@@ -1,9 +1,14 @@
 import {option} from "./utils";
 
-class optionObject {
+export default class OptionObject {
     constructor(d) {
         d = option(d, {});
 
-        this.type = option(d.type, "column");
+        this.axis = option(d.axis, {});
+        this.legend = option(d.legend, {});
+    }
+
+    copy(){
+        return new OptionObject(this);
     }
 }
