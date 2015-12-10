@@ -1,0 +1,21 @@
+{
+  "name": "iva.js",
+  "version": "0.0.0",
+  "authors": [
+    "missingdays <rebovykin@gmail.com>"
+  ],
+  "description": "Fast modular chart library",
+  "main": "index.js",
+  "moduleType": [
+    "es6"
+  ],
+  "keywords": [
+    "chart",
+    "charts",
+    "fast",
+    "svg",
+    "canvas",
+    "webgl"
+  ],
+  "license": "MIT"
+}
