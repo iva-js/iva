@@ -1,6 +1,8 @@
 
 import {expect} from "chai";
+
 import Column from "../../src/dataObject/column";
+import DataObject from "../../src/dataObject/dataObject";
 
 describe("Column", ()=>{
     let data = {
@@ -14,10 +16,15 @@ describe("Column", ()=>{
         }]
     };
 
+    let column = {};
+    let dataObject = new DataObject();
+
+    beforeEach(()=>{
+        column = new Column(data, dataObject);
+    });
+
     describe("constructor", ()=>{
         it("should be correctly initialized", ()=>{
-            let column = new Column(data);
-
             expect(column.id()).to.equal(data.id);
             expect(column.values()).to.deep.equal(data.values);
         });
@@ -33,14 +40,10 @@ describe("Column", ()=>{
 
     describe("id", ()=>{
         it("should get id", ()=>{
-            let column = new Column(data);
-
             expect(column.id()).to.equal(data.id);
         });
 
         it("should set id", ()=>{
-            let column = new Column(data);
-
             column.id("another");
             expect(column.id()).to.equal("another");
         });
@@ -48,22 +51,34 @@ describe("Column", ()=>{
 
     describe("values", ()=>{
         it("should get values", ()=>{
-            let column = new Column(data);
-
             expect(column.values()).to.deep.equal(data.values);
         });
 
         it("should set values", ()=>{
-            let column = new Column(data);
-    
             let newValues = [{ y: 30 }, { y: 40}];
             column.values(newValues);
 
             expect(column.values()).to.deep.equal(newValues);
         });
 
+        it("should set when values are just numbers", ()=>{
+            column.values([40, 50, 60]);
+            expect(column.values()).to.deep.equal(
+                [
+                    { 
+                        y: 40
+                    },
+                    {
+                        y: 50
+                    },
+                    {
+                        y: 60
+                    }
+                ]
+            );
+        });
+
         it("should throw when values are not array", ()=>{
-            let column = new Column(data);
             expect(()=>{
                 column.values({});
             }).to.throw(Error);

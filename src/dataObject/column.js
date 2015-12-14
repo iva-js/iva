@@ -1,20 +1,32 @@
-import {isNumeric} from "../utils";
+import Obj from "../object";
 
-export default class Column {
-    constructor(d){
+import {isNumeric, option} from "../utils";
+
+export default class Column extends Obj {
+    constructor(d, parent){
+        super(d);
+
+        d = option(d, {});
+
         if(d.id === undefined){
             throw new Error("d.id should be provided");
         }
 
-        this.__init(d);
+        if(parent === undefined){
+            throw new Error("Every column should have parent");
+        }
+
+        this.__init(d, parent);
         this.values(d.values);
     }
 
-    __init(d){
+    __init(d, parent){
         let __ = this.__ = {
             id: d.id,
             values: [],
-            dirty: true
+            dirty: true,
+
+            parent: parent
         };
     }
 
@@ -24,7 +36,8 @@ export default class Column {
             return __.id;
         }
         __.id = id;
-        __.dirty = true;
+
+        this.dirty(true);
     }
 
     values(values){
@@ -46,22 +59,7 @@ export default class Column {
 
         for(let i = 0; i < values.length; i++){
             let value = values[i];
-            let tmp = {};
-
-            if(value.y === undefined){
-                throw new Error("Every value should have y defined, but " + value + " doesn't");
-            }
-            tmp.y = value.y;
-
-            // This is done for less memory
-            if(value.x){
-                tmp.x = value.x;
-            }
-            if(value.label){
-                tmp.label = value.label;
-            }
-
-            __.values.push(tmp);
+            __.values.push(this.createValue(value));
         }
 
         this.dirty(true);
@@ -70,6 +68,9 @@ export default class Column {
     popValues(amount){
         let __ = this.__;
 
+        if(amount === undefined){
+            amount = 0;
+        }
         if(!isNumeric(amount)){
             throw new Error("Can't pop " + amount + " values");
         }
@@ -90,14 +91,37 @@ export default class Column {
         if(value === undefined){
             return __.values[i];
         }
+
         __.values[i] = value;
+        this.dirty(true);
     }
 
-    dirty(d){
-        let __ = this.__;
-        if(d === undefined){
-            return __.dirty;
+    createValue(value){
+        if(typeof value === "object"){
+            let tmp = {};
+            if(value.y === undefined){
+                throw new Error("Every value should have y defined, but " + value + " doesn't");
+            }
+            tmp.y = value.y;
+
+            // This is done for less memory
+            if(value.x){
+                tmp.x = value.x;
+            }
+            if(value.label){
+                tmp.label = value.label;
+            }
+
+            return tmp;
         }
-        __.dirty = d;
+
+        if(isNumeric(value)){
+            return {
+                y: value
+            };
+        }
+
+        throw new Error("Value should be either object or nubmer but not " + typeof value);
     }
+
 }
