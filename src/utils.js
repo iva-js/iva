@@ -2,9 +2,9 @@ import _ from "underscore";
 
 export function option(value, _default){
     if(value === undefined){
-        return copy(_default);
+        return _default;
     }
-    return copy(value);
+    return value;
 }
 
 export function copy(el){
@@ -44,6 +44,10 @@ export function copyArray(arr){
 }
 
 export function copyString(string){
-    return new String(string);
+    return string.slice(0);
 }
 
+// Taken from jQuery code
+export function isNumeric(obj){
+    return !Array.isArray(obj) && (obj - parseFloat( obj ) + 1) >= 0;
+}

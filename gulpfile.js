@@ -17,7 +17,7 @@ var source = require('vinyl-source-stream');
 var buffer = require('vinyl-buffer');
 
 function compile(watch) {
-    var bundler = watchify(browserify({ debug: true, entries: ["src/index.js"]})
+    var bundler = watchify(browserify({ debug: true, entries: ["src/index.js"], standalone: "iva"})
                          .transform(babel, { sourceMapRelative: path.resolve(__dirname, 'src'), presets: ["es2015"] }));
 
     function rebundle() {

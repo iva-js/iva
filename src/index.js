@@ -1,9 +1,7 @@
-import DataObject from "./dataObject";
-import OptionObject from "./optionObject";
+import DataObject from "./dataObject/dataObject";
+import OptionObject from "./optionObject/optionObject";
 import Chart from "./chart";
 
-export default {
-    DataObject: DataObject,
-    OptionObject: OptionObject,
-    Chart: Chart
-}
+export { DataObject as DataObject };
+export { OptionObject as OptionObject };
+export { Chart as Chart };

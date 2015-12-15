@@ -1,7 +1,7 @@
 
 export default class Obj {
-    constructor(d){
-        this.__init(d);
+    constructor(d, parent){
+        this.__init(d, parent);
     }
 
     __init(d){
