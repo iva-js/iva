@@ -1,8 +1,14 @@
 import {option} from "./utils";
 
-import DefaultHandler from "./dataHandlers/default";
+import ColumnHandler from "./dataHandlers/column";
 
-import SvgRenderer from "./renderers/svg/index.js";
+import DefaultBuffer from "./buffers/default";
+import InstantBuffer from "./buffers/instant";
+
+import SvgRenderer from "./renderers/svg/index";
+
+import OptionObject from "./optionObject/optionObject";
+import DataObject from "./dataObject/dataObject";
 
 export default class Chart {
     constructor(dataObject, optionObject){
@@ -10,24 +16,26 @@ export default class Chart {
         this.initDataObject(dataObject);
         this.initOptionObject(optionObject);
 
-        this.initHandler();
-        this.initRenderer();
+        this.setBuffer(this.option.buffer);
+        this.setHandler(this.option.handler);
+        this.setRenderer(this.option.renderer);
     }
 
     redraw(){
-        this.renderer.redraw();
+        let renderObject = this.handler.computeRenderObject(this.data, this.option);
+        this.renderer.redraw(renderObject);
     }
 
     initDataObject(dataObject){
-        this.data = option(dataObject, {});
+        this.data = option(dataObject, new DataObject({}, this.buffer));
     }
 
     initOptionObject(optionObject){
-        this.option = option(optionObject, {});
+        this.option = option(optionObject, new OptionObject({}, this.buffer));
     }
 
-    initHandler(){
-        let handler = option(this.option.handler, "column");
+    setHandler(handler){
+        handler = option(handler, "column");
 
         if(typeof handler === "function"){
             this.handler = new handler(this);
@@ -40,14 +48,14 @@ export default class Chart {
 
     setHandlerByName(handler){
         if(handler === "column"){
-            this.handler = new DefaultHandler(this);
+            this.handler = new ColumnHandler(this);
         } else {
             throw new Error("Uknown type of handler: " + hanlder);
         }
     }
 
-    initRenderer(){
-        let renderer = option(this.option.renderer, "default");
+    setRenderer(renderer){
+        renderer = option(renderer, "default");
 
         if(typeof renderer === "function"){
             this.renderer = new renderer(this); 
@@ -63,6 +71,28 @@ export default class Chart {
             this.renderer = new SvgRenderer(this);
         } else {
             throw new Error("Uknown type of renderer: " + renderer);
+        }
+    }
+
+    setBuffer(buffer){
+        buffer = option(buffer, "default");
+
+        if(typeof buffer === "function"){
+            this.buffer = new buffer(this);
+        } else if(typeof buffer === "object"){
+            this.buffer = buffer;
+        } else {
+            this.setBufferByName(buffer);
+        }
+    }
+
+    setBufferByName(buffer){
+        if(buffer === "default"){
+            this.buffer = new DefaultBuffer(this);
+        } else if(buffer === "instant"){
+            this.buffer = new InstantBuffer(this);
+        }else {
+            throw new Error("Uknown type of buffer: " + buffer);
         }
     }
 }

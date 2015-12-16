@@ -4,13 +4,14 @@
  * Basic buffer doesn't do anything except marking itself as dirty
  */
 export default class DefaultBuffer {
-    constructor(){
-        this.__init();
+    constructor(chart){
+        this.__init(chart);
     }
 
-    __init(){
+    __init(chart){
         this.__ = {
-            dirty: false
+            dirty: false,
+            chart: chart
         }
     }
 
@@ -20,5 +21,10 @@ export default class DefaultBuffer {
             return __.dirty;
         }
         __.dirty = dirty;
+
+        this.actOnDirty(dirty);
     }
+
+    // Don't do anything
+    actOnDirty(dirty){}
 }
