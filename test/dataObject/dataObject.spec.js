@@ -3,9 +3,18 @@ import {expect} from "chai";
 
 import DataObject from "../../src/dataObject/dataObject";
 
+import FakeParent from "../fake/parent";
+
 describe("Data object", ()=>{
     let data, anotherData;
+
+    let counter = {
+        dirty: 0
+    };
+
     beforeEach(()=>{
+        counter.dirty = 0;
+
         data = new DataObject({
             columns: [{
                 id: "data1",
@@ -18,12 +27,12 @@ describe("Data object", ()=>{
                     30, 40, 50
                 ]
             }]
-        });
+        }, new FakeParent(counter));
     });
 
     describe("columns", ()=>{
         it("should get columns", ()=>{
-            let columns = data.columns();
+            let columns = data.columns.values();
 
             expect(columns[0].id()).to.equal("data1");
             expect(columns[1].id()).to.equal("data2");
@@ -33,14 +42,14 @@ describe("Data object", ()=>{
         });
 
         it("should set columns", ()=>{
-            data.columns([
+            data.columns.values([
                 {
                     id: "data3",
                     values: [100, 200, 300]
                 }
             ]);
 
-            let columns = data.columns();
+            let columns = data.columns.values();
 
             expect(columns.length).to.equal(1);
             expect(columns[0].id()).to.equal("data3");

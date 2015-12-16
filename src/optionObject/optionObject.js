@@ -4,9 +4,8 @@ import Size from "./size";
 import {option} from "../utils";
 
 export default class OptionObject extends Obj {
-    constructor(d) {
+    constructor(d, parent) {
         d = option(d, {});
-        let parent = { dirty: () => {} };
 
         super(d, parent);
 
@@ -24,8 +23,9 @@ export default class OptionObject extends Obj {
             chart: "#chart",
             parent: parent,
             dirty: true
-        }
-        __.size = new Size(d.size, this);
+        };
+
+        this.size = new Size(d.size, this);
 
     }
 

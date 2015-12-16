@@ -4,19 +4,14 @@ import {isNumeric, option} from "../utils";
 
 export default class Column extends Obj {
     constructor(d, parent){
-        super(d);
-
         d = option(d, {});
 
         if(d.id === undefined){
             throw new Error("d.id should be provided");
         }
 
-        if(parent === undefined){
-            throw new Error("Every column should have parent");
-        }
+        super(d, parent);
 
-        this.__init(d, parent);
         this.values(d.values);
     }
 

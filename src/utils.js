@@ -51,3 +51,15 @@ export function copyString(string){
 export function isNumeric(obj){
     return !Array.isArray(obj) && (obj - parseFloat( obj ) + 1) >= 0;
 }
+
+export function toString(obj){
+    if(typeof obj === "object"){
+        return objToString(obj);
+    } else {
+        throw new Error(`Can't convert ${typeof obj} to string`);
+    }
+}
+
+export function objToString(obj){
+    return JSON.stringify(obj, null, 8);
+}

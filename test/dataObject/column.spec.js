@@ -4,6 +4,8 @@ import {expect} from "chai";
 import Column from "../../src/dataObject/column";
 import DataObject from "../../src/dataObject/dataObject";
 
+import FakeParent from "../fake/parent";
+
 describe("Column", ()=>{
     let data = {
         id: "data",
@@ -17,7 +19,7 @@ describe("Column", ()=>{
     };
 
     let column = {};
-    let dataObject = new DataObject();
+    let dataObject = new DataObject({}, new FakeParent());
 
     beforeEach(()=>{
         column = new Column(data, dataObject);

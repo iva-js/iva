@@ -3,6 +3,8 @@ import {expect} from "chai";
 import OptionObject from "../../src/optionObject/optionObject";
 import Size from "../../src/optionObject/size";
 
+import FakeParent from "../fake/parent";
+
 describe("Size", ()=>{
     let size;
     let d = {
@@ -10,7 +12,7 @@ describe("Size", ()=>{
         height: 1000
     };
 
-    let optionObject = new OptionObject();
+    let optionObject = new OptionObject({}, new FakeParent());
     
     beforeEach(()=>{
         size = new Size(d, optionObject);
@@ -88,4 +90,5 @@ describe("Size", ()=>{
             expect(size.height()).to.equal(def.height);
         });
     });
+
 });

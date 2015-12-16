@@ -1,3 +1,14 @@
 export default class Handler {
-    constructor(){}
+    constructor(){
+        this.__ = {
+            d: {
+            }
+        };
+
+        this.init();
+    }
+
+    d(){
+        return this.__.d;
+    }
 }

@@ -13,10 +13,11 @@ import DataObject from "./dataObject/dataObject";
 export default class Chart {
     constructor(dataObject, optionObject){
 
+        this.setBuffer(optionObject.buffer);
+
         this.initDataObject(dataObject);
         this.initOptionObject(optionObject);
 
-        this.setBuffer(this.option.buffer);
         this.setHandler(this.option.handler);
         this.setRenderer(this.option.renderer);
     }
