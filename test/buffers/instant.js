@@ -29,5 +29,22 @@ describe("InstanBuffer", ()=>{
             buffer.dirty(false);
             expect(counter.count).to.equal(0);
         });
+
+        it("shouldn't redraw when frozen", ()=>{
+            buffer.freeze(true);
+            buffer.dirty(true);
+
+            expect(counter.count).to.equal(0);
+
+            buffer.freeze(false);
+            buffer.dirty(true);
+
+            expect(counter.count).to.equal(1);
+
+            buffer.freeze(true);
+            buffer.dirty(true);
+
+            expect(counter.count).to.equal(1);
+        });
     });
 });

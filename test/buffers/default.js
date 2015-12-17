@@ -23,4 +23,18 @@ describe("DefaultBuffer", ()=>{
             expect(buffer.dirty()).to.equal(false);
         });
     });
+
+    describe("freeze", ()=>{
+        it("should get freeze", ()=>{
+            expect(buffer.freeze()).to.equal(false);
+        });
+
+        it("should set freeze", ()=>{
+            buffer.freeze(true);
+            expect(buffer.freeze()).to.equal(true);
+
+            buffer.freeze(false);
+            expect(buffer.freeze()).to.equal(false);
+        });
+    });
 });

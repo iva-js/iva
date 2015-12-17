@@ -11,7 +11,8 @@ export default class DefaultBuffer {
     __init(chart){
         this.__ = {
             dirty: false,
-            chart: chart
+            chart: chart,
+            freeze: false
         }
     }
 
@@ -22,7 +23,24 @@ export default class DefaultBuffer {
         }
         __.dirty = dirty;
 
-        this.actOnDirty(dirty);
+        if(!__.freeze){
+            this.actOnDirty(dirty);
+        }
+    }
+
+    /**
+     * If frozen, buffer won't activate actOnDirty.
+     * This is needed for chart initialization when 'dirty' happens all the time
+     * but we don't need to redraw when initializing.
+     */
+    freeze(freeze){
+        let __ = this.__;
+
+        if(freeze === undefined){
+            return __.freeze;
+        }
+
+        __.freeze = freeze;
     }
 
     // Don't do anything
