@@ -1,6 +1,6 @@
 import Obj from "../object";
 
-import {option, copy, isObject, isNumeric, isArray, isUndefined, toInt} from "../utils";
+import {option, copy, isObject, isNumeric, isArray, isUndefined, toInt, throwIfNotString} from "../utils";
 
 
 /**
@@ -15,7 +15,7 @@ export default class DataObject extends Obj {
 
         let __ = this.__;
 
-        let table = __.table = {};
+        let table = __.table = new Map()
 
         d = option(d, {});
         
@@ -23,12 +23,12 @@ export default class DataObject extends Obj {
         d.rows = option(d.rows, []);
 
         this.columns(d.columns);
-        //this.rows(d.rows);
+        this.addRows(d.rows);
 
     }
 
     clear(){
-        this.__.table = {};
+        this.__.table.clear();
     }
 
     columns(columns){
@@ -57,15 +57,11 @@ export default class DataObject extends Obj {
     addColumn(column){
         let __ = this.__;
 
-        if(typeof column.id !== "string"){
-            throw new TypeError("Column id should be string and not " + typeof column.id);
-        }
-
         if(this.getColumnById(column.id) !== undefined){
             throw new Error(`Column ids should be unique but ${column.id} is already presented in table`);
         }
 
-        __.table[column.id] = {};
+        this.emptyColumn(column.id);
         
         this.setValuesToColumn(column.id, column.values);
     }
@@ -81,14 +77,14 @@ export default class DataObject extends Obj {
 
         let column = this.getColumnById(id);
         
-        let offset = this.getNextX(id);
+        let offset = this.__getNextX(id);
 
         for(let i = 0; i < values.length; i++){
             let value = values[i];
             if(isUndefined(value.x)){
-                column[i+offset] = this.__value(value);
+                column.set(i+offset, this.__value(value));
             } else {
-                column[value.x] = this.__value(value);
+                column.set(value.x, this.__value(value));
             }
         }
 
@@ -98,21 +94,53 @@ export default class DataObject extends Obj {
         this.setValuesToColumn(id, [value]);
     }
 
+    emptyColumn(id){
+        let __ = this.__;
+
+        throwIfNotString("Column id", id);
+
+        let column = this.getColumnById(id);
+
+        if(column){
+            column.clear();
+        } else {
+            __.table.set(id, new Map());
+        }
+    }
+
     getColumnById(id){
         let __ = this.__;
 
-        return __.table[id];
+        return __.table.get(id);
     }
 
     rows(rows){
         let __ = this.__;
 
         if(rows === undefined){
-            return rows;
+            return this.toRows();
         }
 
         this.clear();
         this.addRows(rows);
+    }
+
+    toRows(){
+        let table = this.__.table;
+
+        let rows = new Map();
+
+        for(let [i, column] of table){
+            for(let [x, value] of column){
+                if(rows.has(x)){
+                    rows.get(x).set(i, value);
+                } else {
+                    rows.set(x, new Map([[i, value]]));
+                }
+            }
+        }
+
+        return rows;
     }
 
     addRows(rows){
@@ -131,7 +159,7 @@ export default class DataObject extends Obj {
         }
 
         row.values.forEach(value => {
-            setValueToRow(row.x, value);
+            this.setValueToRow(row.x, value);
         });        
     }
 
@@ -142,18 +170,25 @@ export default class DataObject extends Obj {
             throw new Error("Each row should have x");
         }
 
-        __.table.forEach(column => {
+        for(let [i, column] of __.table){
             this.setValueToColumn(column.id, x, value);
-        });
+        }
     }
 
-    getNextX(id){
-        let __ = this.__;
-        let column = __.table[id];
+    copy(){
+    }
+
+    /*
+     * Gets next available x in column with given id.
+     * Say column is [{ x: 10 }, { x: 11 }, { x: 22 }].
+     * The result will be 23 as it is the next x in this column.
+     */
+    __getNextX(id){
+        let column = this.getColumnById(id);
         let m = -1;
 
-        for(let i in column){
-            let x = (isUndefined(column[i].x) ? i : column[i].x);
+        for(let [i, value] of column){
+            let x = (isUndefined(column.x) ? i : column.x);
             if(x > m){
                 m = x;
             }
@@ -162,8 +197,6 @@ export default class DataObject extends Obj {
         return toInt(m)+1;
     }
 
-    copy(){
-    }
 
     __value(v){
         if(isObject(v)){

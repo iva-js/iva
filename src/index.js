@@ -5,8 +5,8 @@ import Chart from "./chart";
 
 import DefaultBuffer from "./buffers/default";
 
-let buffers = {
-    DefaultBuffer: DefaultBuffer
+let Buffer = {
+    Default: DefaultBuffer
 };
 
 export { DataObject as DataObject };
@@ -14,4 +14,4 @@ export { OptionObject as OptionObject };
 
 export { Chart as Chart };
 
-export { buffers as buffers };
+export { Buffer as Buffer };

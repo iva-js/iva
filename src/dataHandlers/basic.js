@@ -2,6 +2,7 @@ export default class Handler {
     constructor(){
         this.__ = {
             d: {
+                bindTo: "#chart" 
             }
         };
 

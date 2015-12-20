@@ -7,6 +7,10 @@ export function option(value, _default){
     return value;
 }
 
+/*
+ * Function for copying
+ */
+
 export function copy(el){
     if(Array.isArray(el)){
         return copyArray(el);
@@ -47,10 +51,38 @@ export function copyString(string){
     return string.slice(0);
 }
 
+/*
+ * Functions for checking if value is some type
+ */
+
 // Taken from jQuery code
 export function isNumeric(obj){
     return !Array.isArray(obj) && (obj - parseFloat( obj ) + 1) >= 0;
 }
+
+export function isObject(obj){
+    return typeof obj === "object";
+}
+
+export function isArray(obj){
+    return Array.isArray(obj);
+}
+
+export function isString(obj){
+    return typeof obj === "string";
+}
+
+export function isFunction(obj){
+    return typeof obj === "function";
+}
+
+export function isUndefined(obj){
+    return obj === undefined;
+}
+
+/*
+ * Transformers
+ */
 
 export function toString(obj){
     if(typeof obj === "object"){
@@ -60,6 +92,49 @@ export function toString(obj){
     }
 }
 
+export function toInt(obj){
+    return parseInt(obj);
+}
+
 export function objToString(obj){
     return JSON.stringify(obj, null, 8);
+}
+
+/*
+ * Throw if x is not y type
+ */
+
+export function throwIfNotNumeric(v, msg){
+    msg = option(msg, v);
+    if(!isNumeric(v)){
+        throw new TypeError(`${msg} should be number and not ${typeof v}`);
+    }
+}
+
+export function throwIfNotArray(v, msg){
+    msg = option(msg, v);
+    if(!isArray(v)){
+        throw new TypeError(`${msg} should be array and not ${typeof v}`);
+    }
+}
+
+export function throwIfNotObject(v, msg){
+    msg = option(msg, v);
+    if(!isObject(v)){
+        throw new TypeError(`${msg} should be object and not ${typeof v}`);
+    }
+}
+
+export function throwIfNotString(v, msg){
+    msg = option(msg, v);
+    if(!isString(v)){
+        throw new TypeError(`${msg} shoud be string and not ${typeof v}`);
+    }
+}
+
+export function throwIfNotFunction(v, msg){
+    msg = option(msg, v);
+    if(!isFunction(v)){
+        throw new TypeError(`${msg} should be function and not ${typeof v}`);
+    }
 }

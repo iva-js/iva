@@ -37,8 +37,8 @@ export default class ColumnHandler extends Handler {
             return;
         }
 
-        d.option.size.width = size.width;
-        d.option.size.height = size.height;
+        d.option.size.width = size.width();
+        d.option.size.height = size.height();
 
         d.option.size.dirty = true;
         
@@ -61,27 +61,31 @@ export default class ColumnHandler extends Handler {
         
         d.data.columns.dirty = true;
 
+        this.columnsToRows(columns);
     }
 
     processColumn(column){
-        let processed = [];
+        let processed = {
+            id: column.id(),
+            values: []
+        };
 
         let i;
         let values = column.values();
         for(i = 0; i < values.length; i++){
             let value = values[i];
-            let y = option(value, i);
-            processed.push(this.copyValue(value), { y: y });
+            processed.values.push(this.processValue(value, { x: i }));
         }
+
         return processed;
     }
 
-    copyValue(v, d){
+    processValue(v, d){
         d = option(d, {});
 
         return {
-            x: v.x,
-            y: option(v.y, d.y),
+            x: option(v.x, d.x),
+            y: v.y,
             dirty: v.dirty,
             label: v.label
         }

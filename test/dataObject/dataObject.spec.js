@@ -33,7 +33,7 @@ describe("Data object", ()=>{
 
         function checkColumn(column, values){
             for(let i = 0; i < values.length; i++){
-                expect(column[i]).to.deep.equal(values[i]);
+                expect(column.get(i)).to.deep.equal(values[i]);
             }
         }
 
@@ -42,8 +42,8 @@ describe("Data object", ()=>{
             it("should get columns", ()=>{
                 let columns = data.columns();
 
-                checkColumn(columns["data1"], [{ y: 10 }, { y: 20 }, { y: 30 }]);
-                checkColumn(columns["data2"], [{ y: 30 }, { y: 40 }, { y: 50 }]);
+                checkColumn(columns.get("data1"), [{ y: 10 }, { y: 20 }, { y: 30 }]);
+                checkColumn(columns.get("data2"), [{ y: 30 }, { y: 40 }, { y: 50 }]);
 
             });
 
@@ -58,8 +58,8 @@ describe("Data object", ()=>{
 
                 let columns = data.columns();
 
-                checkColumn(columns["data3"], [{ y: 1 }, { y: 2 }, { y: 3 }]);
-                checkColumn(columns["data4"], [{ y: 3 }, { y: 2 }, { y: 1 }]);
+                checkColumn(columns.get("data3"), [{ y: 1 }, { y: 2 }, { y: 3 }]);
+                checkColumn(columns.get("data4"), [{ y: 3 }, { y: 2 }, { y: 1 }]);
             });
 
         });
@@ -76,8 +76,8 @@ describe("Data object", ()=>{
 
                 let columns = data.columns();
 
-                checkColumn(columns["data3"], [{ y: 1 }, { y: 2 }, { y: 3 }]);
-                checkColumn(columns["data4"], [{ y: 3 }, { y: 2 }, { y: 1 }]);
+                checkColumn(columns.get("data3"), [{ y: 1 }, { y: 2 }, { y: 3 }]);
+                checkColumn(columns.get("data4"), [{ y: 3 }, { y: 2 }, { y: 1 }]);
             });
         });
 
@@ -90,7 +90,7 @@ describe("Data object", ()=>{
 
                 let columns = data.columns();
 
-                checkColumn(columns["data3"], [{ y: 1 }, { y: 2 }, { y: 3 }]);
+                checkColumn(columns.get("data3"), [{ y: 1 }, { y: 2 }, { y: 3 }]);
             });
 
             it("should throw if column with id already exists", ()=>{
@@ -106,7 +106,7 @@ describe("Data object", ()=>{
 
                 let columns = data.columns();
 
-                checkColumn(columns["data1"], [{ y: 10 }, { y: 20 }, { y: 30 }, { y: 100 }, { y: 90 }, { y: 80 }]);
+                checkColumn(columns.get("data1"), [{ y: 10 }, { y: 20 }, { y: 30 }, { y: 100 }, { y: 90 }, { y: 80 }]);
             });
 
             it("should set to existing values", ()=>{
@@ -120,14 +120,14 @@ describe("Data object", ()=>{
 
                 let columns = data.columns();
 
-                checkColumn(columns["data1"], [{ x: 0, y: 30 }, { y: 20 }, { x: 2, y: 10 }]);
+                checkColumn(columns.get("data1"), [{ x: 0, y: 30 }, { y: 20 }, { x: 2, y: 10 }]);
             });
         });
 
         describe("setValueToColumn", ()=>{
             it("should add value", ()=>{
                 data.setValueToColumn("data1", 10);
-                checkColumn(data.columns()["data1"], [{ y: 10 }, { y: 20 }, { y: 30}, { y: 10 }]);
+                checkColumn(data.columns().get("data1"), [{ y: 10 }, { y: 20 }, { y: 30}, { y: 10 }]);
             });
 
             it("should set value", ()=>{
@@ -135,8 +135,69 @@ describe("Data object", ()=>{
                     x: 1,
                     y: 40
                 });
-                checkColumn(data.columns()["data1"], [{ y: 10 }, { x: 1, y: 40} , { y: 30 }]);
+                checkColumn(data.columns().get("data1"), [{ y: 10 }, { x: 1, y: 40} , { y: 30 }]);
             });
+        });
+    });
+
+    describe("/rows", ()=>{
+        beforeEach(()=>{
+            counter.dirty = 0;
+
+            data = new DataObject({
+                columns: [{
+                    id: "data1",
+                    values: [
+                        10, 20, 30
+                    ]
+                }, {
+                    id: "data2",
+                    values: [
+                        30, 40, 50
+                    ]
+                }]
+            }, new FakeParent(counter));
+        });
+
+        function checkRow(row, values){
+            for(let value of values){
+                expect(row.get(value[0])).to.deep.equal(value[1]);
+            }
+        }
+
+        it("should get rows", ()=>{
+            let rows = data.rows();
+
+            checkRow(rows.get(0), [["data1", { y: 10 }], ["data2", { y: 30 }]]);
+            checkRow(rows.get(1), [["data1", { y: 20 }], ["data2", { y: 40 }]]);
+            checkRow(rows.get(2), [["data1", { y: 30 }], ["data2", { y: 50 }]]);
+        });
+
+        it("should set rows", ()=>{
+            data.rows([{
+                x: 0,
+                values: [{
+                    id: "data1",
+                    y: 1
+                }, {
+                    id: "data2",
+                    y: 3
+                }]
+            }, {
+                x: 1,
+                values: [{
+                    id: "data1",
+                    y: 3
+                }, {
+                    id: "data2",
+                    y: 2
+                }]
+            }]);
+
+            let rows = data.rows();
+
+            //checkRow(rows.get(0), [["data1", { y: 1 }], ["data2", { y: 3 }]]);
+            //checkRow(rows.get(1), [["data1", { y: 2 }], ["data2", { y: 2 }]]);
         });
     });
 });

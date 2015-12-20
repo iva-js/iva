@@ -16,9 +16,12 @@ export default class Obj {
             parent: parent
         };
 
-        if(d.values){
-            __.values = d.values;
+        if(d.fields){
+            d.fields.forEach(field => {
+                this.setField(field.query, field.value);
+            });
         }
+
     }
 
     dirty(d){
@@ -32,14 +35,75 @@ export default class Obj {
         }
     }
 
-    values(values){
+    /**
+     * Fields are used for storing additional data that can be used by custom data handlers.
+     * Query is string in formart "a.b.c".
+     */
+    field(query, value){
+        if(value === undefined){
+            return this.getField(query);
+        } else {
+            return this.setField(query, value);
+        }
+    }
+
+    getField(query, obj){
         let __ = this.__;
 
-        if(values === undefined){
-            return __.values;
+        if(typeof query !== "string"){
+            throw new TypeError("Query should be string and not " + typeof query);
         }
 
-        __.values = values;
-        __.dirty = true;
+
+        if(__.fields === undefined){
+            return undefined;
+        }
+
+        if(obj === undefined){
+            obj = __.fields;
+        }
+
+        let q = query.split(".");
+
+        if(q.length === 1){
+            return obj[query];
+        }
+
+        return this.getField(q.slice(1).join("."), obj[q[0]]);
     }
+
+    setField(query, value, obj){
+        let __ = this.__;
+
+        if(typeof query !== "string"){
+            throw new TypeError("Query should be string and not " + typeof query);
+        }
+
+        if(__.fields === undefined){
+            __.fields = {};
+        }
+
+        if(obj === undefined){
+            obj = __.fields;
+        }
+
+        if(typeof obj !== "object"){
+            throw new TypeError("Can't set value to non-object field " + obj);
+        }
+
+        let q = query.split(".");
+
+        if(q.length === 1){
+            return obj[query] = value;
+        }
+
+
+        if(obj[q[0]] === undefined){
+            obj[q[0]] = {};
+        }
+        
+
+        this.setField(q.slice(1).join("."), value, obj[q[0]]);
+    }
+
 }
