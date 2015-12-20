@@ -6,5 +6,8 @@
 test-unit:
 	mocha --recursive --compilers js:babel/register
 
+test-integr:
+	gulp test-integration
+
 clean:
-	rm -rf node_modules bower_components
+	rm -rf node_modules bower_components build

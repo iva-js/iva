@@ -8,6 +8,4 @@ before_script:
     - npm install -g gulp    
     - npm install -g mocha
 
-install: make      
-
-script: make test-unit    
+script: mocha --recursive --compilers js:babel/register

@@ -16,8 +16,10 @@ var eslint = require("gulp-eslint");
 var source = require('vinyl-source-stream');
 var buffer = require('vinyl-buffer');
 
+var Server = require("karma").Server;
+
 function compile(watch) {
-    var bundler = watchify(browserify({ debug: true, entries: ["src/index.js"], standalone: "iva"})
+    var bundler = watchify(browserify({ debug: true, entries: ["src/index.js"], standalone: "Iva"})
                          .transform(babel, { sourceMapRelative: path.resolve(__dirname, 'src'), presets: ["es2015"] }));
 
     function rebundle() {
@@ -63,3 +65,9 @@ function lint(){
 gulp.task('build', function() { return compile(); });
 gulp.task('watch', function() { return watch(); });
 
+gulp.task('test-integration', function(done){
+    new Server({
+        configFile: __dirname + '/karma.conf.js',
+        singleRun: true
+    }, done).start();
+});
