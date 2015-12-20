@@ -1,4 +1,3 @@
-
 describe("Bacis use case", function(){
     it("should init", function(){
         expect(function(){
@@ -6,6 +5,6 @@ describe("Bacis use case", function(){
             var data = new Iva.DataObject({}, buffer);
             var option = new Iva.OptionObject({}, buffer);
             var chart = new Iva.Chart(data, option);
-        }).to.not.throw();
+        }).to.not.throw(Error);
     });
 });

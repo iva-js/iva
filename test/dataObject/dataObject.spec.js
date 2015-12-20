@@ -83,10 +83,7 @@ describe("Data object", ()=>{
 
         describe("addColumn", ()=>{
             it("should add column", ()=>{
-                data.addColumn({
-                    id: "data3",
-                    values: [1, 2, 3]
-                });
+                data.addColumn("data3", [1, 2, 3]);
 
                 let columns = data.columns();
 
@@ -102,11 +99,20 @@ describe("Data object", ()=>{
 
         describe("setValuesToColumn", ()=>{
             it("should add values", ()=>{
-                data.setValuesToColumn("data1", [100, 90, 80]);
+                data.setValuesToColumn("data1", [{
+                    x: 3,
+                    y:100
+                }, {
+                    x:4,
+                    y: 90
+                }, { 
+                    x: 5,
+                    y: 80
+                }]);
 
                 let columns = data.columns();
 
-                checkColumn(columns.get("data1"), [{ y: 10 }, { y: 20 }, { y: 30 }, { y: 100 }, { y: 90 }, { y: 80 }]);
+                checkColumn(columns.get("data1"), [{ y: 10 }, { y: 20 }, { y: 30 }, { x: 3, y: 100 }, { x: 4, y: 90 }, { x: 5, y: 80 }]);
             });
 
             it("should set to existing values", ()=>{
@@ -124,18 +130,15 @@ describe("Data object", ()=>{
             });
         });
 
-        describe("setValueToColumn", ()=>{
+        describe("columnValue", ()=>{
             it("should add value", ()=>{
-                data.setValueToColumn("data1", 10);
+                data.columnValue("data1", 3, 10);
                 checkColumn(data.columns().get("data1"), [{ y: 10 }, { y: 20 }, { y: 30}, { y: 10 }]);
             });
 
             it("should set value", ()=>{
-                data.setValueToColumn("data1", {
-                    x: 1,
-                    y: 40
-                });
-                checkColumn(data.columns().get("data1"), [{ y: 10 }, { x: 1, y: 40} , { y: 30 }]);
+                data.columnValue("data1", 1, 40);
+                checkColumn(data.columns().get("data1"), [{ y: 10 }, { y: 40} , { y: 30 }]);
             });
         });
     });
@@ -165,39 +168,77 @@ describe("Data object", ()=>{
             }
         }
 
-        it("should get rows", ()=>{
-            let rows = data.rows();
+        describe("rows", ()=>{
 
-            checkRow(rows.get(0), [["data1", { y: 10 }], ["data2", { y: 30 }]]);
-            checkRow(rows.get(1), [["data1", { y: 20 }], ["data2", { y: 40 }]]);
-            checkRow(rows.get(2), [["data1", { y: 30 }], ["data2", { y: 50 }]]);
+            it("should get rows", ()=>{
+                let rows = data.rows();
+
+                checkRow(rows.get(0), [["data1", { y: 10 }], ["data2", { y: 30 }]]);
+                checkRow(rows.get(1), [["data1", { y: 20 }], ["data2", { y: 40 }]]);
+                checkRow(rows.get(2), [["data1", { y: 30 }], ["data2", { y: 50 }]]);
+            });
+
+            it("should set rows", ()=>{
+                data.rows([{
+                    x: 0,
+                    values: [{
+                        id: "data1",
+                        y: 1
+                    }, {
+                        id: "data2",
+                        y: 3
+                    }]
+                }, {
+                    x: 1,
+                    values: [{
+                        id: "data1",
+                        y: 3
+                    }, {
+                        id: "data2",
+                        y: 2
+                    }]
+                }]);
+
+                let rows = data.rows();
+
+                checkRow(rows.get(0), [["data1", { y: 1 }], ["data2", { y: 3 }]]);
+                checkRow(rows.get(1), [["data1", { y: 3 }], ["data2", { y: 2 }]]);
+            });
+
         });
 
-        it("should set rows", ()=>{
-            data.rows([{
-                x: 0,
-                values: [{
+        describe("row", ()=>{
+            it("should update row", ()=>{
+                data.row(0,  [{
                     id: "data1",
                     y: 1
                 }, {
                     id: "data2",
-                    y: 3
-                }]
-            }, {
-                x: 1,
-                values: [{
-                    id: "data1",
-                    y: 3
-                }, {
-                    id: "data2",
                     y: 2
-                }]
-            }]);
+                }
+                ]);
 
-            let rows = data.rows();
+                let rows = data.rows();
 
-            //checkRow(rows.get(0), [["data1", { y: 1 }], ["data2", { y: 3 }]]);
-            //checkRow(rows.get(1), [["data1", { y: 2 }], ["data2", { y: 2 }]]);
+                checkRow(rows.get(0), [["data1", {y: 1}], ["data2", { y: 2 }]]);
+            });
+
+            it("should create new columns if needed", ()=>{
+                data.row(0, [{ id: "data3", y: 15}]);
+
+                let rows = data.rows();
+
+                checkRow(rows.get(0), [["data3", { y: 15 }]]);
+            });
+        });
+
+        describe("addValuesToRow", ()=>{
+            it("should add new values", ()=>{
+                data.addValuesToRow(0, [{ id: "data3", y: 15 }]);
+                let rows = data.rows();
+
+                checkRow(rows.get(0), [["data1", { y: 10 }], ["data2", { y: 30 }], ["data3", { y: 15 }]]);
+            });
         });
     });
 });

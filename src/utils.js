@@ -104,6 +104,13 @@ export function objToString(obj){
  * Throw if x is not y type
  */
 
+export function throwIfUndefined(v, msg){
+    msg = option(msg, v);
+    if(isUndefined(v)){
+        throw new TypeError(`${msg} shouldn't be undefined`);
+    }
+}
+
 export function throwIfNotNumeric(v, msg){
     msg = option(msg, v);
     if(!isNumeric(v)){

@@ -1,6 +1,6 @@
 import Obj from "../object";
 
-import {option, copy, isObject, isNumeric, isArray, isUndefined, toInt, throwIfNotString} from "../utils";
+import {option, copy, isObject, isNumeric, isArray, isUndefined, toInt, throwIfNotString, throwIfNotArray, throwIfUndefined} from "../utils";
 
 
 /**
@@ -42,6 +42,17 @@ export default class DataObject extends Obj {
         this.addColumns(columns);
     }
 
+    column(id, values){
+        let __ = this.__;
+
+        if(values === undefined){
+            return __.table.get(id);
+        } else {
+            this.emptyColumn(id);
+            this.setValuesToColumn(id, values);
+        }
+    }
+
     addColumns(columns){
         let __ = this.__;
 
@@ -50,39 +61,56 @@ export default class DataObject extends Obj {
         }
 
         columns.forEach(column => {
-            this.addColumn(column);
+            this.addColumn(column.id, column.values);
         });
     }
 
-    addColumn(column){
-        let __ = this.__;
+    addColumn(id, values){
+        let table = this.__.table;
 
-        if(this.getColumnById(column.id) !== undefined){
-            throw new Error(`Column ids should be unique but ${column.id} is already presented in table`);
+        throwIfNotString(id, "Column id");
+
+        throwIfNotArray(values, "Column values");
+
+        if(this.column(id) !== undefined){
+            throw new Error(`Columns can't have equals ids but ${id} is presented twice`);
         }
 
-        this.emptyColumn(column.id);
-        
-        this.setValuesToColumn(column.id, column.values);
+        let newColumn = new Map();
+
+        table.set(id, newColumn);
+
+        this.setValuesToColumn(id, values);
+
+        return this.column(id);
+    }
+
+    columnValue(id, x, value){
+        if(value === undefined){
+            return this.column(id).get(x);
+        } else {
+            let column = this.column(id);
+
+            if(column === undefined){
+                column = this.addEmptyColumn(id);
+            }
+            column.set(x, this.__value(value));
+        }
     }
 
     setValuesToColumn(id, values){
-        if(typeof id !== "string"){
-            throw new TypeError("Column id should be string and not " + typeof id);
-        }
+        throwIfNotString(id, "Column id");
 
-        if(!Array.isArray(values)){
-            throw new TypeError("Values should be string and not " + typeof values);
-        }
-
-        let column = this.getColumnById(id);
+        throwIfNotArray(values, "Column values");
         
-        let offset = this.__getNextX(id);
+        let column = this.column(id);
+
+        throwIfUndefined(column, "Can't set values to undefined column");
 
         for(let i = 0; i < values.length; i++){
             let value = values[i];
             if(isUndefined(value.x)){
-                column.set(i+offset, this.__value(value));
+                column.set(i, this.__value(value));
             } else {
                 column.set(value.x, this.__value(value));
             }
@@ -90,39 +118,68 @@ export default class DataObject extends Obj {
 
     }
 
-    setValueToColumn(id, value){
-        this.setValuesToColumn(id, [value]);
+    addEmptyColumn(id){
+        return this.addColumn(id, []);
     }
 
     emptyColumn(id){
-        let __ = this.__;
+        throwIfNotString(id, "Column id");
 
-        throwIfNotString("Column id", id);
-
-        let column = this.getColumnById(id);
+        let column = this.column(id);
 
         if(column){
             column.clear();
         } else {
-            __.table.set(id, new Map());
+            this.addEmptyColumn(id);
         }
     }
 
-    getColumnById(id){
-        let __ = this.__;
-
-        return __.table.get(id);
+    removeColumn(id){
+        this.__.table.delete(id);
     }
 
     rows(rows){
-        let __ = this.__;
-
         if(rows === undefined){
             return this.toRows();
         }
 
+        throwIfNotArray(rows, "Rows");
+
         this.clear();
         this.addRows(rows);
+    }
+
+    addRows(rows){
+        throwIfNotArray(rows, "Rows");
+        rows.forEach(row => {
+            this.row(row.x, row.values);
+        });
+    }
+
+    row(x, values){
+        throwIfUndefined(x, "Row x");
+
+        this.emptyRow(x);
+
+        this.addValuesToRow(x, values);
+    }
+
+    addValuesToRow(x, values){
+        throwIfUndefined(x, "Row x");
+        throwIfNotArray(values, "Row values");
+
+        values.forEach(value => {
+            this.columnValue(value.id, x, value);
+        });
+    }
+
+    emptyRow(x){
+        let table = this.__.table;
+        for(let [i, column] of table){
+            if(column.has(x)){
+                column.delete(x);
+            }
+        }
     }
 
     toRows(){
@@ -143,38 +200,6 @@ export default class DataObject extends Obj {
         return rows;
     }
 
-    addRows(rows){
-        if(!isArray(rows)){
-            throw new TypeError("Rows should be array and not " + typeof rows);
-        }
-
-        rows.forEach(row => {
-            this.addRow(row);
-        });
-    }
-
-    addRow(row){
-        if(!isArray(row.values)){
-            throw new TypeError("Row values should be array and not " + typeof row.values);
-        }
-
-        row.values.forEach(value => {
-            this.setValueToRow(row.x, value);
-        });        
-    }
-
-    setValueToRow(x, value){
-        let __ = this.__;
-
-        if(x === undefined){
-            throw new Error("Each row should have x");
-        }
-
-        for(let [i, column] of __.table){
-            this.setValueToColumn(column.id, x, value);
-        }
-    }
-
     copy(){
     }
 
@@ -184,7 +209,7 @@ export default class DataObject extends Obj {
      * The result will be 23 as it is the next x in this column.
      */
     __getNextX(id){
-        let column = this.getColumnById(id);
+        let column = this.column(id);
         let m = -1;
 
         for(let [i, value] of column){
