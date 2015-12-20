@@ -6,7 +6,5 @@ node_js:
 
 before_script:
     - npm install -g gulp    
-    - npm install -g mocha
-    - npm install -g babel
 
-script: mocha --recursive --compilers js:babel/register
+script: gulp test-integration 
