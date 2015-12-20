@@ -31,9 +31,10 @@ describe("Data object", ()=>{
             }, new FakeParent(counter));
         });
 
-        function checkColumn(column, id, values){
-            expect(column.id).to.equal(id);
-            expect(column.values).to.deep.equal(values);
+        function checkColumn(column, values){
+            for(let i = 0; i < values.length; i++){
+                expect(column[i]).to.deep.equal(values[i]);
+            }
         }
 
         describe("columns", ()=>{
@@ -41,8 +42,8 @@ describe("Data object", ()=>{
             it("should get columns", ()=>{
                 let columns = data.columns();
 
-                checkColumn(columns[0], "data1", [{ y: 10 }, { y: 20 }, { y: 30 }]);
-                checkColumn(columns[1], "data2", [{ y: 30 }, { y: 40 }, { y: 50 }]);
+                checkColumn(columns["data1"], [{ y: 10 }, { y: 20 }, { y: 30 }]);
+                checkColumn(columns["data2"], [{ y: 30 }, { y: 40 }, { y: 50 }]);
 
             });
 
@@ -57,9 +58,8 @@ describe("Data object", ()=>{
 
                 let columns = data.columns();
 
-                expect(columns.length).to.equal(2);
-                checkColumn(columns[0], "data3", [{ y: 1 }, { y: 2 }, { y: 3 }]);
-                checkColumn(columns[1], "data4", [{ y: 3 }, { y: 2 }, { y: 1 }]);
+                checkColumn(columns["data3"], [{ y: 1 }, { y: 2 }, { y: 3 }]);
+                checkColumn(columns["data4"], [{ y: 3 }, { y: 2 }, { y: 1 }]);
             });
 
         });
@@ -76,8 +76,8 @@ describe("Data object", ()=>{
 
                 let columns = data.columns();
 
-                checkColumn(columns[2], "data3", [{ y: 1 }, { y: 2 }, { y: 3 }]);
-                checkColumn(columns[3], "data4", [{ y: 3 }, { y: 2 }, { y: 1 }]);
+                checkColumn(columns["data3"], [{ y: 1 }, { y: 2 }, { y: 3 }]);
+                checkColumn(columns["data4"], [{ y: 3 }, { y: 2 }, { y: 1 }]);
             });
         });
 
@@ -90,7 +90,7 @@ describe("Data object", ()=>{
 
                 let columns = data.columns();
 
-                checkColumn(columns[2], "data3", [{ y: 1 }, { y: 2 }, { y: 3 }]);
+                checkColumn(columns["data3"], [{ y: 1 }, { y: 2 }, { y: 3 }]);
             });
 
             it("should throw if column with id already exists", ()=>{
@@ -100,20 +100,42 @@ describe("Data object", ()=>{
             });
         });
 
-        describe("addValuesToColumn", ()=>{
+        describe("setValuesToColumn", ()=>{
             it("should add values", ()=>{
-                data.addValuesToColumn("data1", [100, 90, 80]);
+                data.setValuesToColumn("data1", [100, 90, 80]);
 
                 let columns = data.columns();
 
-                checkColumn(columns[0], "data1", [{ y: 10 }, { y: 20 }, { y: 30 }, { y: 100 }, { y: 90 }, { y: 80 }]);
+                checkColumn(columns["data1"], [{ y: 10 }, { y: 20 }, { y: 30 }, { y: 100 }, { y: 90 }, { y: 80 }]);
+            });
+
+            it("should set to existing values", ()=>{
+                data.setValuesToColumn("data1", [{
+                    x: 0,
+                    y: 30
+                }, {
+                    x: 2,
+                    y: 10
+                }]);
+
+                let columns = data.columns();
+
+                checkColumn(columns["data1"], [{ x: 0, y: 30 }, { y: 20 }, { x: 2, y: 10 }]);
             });
         });
 
-        describe("addValueToColumn", ()=>{
+        describe("setValueToColumn", ()=>{
             it("should add value", ()=>{
-                data.addValueToColumn("data1", 10);
-                checkColumn(data.columns()[0], "data1", [{ y: 10 }, { y: 20 }, { y: 30}, { y: 10 }]);
+                data.setValueToColumn("data1", 10);
+                checkColumn(data.columns()["data1"], [{ y: 10 }, { y: 20 }, { y: 30}, { y: 10 }]);
+            });
+
+            it("should set value", ()=>{
+                data.setValueToColumn("data1", {
+                    x: 1,
+                    y: 40
+                });
+                checkColumn(data.columns()["data1"], [{ y: 10 }, { x: 1, y: 40} , { y: 30 }]);
             });
         });
     });

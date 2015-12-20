@@ -1,6 +1,6 @@
 import Obj from "../object";
 
-import {option, copy, isObject, isNumeric} from "../utils";
+import {option, copy, isObject, isNumeric, isArray, isUndefined, toInt} from "../utils";
 
 
 /**
@@ -18,12 +18,17 @@ export default class DataObject extends Obj {
         let table = __.table = {};
 
         d = option(d, {});
+        
         d.columns = option(d.columns, []);
         d.rows = option(d.rows, []);
 
         this.columns(d.columns);
-        this.rows(d.rows);
+        //this.rows(d.rows);
 
+    }
+
+    clear(){
+        this.__.table = {};
     }
 
     columns(columns){
@@ -33,7 +38,7 @@ export default class DataObject extends Obj {
             return __.table;
         }
 
-        __.table = [];
+        this.clear();
         this.addColumns(columns);
     }
 
@@ -60,15 +65,12 @@ export default class DataObject extends Obj {
             throw new Error(`Column ids should be unique but ${column.id} is already presented in table`);
         }
 
-        __.table.push({
-            id: column.id,
-            values: []
-        });
+        __.table[column.id] = {};
         
-        this.addValuesToColumn(column.id, column.values);
+        this.setValuesToColumn(column.id, column.values);
     }
 
-    addValuesToColumn(id, values){
+    setValuesToColumn(id, values){
         if(typeof id !== "string"){
             throw new TypeError("Column id should be string and not " + typeof id);
         }
@@ -78,27 +80,116 @@ export default class DataObject extends Obj {
         }
 
         let column = this.getColumnById(id);
+        
+        let offset = this.getNextX(id);
 
-        values.forEach(value => {
-            column.values.push(this.__value(value));
-        });
-
-        column.dirty = true;
+        for(let i = 0; i < values.length; i++){
+            let value = values[i];
+            if(isUndefined(value.x)){
+                column[i+offset] = this.__value(value);
+            } else {
+                column[value.x] = this.__value(value);
+            }
+        }
 
     }
 
-    addValueToColumn(id, value){
-        this.addValuesToColumn(id, [value]);
+    setValueToColumn(id, value){
+        this.setValuesToColumn(id, [value]);
+    }
+
+    getColumnById(id){
+        let __ = this.__;
+
+        return __.table[id];
+    }
+
+    rows(rows){
+        let __ = this.__;
+
+        if(rows === undefined){
+            return rows;
+        }
+
+        this.clear();
+        this.addRows(rows);
+    }
+
+    addRows(rows){
+        if(!isArray(rows)){
+            throw new TypeError("Rows should be array and not " + typeof rows);
+        }
+
+        rows.forEach(row => {
+            this.addRow(row);
+        });
+    }
+
+    addRow(row){
+        if(!isArray(row.values)){
+            throw new TypeError("Row values should be array and not " + typeof row.values);
+        }
+
+        row.values.forEach(value => {
+            setValueToRow(row.x, value);
+        });        
+    }
+
+    setValueToRow(x, value){
+        let __ = this.__;
+
+        if(x === undefined){
+            throw new Error("Each row should have x");
+        }
+
+        __.table.forEach(column => {
+            this.setValueToColumn(column.id, x, value);
+        });
+    }
+
+    getNextX(id){
+        let __ = this.__;
+        let column = __.table[id];
+        let m = -1;
+
+        for(let i in column){
+            let x = (isUndefined(column[i].x) ? i : column[i].x);
+            if(x > m){
+                m = x;
+            }
+        }
+
+        return toInt(m)+1;
+    }
+
+    copy(){
     }
 
     __value(v){
         if(isObject(v)){
-            return {
-                y: v.y,
-                x: v.x,
-                label: v.label,
-                color: v.color
-            };
+            let obj = {};
+
+            // This is done for memory efficiency so we don't have smth like
+            // {
+            //     y: 10,
+            //     x: undefined,
+            //     label: undefined,
+            //     color: undefined
+            // }
+
+            if(!isUndefined(v.y)){
+                obj.y = v.y;
+            }
+            if(!isUndefined(v.x)){
+                obj.x = v.x;
+            }
+            if(!isUndefined(v.label)){
+                obj.label = v.label;
+            }
+            if(!isUndefined(v.color)){
+                obj.color = v.color;
+            }
+            return obj;
         }
 
         if(isNumeric(v)){
@@ -108,20 +199,5 @@ export default class DataObject extends Obj {
         }
     }
 
-    getColumnById(id){
-        let columns = this.columns();
-
-        for(let i = columns.length-1; i >= 0; i--){
-            if(columns[i].id === id){
-                return columns[i]
-            }
-        }
-    }
-
-    rows(){
-    }
-
-    copy(){
-    }
 
 }
