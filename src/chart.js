@@ -1,6 +1,7 @@
 import {option} from "./utils";
 
 import ColumnHandler from "./dataHandlers/column";
+import LineHandler from "./dataHandlers/line";
 
 import DefaultBuffer from "./buffers/default";
 import InstantBuffer from "./buffers/instant";
@@ -36,7 +37,7 @@ export default class Chart {
     }
 
     setHandler(handler){
-        handler = option(handler, "column");
+        handler = option(handler, "line");
 
         if(typeof handler === "function"){
             this.handler = new handler(this);
@@ -50,6 +51,8 @@ export default class Chart {
     setHandlerByName(handler){
         if(handler === "column"){
             this.handler = new ColumnHandler(this);
+        } else if(handler === "line"){
+            this.handler = new LineHandler(this);
         } else {
             throw new Error("Uknown type of handler: " + hanlder);
         }

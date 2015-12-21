@@ -9,6 +9,7 @@ export default class OptionObject extends Obj {
 
         super(d, parent);
 
+        this.handler = d.handler;
         this.axis = option(d.axis, {});
         this.legend = option(d.legend, {});
     }

@@ -2,7 +2,14 @@ export default class Handler {
     constructor(){
         this.__ = {
             d: {
-                bindTo: "#chart" 
+                option: { 
+                    bindTo: "#chart",
+                    size: {
+                    }
+                },
+                data: {
+
+                }
             }
         };
 
@@ -11,5 +18,19 @@ export default class Handler {
 
     d(){
         return this.__.d;
+    }
+
+    processSize(size){
+        let d = this.d();
+
+        if(!size.dirty()){
+            return;
+        }
+
+        d.option.size.width = size.width();
+        d.option.size.height = size.height();
+
+        d.option.size.dirty = true;
+        
     }
 }

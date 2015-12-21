@@ -9,45 +9,26 @@ export default class ColumnHandler extends Handler {
     computeRenderObject(data, option){
         let d = this.d();
 
-        this.processColumns(data.columns);
-
         this.processSize(option.size);
+
+        this.processColumns(data.columns);
 
         return d;
     }
 
     init(){
         let d = this.d();
-
-        d.option = {
-            size: {}
-        };
-
-        d.data = {
-            columns: {
-                values: []
-            }
+        d.data.columns = {
+            dirty: true,
+            values: []
         };
     }
 
-    processSize(size){
-        let d = this.d();
-
-        if(!size.dirty()){
-            return;
-        }
-
-        d.option.size.width = size.width();
-        d.option.size.height = size.height();
-
-        d.option.size.dirty = true;
-        
-    }
 
     processColumns(columns){
         let d = this.d();
 
-        if(!columns.dirty()){
+        if(!columns.dirty){
             return;
         }
 

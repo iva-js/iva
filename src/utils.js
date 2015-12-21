@@ -80,6 +80,10 @@ export function isUndefined(obj){
     return obj === undefined;
 }
 
+export function isDefined(obj){
+    return obj !== undefined;
+}
+
 /*
  * Transformers
  */
