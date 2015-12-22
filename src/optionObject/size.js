@@ -1,8 +1,12 @@
 
 import Obj from "../object";
 
+import {option} from "../utils";
+
 export default class Size extends Obj {
     constructor(d, parent){
+        d = option(d, { def: true });
+
         super(d, parent);
 
         this.sizes(d);

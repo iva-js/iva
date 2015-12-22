@@ -149,3 +149,28 @@ export function throwIfNotFunction(v, msg){
         throw new TypeError(`${msg} should be function and not ${typeof v}`);
     }
 }
+
+/*
+ * Object manipulation 
+ */
+
+/*
+ * Returns new object that has values of second object merged into values of first.
+ * {                       {                {
+ *     a: 10,        <---      a: 15,   =       a: 15,
+ *     b: undefined, <---      b: 5     =       b: 5,
+ *     c: 20         <---               =       c: 20
+ * }                       }                }
+ */
+export function merge(o1, o2){
+    let o = {};
+
+    for(let key in o1){
+        o[key] = o1[key];
+    }
+
+    for(let key in o2){
+        o[key] = o2[key];
+    }
+    return o;
+}
