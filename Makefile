@@ -11,3 +11,6 @@ test-integr:
 
 clean:
 	rm -rf node_modules bower_components build
+
+check-ts:
+	tsc ts/iva.d.ts

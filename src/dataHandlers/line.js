@@ -62,6 +62,9 @@ export default class LineHandler extends Handler {
         if(isDefined(value.color)){
             v.color = value.color;
         }
+        if(isDefined(value.label)){
+            v.label = value.label;
+        }
 
         return v;
     }

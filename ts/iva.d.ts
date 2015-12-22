@@ -12,9 +12,24 @@ declare module Iva {
         }
     }
 
+    module Inner {
+        interface RenderObject {
+            data: {
+                areas?: Iva.Store;
+                columns?: Iva.Store;
+                lines?: Iva.Store;
+                pies?: Iva.Store;
+            }
+        }
+    }
+
     class Chart {
         constructor(dataObject: Iva.DataObject, optionObject: Iva.OptionObject);
         redraw();
+    }
+
+    interface Color {
+
     }
 
     class DataObject extends Iva.Obj {
@@ -28,6 +43,16 @@ declare module Iva {
     interface Field {
         query: String,
         value: any
+    }
+
+    interface Store {
+        dirty: Boolean;
+        values: Array<Iva.StoreValues>;
+    }
+
+    interface StoreValues {
+        dirty: Boolean;
+        values: Array<Iva.Value>;
     }
 
     class Obj implements Parent {
@@ -50,5 +75,12 @@ declare module Iva {
 
     interface Parent {
         dirty(dirty: Boolean);
+    }
+
+    interface Value {
+        y: Number;
+        x?: Number;
+        color?: Iva.Color;
+        label?: String
     }
 }
