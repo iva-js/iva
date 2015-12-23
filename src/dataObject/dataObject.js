@@ -31,6 +31,7 @@ export default class DataObject extends Obj {
 
     clear(){
         this.__.table.clear();
+        return this;
     }
 
     columns(columns){
@@ -42,6 +43,8 @@ export default class DataObject extends Obj {
 
         this.clear();
         this.addColumns(columns);
+
+        return this;
     }
 
     column(id, values){
@@ -52,6 +55,7 @@ export default class DataObject extends Obj {
         } else {
             this.emptyColumn(id);
             this.setValuesToColumn(id, values);
+            return this;
         }
     }
 
@@ -65,6 +69,8 @@ export default class DataObject extends Obj {
         columns.forEach(column => {
             this.addColumn(column.id, column.values);
         });
+
+        return this;
     }
 
     addColumn(id, values){
@@ -97,6 +103,8 @@ export default class DataObject extends Obj {
                 column = this.addEmptyColumn(id);
             }
             column.set(x, this.__value(value));
+
+            return this;
         }
     }
 
@@ -118,6 +126,7 @@ export default class DataObject extends Obj {
             }
         }
 
+        return this;
     }
 
     addEmptyColumn(id){
@@ -134,10 +143,13 @@ export default class DataObject extends Obj {
         } else {
             this.addEmptyColumn(id);
         }
+
+        return this;
     }
 
     removeColumn(id){
         this.__.table.delete(id);
+        return this;
     }
 
     rows(rows){
@@ -149,6 +161,8 @@ export default class DataObject extends Obj {
 
         this.clear();
         this.addRows(rows);
+
+        return this;
     }
 
     addRows(rows){
@@ -156,6 +170,8 @@ export default class DataObject extends Obj {
         rows.forEach(row => {
             this.row(row.x, row.values);
         });
+
+        return this;
     }
 
     row(x, values){
@@ -164,6 +180,8 @@ export default class DataObject extends Obj {
         this.emptyRow(x);
 
         this.addValuesToRow(x, values);
+
+        return this;
     }
 
     addValuesToRow(x, values){
@@ -173,6 +191,8 @@ export default class DataObject extends Obj {
         values.forEach(value => {
             this.columnValue(value.id, x, value);
         });
+
+        return this;
     }
 
     emptyRow(x){
@@ -182,6 +202,8 @@ export default class DataObject extends Obj {
                 column.delete(x);
             }
         }
+
+        return this;
     }
 
     toRows(){

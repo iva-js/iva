@@ -6791,6 +6791,7 @@ var DataObject = (function (_Obj) {
         key: "clear",
         value: function clear() {
             this.__.table.clear();
+            return this;
         }
     }, {
         key: "columns",
@@ -6803,6 +6804,8 @@ var DataObject = (function (_Obj) {
 
             this.clear();
             this.addColumns(_columns);
+
+            return this;
         }
     }, {
         key: "column",
