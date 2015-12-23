@@ -1,7 +1,7 @@
-import Handler from "./basic";
+import RectangularHandler from "./rectangular";
 import {option, toString, isDefined} from "../utils";
 
-export default class LineHandler extends Handler {
+export default class LineHandler extends RectangularHandler {
     constructor(){
         super();
     }
@@ -17,20 +17,24 @@ export default class LineHandler extends Handler {
     computeRenderObject(data, option){
         let d = this.d();
 
-        this.processSize(option.size);
+        super.computeRenderObject(data, option);
 
-        this.processLines(data.columns());
+        d.data.lines = this.processLines(data.columns());
 
         return d;
     }
 
     processLines(lines){
-        let d = this.d();
+        let ret = {
+            dirty: true,
+            values: []
+        };
 
         for(let [id, line] of lines){
-            d.data.lines.values.push(this.processLine(line, id));
+            ret.values.push(this.processLine(line, id));
         } 
 
+        return ret;
     }
 
     processLine(line, id){

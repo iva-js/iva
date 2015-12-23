@@ -2,6 +2,7 @@ import d3 from "d3";
 import _ from "underscore";
 
 import Renderer from "../renderer";
+import {PADDING, AXIS} from "./constants";
 
 export default class SvgRenderer extends Renderer {
 
@@ -23,17 +24,46 @@ export default class SvgRenderer extends Renderer {
 
         this.setSizes();
 
+
         //this.redrawColumns();
         this.redrawLines();
+
+        this.redrawAxis();
     }
 
     setSizes(){
-        this.easel.attr("width", this.option.size.width).attr("height", this.option.size.height);
+        let size = this.option.size;
 
-        this.x = d3.scale.linear().range([0, this.option.size.width]);
+        let innerSize = this.innerSize = {
+            width: size.width - PADDING.LEFT - PADDING.RIGHT,
+            height: size.height - PADDING.TOP - PADDING.BOTTOM
+        };
 
-        this.y = d3.scale.linear().range([this.option.size.height, 0]);
+        console.log(innerSize);
 
+        this.easel.attr("width", size.width).attr("height", size.height);
+
+        this.x = d3.scale.linear().range([0, innerSize.width - AXIS.WIDTH]);
+
+        this.y = d3.scale.linear().range([innerSize.height - AXIS.WIDTH, 0]);
+
+    }
+
+    redrawAxis(){
+        let easel = this.easel, option = this.option, x = this.x, y = this.y, size = this.option.size, innerSize = this.innerSize;
+
+        let xAxis = this.xAxis = d3.svg.axis().scale(x).orient("bottom");
+        let yAxis = this.yAxis = d3.svg.axis().scale(y).orient("left");
+
+        easel.append("g")
+            .attr("class", "axis")
+            .attr("transform", `translate(${AXIS.WIDTH + PADDING.LEFT}, ${size.height - AXIS.WIDTH})`)
+            .call(xAxis);
+
+        easel.append("g")
+            .attr("class", "axis")
+            .attr("transform", `translate(${AXIS.WIDTH}, ${PADDING.TOP})`)
+            .call(yAxis);    
     }
 
     redrawColumns(){
@@ -99,7 +129,8 @@ export default class SvgRenderer extends Renderer {
         let linesSvg = easel.selectAll(".lines")
             .data(lines)
           .enter().append("g")
-            .attr("class", "lines");
+            .attr("class", "lines")
+            .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, 0)`);
 
         linesSvg.append("path")
             .attr("class", "line")

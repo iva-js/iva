@@ -1,7 +1,7 @@
 
 import Obj from "../object";
 import Size from "./size";
-import Axis from "./axis";
+import Axes from "./axes";
 
 import {option} from "../utils";
 
@@ -15,7 +15,7 @@ export default class OptionObject extends Obj {
 
         this.handler = d.handler;
 
-        this.axis = new Axis(d.axis, this);
+        this.axes = new Axes(d.axes, this);
 
         this.legend = option(d.legend, {});
     }

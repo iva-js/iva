@@ -2,7 +2,7 @@
 import Obj from "../object";
 import {option, merge, isUndefined} from "../utils";
 
-export default class Axis extends Obj {
+export default class Axes extends Obj {
 
     constructor(d, parent){
         d = option(d, {});
@@ -20,7 +20,7 @@ export default class Axis extends Obj {
 
 }
 
-class AnyAxis extends Obj {
+class Axis extends Obj {
     constructor(d, parent){
         d = option(d, {});
 
@@ -90,10 +90,10 @@ class Both {
     }
 }
 
-class XAxis extends AnyAxis {
+class XAxis extends Axis {
 
 }
 
-class YAxis extends AnyAxis {
+class YAxis extends Axis {
 
 }

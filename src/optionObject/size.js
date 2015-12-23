@@ -5,10 +5,11 @@ import {option} from "../utils";
 
 export default class Size extends Obj {
     constructor(d, parent){
-        d = option(d, { def: true });
+        d = option(d, { });
 
         super(d, parent);
 
+        this.setDefault();
         this.sizes(d);
     }
 
@@ -25,12 +26,8 @@ export default class Size extends Obj {
             return __;
         }
 
-        if(d.def === true){
-            this.setDefault();
-        } else {
-            this.width(d.width);
-            this.height(d.height);
-        }
+        this.width(d.width);
+        this.height(d.height);
     }
 
     width(width){

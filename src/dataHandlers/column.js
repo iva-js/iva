@@ -1,15 +1,13 @@
-import Handler from "./basic";
+import RectangularHandler from "./rectangular";
 import {option} from "../utils";
 
-export default class ColumnHandler extends Handler {
+export default class ColumnHandler extends RectangularHandler {
     constructor(){
         super();
     }
 
     computeRenderObject(data, option){
         let d = this.d();
-
-        this.processSize(option.size);
 
         this.processColumns(data.columns);
 

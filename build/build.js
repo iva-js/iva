@@ -6328,7 +6328,7 @@ var Chart = (function () {
 
 exports.default = Chart;
 
-},{"./buffers/default":192,"./buffers/instant":193,"./dataHandlers/column":196,"./dataHandlers/line":197,"./dataObject/dataObject":198,"./optionObject/optionObject":201,"./renderers/svg/index":205,"./utils":206}],195:[function(require,module,exports){
+},{"./buffers/default":192,"./buffers/instant":193,"./dataHandlers/column":196,"./dataHandlers/line":197,"./dataObject/dataObject":199,"./optionObject/optionObject":203,"./renderers/svg/index":208,"./utils":209}],195:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -6362,18 +6362,21 @@ var Handler = (function () {
             return this.__.d;
         }
     }, {
-        key: "processSize",
-        value: function processSize(size) {
+        key: "computeRenderObject",
+        value: function computeRenderObject(data, option) {
             var d = this.d();
 
-            if (!size.dirty()) {
-                return;
-            }
+            d.option.size = this.processSize(option.size);
+        }
+    }, {
+        key: "processSize",
+        value: function processSize(size) {
 
-            d.option.size.width = size.width();
-            d.option.size.height = size.height();
-
-            d.option.size.dirty = true;
+            return {
+                dirty: true,
+                width: size.width(),
+                height: size.height()
+            };
         }
     }]);
 
@@ -6391,9 +6394,9 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _basic = require("./basic");
+var _rectangular = require("./rectangular");
 
-var _basic2 = _interopRequireDefault(_basic);
+var _rectangular2 = _interopRequireDefault(_rectangular);
 
 var _utils = require("../utils");
 
@@ -6405,8 +6408,8 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var ColumnHandler = (function (_Handler) {
-    _inherits(ColumnHandler, _Handler);
+var ColumnHandler = (function (_RectangularHandler) {
+    _inherits(ColumnHandler, _RectangularHandler);
 
     function ColumnHandler() {
         _classCallCheck(this, ColumnHandler);
@@ -6418,8 +6421,6 @@ var ColumnHandler = (function (_Handler) {
         key: "computeRenderObject",
         value: function computeRenderObject(data, option) {
             var d = this.d();
-
-            this.processSize(option.size);
 
             this.processColumns(data.columns);
 
@@ -6489,24 +6490,26 @@ var ColumnHandler = (function (_Handler) {
     }]);
 
     return ColumnHandler;
-})(_basic2.default);
+})(_rectangular2.default);
 
 exports.default = ColumnHandler;
 
-},{"../utils":206,"./basic":195}],197:[function(require,module,exports){
+},{"../utils":209,"./rectangular":198}],197:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _basic = require("./basic");
+var _rectangular = require("./rectangular");
 
-var _basic2 = _interopRequireDefault(_basic);
+var _rectangular2 = _interopRequireDefault(_rectangular);
 
 var _utils = require("../utils");
 
@@ -6518,8 +6521,8 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var LineHandler = (function (_Handler) {
-    _inherits(LineHandler, _Handler);
+var LineHandler = (function (_RectangularHandler) {
+    _inherits(LineHandler, _RectangularHandler);
 
     function LineHandler() {
         _classCallCheck(this, LineHandler);
@@ -6541,16 +6544,19 @@ var LineHandler = (function (_Handler) {
         value: function computeRenderObject(data, option) {
             var d = this.d();
 
-            this.processSize(option.size);
+            _get(Object.getPrototypeOf(LineHandler.prototype), "computeRenderObject", this).call(this, data, option);
 
-            this.processLines(data.columns());
+            d.data.lines = this.processLines(data.columns());
 
             return d;
         }
     }, {
         key: "processLines",
         value: function processLines(lines) {
-            var d = this.d();
+            var ret = {
+                dirty: true,
+                values: []
+            };
 
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
@@ -6563,7 +6569,7 @@ var LineHandler = (function (_Handler) {
                     var id = _step$value[0];
                     var line = _step$value[1];
 
-                    d.data.lines.values.push(this.processLine(line, id));
+                    ret.values.push(this.processLine(line, id));
                 }
             } catch (err) {
                 _didIteratorError = true;
@@ -6579,6 +6585,8 @@ var LineHandler = (function (_Handler) {
                     }
                 }
             }
+
+            return ret;
         }
     }, {
         key: "processLine",
@@ -6636,17 +6644,91 @@ var LineHandler = (function (_Handler) {
             if ((0, _utils.isDefined)(value.color)) {
                 v.color = value.color;
             }
+            if ((0, _utils.isDefined)(value.label)) {
+                v.label = value.label;
+            }
 
             return v;
         }
     }]);
 
     return LineHandler;
-})(_basic2.default);
+})(_rectangular2.default);
 
 exports.default = LineHandler;
 
-},{"../utils":206,"./basic":195}],198:[function(require,module,exports){
+},{"../utils":209,"./rectangular":198}],198:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _basic = require("./basic");
+
+var _basic2 = _interopRequireDefault(_basic);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/*
+ * Rectangular chart is the father of column, line, area and other charts, that are painted on rectangular canvas.
+ * It has right-angled axes and grids.
+ */
+
+var RectangularHandler = (function (_Handler) {
+    _inherits(RectangularHandler, _Handler);
+
+    function RectangularHandler() {
+        _classCallCheck(this, RectangularHandler);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(RectangularHandler).apply(this, arguments));
+    }
+
+    _createClass(RectangularHandler, [{
+        key: "computeRenderObject",
+        value: function computeRenderObject(data, option) {
+            _get(Object.getPrototypeOf(RectangularHandler.prototype), "computeRenderObject", this).call(this, data, option);
+
+            var d = this.d();
+
+            d.option.axes = this.processAxis(option.axes);
+        }
+    }, {
+        key: "processAxis",
+        value: function processAxis(axes) {
+            var d = {
+                x: {
+                    dirty: true
+                },
+                y: {
+                    dirty: true
+                },
+                dirty: true
+            };
+
+            d.x.visible = axes.x.visible();
+            d.y.visible = axes.y.visible();
+
+            return d;
+        }
+    }]);
+
+    return RectangularHandler;
+})(_basic2.default);
+
+exports.default = RectangularHandler;
+
+},{"./basic":195}],199:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -7061,7 +7143,7 @@ var DataObject = (function (_Obj) {
 
 exports.default = DataObject;
 
-},{"../object":200,"../utils":206,"babel-polyfill":1}],199:[function(require,module,exports){
+},{"../object":201,"../utils":209,"babel-polyfill":1}],200:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7096,7 +7178,7 @@ exports.OptionObject = _optionObject2.default;
 exports.Chart = _chart2.default;
 exports.Buffer = Buffer;
 
-},{"./buffers/default":192,"./chart":194,"./dataObject/dataObject":198,"./optionObject/optionObject":201}],200:[function(require,module,exports){
+},{"./buffers/default":192,"./chart":194,"./dataObject/dataObject":199,"./optionObject/optionObject":203}],201:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7230,7 +7312,171 @@ var Obj = (function () {
 
 exports.default = Obj;
 
-},{"./utils":206}],201:[function(require,module,exports){
+},{"./utils":209}],202:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Axes = (function (_Obj) {
+    _inherits(Axes, _Obj);
+
+    function Axes(d, parent) {
+        _classCallCheck(this, Axes);
+
+        d = (0, _utils.option)(d, {});
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Axes).call(this, d, parent));
+
+        var x = (0, _utils.option)(d.x, {});
+        var y = (0, _utils.option)(d.y, {});
+        var both = (0, _utils.option)(d.both, {});
+
+        _this.x = new XAxis((0, _utils.merge)(both, x), _this);
+        _this.y = new YAxis((0, _utils.merge)(both, y), _this);
+        _this.both = new Both(_this);
+        return _this;
+    }
+
+    return Axes;
+})(_object2.default);
+
+exports.default = Axes;
+
+var Axis = (function (_Obj2) {
+    _inherits(Axis, _Obj2);
+
+    function Axis(d, parent) {
+        _classCallCheck(this, Axis);
+
+        d = (0, _utils.option)(d, {});
+
+        var _this2 = _possibleConstructorReturn(this, Object.getPrototypeOf(Axis).call(this, d, parent));
+
+        _this2.setDefault();
+        _this2.options(d);
+        return _this2;
+    }
+
+    _createClass(Axis, [{
+        key: "options",
+        value: function options(d) {
+            this.visible(d.visible);
+        }
+    }, {
+        key: "visible",
+        value: function visible(_visible) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_visible)) {
+                return __.visible;
+            }
+
+            __.visible = _visible;
+            this.dirty(true);
+        }
+    }, {
+        key: "show",
+        value: function show() {
+            this.visible(true);
+        }
+    }, {
+        key: "hide",
+        value: function hide() {
+            this.visible(false);
+        }
+    }, {
+        key: "setDefault",
+        value: function setDefault() {
+            this.options(this.getDefault());
+        }
+    }, {
+        key: "getDefault",
+        value: function getDefault() {
+            return {
+                visible: false
+            };
+        }
+    }]);
+
+    return Axis;
+})(_object2.default);
+
+/*
+ * This is kinda weird object that just calls both X and Y axis APIs (but first checks, if it is possible, so you can't
+ * call both.position("right") and hope it will work, since horizontal axis can't be right or left.
+ */
+
+var Both = (function () {
+    function Both(proxy) {
+        _classCallCheck(this, Both);
+
+        this.__ = {
+            proxy: proxy
+        };
+    }
+
+    _createClass(Both, [{
+        key: "show",
+        value: function show() {
+            var proxy = this.__.proxy;
+            proxy.x.show();
+            proxy.y.show();
+        }
+    }, {
+        key: "hide",
+        value: function hide() {
+            var proxy = this.__.proxy;
+            proxy.x.hide();
+            proxy.y.hide();
+        }
+    }]);
+
+    return Both;
+})();
+
+var XAxis = (function (_Axis) {
+    _inherits(XAxis, _Axis);
+
+    function XAxis() {
+        _classCallCheck(this, XAxis);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(XAxis).apply(this, arguments));
+    }
+
+    return XAxis;
+})(Axis);
+
+var YAxis = (function (_Axis2) {
+    _inherits(YAxis, _Axis2);
+
+    function YAxis() {
+        _classCallCheck(this, YAxis);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(YAxis).apply(this, arguments));
+    }
+
+    return YAxis;
+})(Axis);
+
+},{"../object":201,"../utils":209}],203:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7246,6 +7492,10 @@ var _object2 = _interopRequireDefault(_object);
 var _size = require("./size");
 
 var _size2 = _interopRequireDefault(_size);
+
+var _axes = require("./axes");
+
+var _axes2 = _interopRequireDefault(_axes);
 
 var _utils = require("../utils");
 
@@ -7267,8 +7517,12 @@ var OptionObject = (function (_Obj) {
 
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(OptionObject).call(this, d, parent));
 
+        _this.size = new _size2.default(d.size, _this);
+
         _this.handler = d.handler;
-        _this.axis = (0, _utils.option)(d.axis, {});
+
+        _this.axes = new _axes2.default(d.axes, _this);
+
         _this.legend = (0, _utils.option)(d.legend, {});
         return _this;
     }
@@ -7276,18 +7530,10 @@ var OptionObject = (function (_Obj) {
     _createClass(OptionObject, [{
         key: "__init",
         value: function __init(d, parent) {
-
-            d.size = (0, _utils.option)(d.size, { def: true });
-
-            var __ = this.__ = {
-                legend: {},
-                axis: {},
-                chart: "#chart",
+            this.__ = {
                 parent: parent,
                 dirty: true
             };
-
-            this.size = new _size2.default(d.size, this);
         }
     }, {
         key: "copy",
@@ -7301,7 +7547,7 @@ var OptionObject = (function (_Obj) {
 
 exports.default = OptionObject;
 
-},{"../object":200,"../utils":206,"./size":202}],202:[function(require,module,exports){
+},{"../object":201,"../utils":209,"./axes":202,"./size":204}],204:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7313,6 +7559,8 @@ Object.defineProperty(exports, "__esModule", {
 var _object = require("../object");
 
 var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7328,8 +7576,11 @@ var Size = (function (_Obj) {
     function Size(d, parent) {
         _classCallCheck(this, Size);
 
+        d = (0, _utils.option)(d, {});
+
         var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Size).call(this, d, parent));
 
+        _this.setDefault();
         _this.sizes(d);
         return _this;
     }
@@ -7350,12 +7601,8 @@ var Size = (function (_Obj) {
                 return __;
             }
 
-            if (d.def === true) {
-                this.setDefault();
-            } else {
-                this.width(d.width);
-                this.height(d.height);
-            }
+            this.width(d.width);
+            this.height(d.height);
         }
     }, {
         key: "width",
@@ -7399,7 +7646,7 @@ var Size = (function (_Obj) {
 
 exports.default = Size;
 
-},{"../object":200}],203:[function(require,module,exports){
+},{"../object":201,"../utils":209}],205:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7436,7 +7683,7 @@ var RenderObject = (function () {
 
 exports.default = RenderObject;
 
-},{"./utils":206}],204:[function(require,module,exports){
+},{"./utils":209}],206:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7459,7 +7706,24 @@ var Renderer = function Renderer() {
 
 exports.default = Renderer;
 
-},{"../renderObject":203}],205:[function(require,module,exports){
+},{"../renderObject":205}],207:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+var PADDING = exports.PADDING = {
+    LEFT: 10,
+    RIGHT: 10,
+    TOP: 10,
+    BOTTOM: 10
+};
+
+var AXIS = exports.AXIS = {
+    WIDTH: 30
+};
+
+},{}],208:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7479,6 +7743,8 @@ var _underscore2 = _interopRequireDefault(_underscore);
 var _renderer = require("../renderer");
 
 var _renderer2 = _interopRequireDefault(_renderer);
+
+var _constants = require("./constants");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7517,15 +7783,43 @@ var SvgRenderer = (function (_Renderer) {
 
             //this.redrawColumns();
             this.redrawLines();
+
+            this.redrawAxis();
         }
     }, {
         key: "setSizes",
         value: function setSizes() {
-            this.easel.attr("width", this.option.size.width).attr("height", this.option.size.height);
+            var size = this.option.size;
 
-            this.x = _d2.default.scale.linear().range([0, this.option.size.width]);
+            var innerSize = this.innerSize = {
+                width: size.width - _constants.PADDING.LEFT - _constants.PADDING.RIGHT,
+                height: size.height - _constants.PADDING.TOP - _constants.PADDING.BOTTOM
+            };
 
-            this.y = _d2.default.scale.linear().range([this.option.size.height, 0]);
+            console.log(innerSize);
+
+            this.easel.attr("width", size.width).attr("height", size.height);
+
+            this.x = _d2.default.scale.linear().range([0, innerSize.width - _constants.AXIS.WIDTH]);
+
+            this.y = _d2.default.scale.linear().range([innerSize.height - _constants.AXIS.WIDTH, 0]);
+        }
+    }, {
+        key: "redrawAxis",
+        value: function redrawAxis() {
+            var easel = this.easel,
+                option = this.option,
+                x = this.x,
+                y = this.y,
+                size = this.option.size,
+                innerSize = this.innerSize;
+
+            var xAxis = this.xAxis = _d2.default.svg.axis().scale(x).orient("bottom");
+            var yAxis = this.yAxis = _d2.default.svg.axis().scale(y).orient("left");
+
+            easel.append("g").attr("class", "axis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").call(xAxis);
+
+            easel.append("g").attr("class", "axis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").call(yAxis);
         }
     }, {
         key: "redrawColumns",
@@ -7622,7 +7916,7 @@ var SvgRenderer = (function (_Renderer) {
                 return y(d.y);
             }).interpolate("basis");
 
-            var linesSvg = easel.selectAll(".lines").data(lines).enter().append("g").attr("class", "lines");
+            var linesSvg = easel.selectAll(".lines").data(lines).enter().append("g").attr("class", "lines").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", 0)");
 
             linesSvg.append("path").attr("class", "line").attr("d", function (d) {
                 return lineSvg(d.values);
@@ -7637,7 +7931,7 @@ var SvgRenderer = (function (_Renderer) {
 
 exports.default = SvgRenderer;
 
-},{"../renderer":204,"d3":207,"underscore":191}],206:[function(require,module,exports){
+},{"../renderer":206,"./constants":207,"d3":210,"underscore":191}],209:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7664,6 +7958,7 @@ exports.throwIfNotArray = throwIfNotArray;
 exports.throwIfNotObject = throwIfNotObject;
 exports.throwIfNotString = throwIfNotString;
 exports.throwIfNotFunction = throwIfNotFunction;
+exports.merge = merge;
 
 var _underscore = require("underscore");
 
@@ -7823,7 +8118,32 @@ function throwIfNotFunction(v, msg) {
     }
 }
 
-},{"underscore":191}],207:[function(require,module,exports){
+/*
+ * Object manipulation 
+ */
+
+/*
+ * Returns new object that has values of second object merged into values of first.
+ * {                       {                {
+ *     a: 10,        <---      a: 15,   =       a: 15,
+ *     b: undefined, <---      b: 5     =       b: 5,
+ *     c: 20         <---               =       c: 20
+ * }                       }                }
+ */
+function merge(o1, o2) {
+    var o = {};
+
+    for (var key in o1) {
+        o[key] = o1[key];
+    }
+
+    for (var key in o2) {
+        o[key] = o2[key];
+    }
+    return o;
+}
+
+},{"underscore":191}],210:[function(require,module,exports){
 !function() {
   var d3 = {
     version: "3.5.6"
@@ -17328,7 +17648,7 @@ function throwIfNotFunction(v, msg) {
   if (typeof define === "function" && define.amd) define(d3); else if (typeof module === "object" && module.exports) module.exports = d3;
   this.d3 = d3;
 }();
-},{}]},{},[199])(199)
+},{}]},{},[200])(200)
 });
 
 

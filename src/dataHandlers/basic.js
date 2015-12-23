@@ -20,17 +20,18 @@ export default class Handler {
         return this.__.d;
     }
 
-    processSize(size){
+    computeRenderObject(data, option){
         let d = this.d();
 
-        if(!size.dirty()){
-            return;
+        d.option.size = this.processSize(option.size);
+    }
+
+    processSize(size){
+       
+        return {
+            dirty: true,
+            width: size.width(),
+            height: size.height()
         }
-
-        d.option.size.width = size.width();
-        d.option.size.height = size.height();
-
-        d.option.size.dirty = true;
-        
     }
 }
