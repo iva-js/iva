@@ -10,7 +10,7 @@ export default class InstantBuffer extends DefaultBuffer {
         let __ = this.__;
 
         if(dirty){
-            __.chart.redraw();
+            this.sendRedraw();
         }
     }
 }

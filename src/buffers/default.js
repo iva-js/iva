@@ -5,14 +5,15 @@
  */
 export default class DefaultBuffer {
     constructor(chart){
-        this.__init(chart);
+        this.__init();
+        this.registerChart(chart);
     }
 
-    __init(chart){
+    __init(){
         this.__ = {
             dirty: false,
-            chart: chart,
-            freeze: false
+            freeze: false,
+            charts: []
         }
     }
 
@@ -26,6 +27,23 @@ export default class DefaultBuffer {
         if(!__.freeze){
             this.actOnDirty(dirty);
         }
+    }
+
+    registerChart(chart){
+        this.__.charts.push(chart);
+    }
+
+    unregisterChart(chart){
+        let charts = this.__.charts;
+        for(let i = 0; i < charts.length; i++){
+            if(chart === charts[i]){
+                charts.splice(i, 1);
+            }
+        }
+    }
+
+    sendRedraw(){
+        this.__.charts.forEach(chart => chart.redraw());
     }
 
     /**

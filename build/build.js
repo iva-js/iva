@@ -6075,16 +6075,17 @@ var DefaultBuffer = (function () {
     function DefaultBuffer(chart) {
         _classCallCheck(this, DefaultBuffer);
 
-        this.__init(chart);
+        this.__init();
+        this.registerChart(chart);
     }
 
     _createClass(DefaultBuffer, [{
         key: "__init",
-        value: function __init(chart) {
+        value: function __init() {
             this.__ = {
                 dirty: false,
-                chart: chart,
-                freeze: false
+                freeze: false,
+                charts: []
             };
         }
     }, {
@@ -6099,6 +6100,28 @@ var DefaultBuffer = (function () {
             if (!__.freeze) {
                 this.actOnDirty(_dirty);
             }
+        }
+    }, {
+        key: "registerChart",
+        value: function registerChart(chart) {
+            this.__.charts.push(chart);
+        }
+    }, {
+        key: "unregisterChart",
+        value: function unregisterChart(chart) {
+            var charts = this.__.charts;
+            for (var i = 0; i < charts.length; i++) {
+                if (chart === charts[i]) {
+                    charts.splice(i, 1);
+                }
+            }
+        }
+    }, {
+        key: "sendRedraw",
+        value: function sendRedraw() {
+            this.__.charts.forEach(function (chart) {
+                return chart.redraw();
+            });
         }
 
         /**
@@ -6167,7 +6190,7 @@ var InstantBuffer = (function (_DefaultBuffer) {
             var __ = this.__;
 
             if (dirty) {
-                __.chart.redraw();
+                this.sendRedraw();
             }
         }
     }]);
@@ -6817,6 +6840,7 @@ var DataObject = (function (_Obj) {
             } else {
                 this.emptyColumn(id);
                 this.setValuesToColumn(id, values);
+                return this;
             }
         }
     }, {
@@ -6833,6 +6857,8 @@ var DataObject = (function (_Obj) {
             columns.forEach(function (column) {
                 _this2.addColumn(column.id, column.values);
             });
+
+            return this;
         }
     }, {
         key: "addColumn",
@@ -6867,6 +6893,8 @@ var DataObject = (function (_Obj) {
                     column = this.addEmptyColumn(id);
                 }
                 column.set(x, this.__value(value));
+
+                return this;
             }
         }
     }, {
@@ -6888,6 +6916,8 @@ var DataObject = (function (_Obj) {
                     column.set(value.x, this.__value(value));
                 }
             }
+
+            return this;
         }
     }, {
         key: "addEmptyColumn",
@@ -6906,11 +6936,14 @@ var DataObject = (function (_Obj) {
             } else {
                 this.addEmptyColumn(id);
             }
+
+            return this;
         }
     }, {
         key: "removeColumn",
         value: function removeColumn(id) {
             this.__.table.delete(id);
+            return this;
         }
     }, {
         key: "rows",
@@ -6923,6 +6956,8 @@ var DataObject = (function (_Obj) {
 
             this.clear();
             this.addRows(_rows);
+
+            return this;
         }
     }, {
         key: "addRows",
@@ -6933,6 +6968,8 @@ var DataObject = (function (_Obj) {
             rows.forEach(function (row) {
                 _this3.row(row.x, row.values);
             });
+
+            return this;
         }
     }, {
         key: "row",
@@ -6942,6 +6979,8 @@ var DataObject = (function (_Obj) {
             this.emptyRow(x);
 
             this.addValuesToRow(x, values);
+
+            return this;
         }
     }, {
         key: "addValuesToRow",
@@ -6954,6 +6993,8 @@ var DataObject = (function (_Obj) {
             values.forEach(function (value) {
                 _this4.columnValue(value.id, x, value);
             });
+
+            return this;
         }
     }, {
         key: "emptyRow",
@@ -6988,6 +7029,8 @@ var DataObject = (function (_Obj) {
                     }
                 }
             }
+
+            return this;
         }
     }, {
         key: "toRows",

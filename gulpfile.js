@@ -20,8 +20,6 @@ var Server = require("karma").Server;
 
 var rmdir = require("rmdir");
 
-var i = 0;
-
 function compile(watch) {
     var bundler = watchify(browserify({ debug: true, entries: ["src/index.js"], standalone: "Iva"})
                          .transform(babel, { sourceMapRelative: path.resolve(__dirname, 'src'), presets: ["es2015"] }));
@@ -30,7 +28,7 @@ function compile(watch) {
         lint();
 
         rmdir("./build", function(err, dirs, files){
-            console.log("removed build");
+            console.log('-> bundling at ' + new Date());
 
             bundler.bundle()
                 .on('error', function(err) { console.error(err); this.emit('end'); })
@@ -45,8 +43,6 @@ function compile(watch) {
 
     if (watch) {
         bundler.on('update', function() {
-            i++;
-            console.log('-> bundling for ' + i + ' time');
             rebundle();
         });
     }

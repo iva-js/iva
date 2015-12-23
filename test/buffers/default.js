@@ -37,4 +37,6 @@ describe("DefaultBuffer", ()=>{
             expect(buffer.freeze()).to.equal(false);
         });
     });
+
+
 });
