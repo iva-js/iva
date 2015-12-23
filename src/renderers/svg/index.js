@@ -13,8 +13,11 @@ export default class SvgRenderer extends Renderer {
 
         this.easel = d3.selectAll("#chart");
         this.easel.append("g").attr("transform", "translate(0, 0)");
+        this.easel.append("g").attr("class", "lines");
 
         this.color = d3.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
+
+        this.initAxes();
     }
 
     redraw(renderObject){
@@ -24,46 +27,55 @@ export default class SvgRenderer extends Renderer {
 
         this.setSizes();
 
-
         //this.redrawColumns();
         this.redrawLines();
 
         this.redrawAxis();
     }
 
+    initAxes(){
+        let easel = this.easel, option = this.option, x = this.x, y = this.y, size = this.option.size, innerSize = this.innerSize;
+
+        let xAxis = this.xAxis = d3.svg.axis().orient("bottom");
+        let yAxis = this.yAxis = d3.svg.axis().orient("left");
+    
+        easel.append("g")
+            .attr("class", "axis xAxis");
+
+        easel.append("g")
+            .attr("class", "axis yAxis");
+    }
+
     setSizes(){
-        let size = this.option.size;
+        let easel = this.easel, size = this.option.size;
 
         let innerSize = this.innerSize = {
             width: size.width - PADDING.LEFT - PADDING.RIGHT,
             height: size.height - PADDING.TOP - PADDING.BOTTOM
         };
 
-        console.log(innerSize);
-
         this.easel.attr("width", size.width).attr("height", size.height);
 
-        this.x = d3.scale.linear().range([0, innerSize.width - AXIS.WIDTH]);
+        let x = this.x = d3.scale.linear().range([0, innerSize.width - AXIS.WIDTH]);
 
-        this.y = d3.scale.linear().range([innerSize.height - AXIS.WIDTH, 0]);
+        let y = this.y = d3.scale.linear().range([innerSize.height - AXIS.WIDTH, 0]);
 
     }
 
     redrawAxis(){
-        let easel = this.easel, option = this.option, x = this.x, y = this.y, size = this.option.size, innerSize = this.innerSize;
+        let easel = this.easel, size = this.option.size, xAxis = this.xAxis, yAxis = this.yAxis;
 
-        let xAxis = this.xAxis = d3.svg.axis().scale(x).orient("bottom");
-        let yAxis = this.yAxis = d3.svg.axis().scale(y).orient("left");
+        xAxis.scale(this.x);
+        yAxis.scale(this.y);
 
-        easel.append("g")
-            .attr("class", "axis")
+        easel.select(".xAxis")
             .attr("transform", `translate(${AXIS.WIDTH + PADDING.LEFT}, ${size.height - AXIS.WIDTH})`)
             .call(xAxis);
 
-        easel.append("g")
-            .attr("class", "axis")
+        easel.select(".yAxis")
             .attr("transform", `translate(${AXIS.WIDTH}, ${PADDING.TOP})`)
-            .call(yAxis);    
+            .call(yAxis);
+
     }
 
     redrawColumns(){
@@ -117,7 +129,7 @@ export default class SvgRenderer extends Renderer {
 
         color.domain(lines.map(line => line.id));
 
-        let lineSvg = d3.svg.line()
+        let line = d3.svg.line()
             .x(d => {
                 return x(d.x);
             })
@@ -126,18 +138,21 @@ export default class SvgRenderer extends Renderer {
             })
             .interpolate("basis");
 
-        let linesSvg = easel.selectAll(".lines")
-            .data(lines)
-          .enter().append("g")
-            .attr("class", "lines")
-            .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, 0)`);
+        let linesSvg = easel.select(".lines");
 
-        linesSvg.append("path")
+        let lineSvg = linesSvg.selectAll(".line").data(lines);
+
+        lineSvg.enter().append("g")
             .attr("class", "line")
-            .attr("d", d => lineSvg(d.values))
+            .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, 0)`)
+
+        lineSvg.append("path")
+            .attr("class", "line")
+            .attr("d", d => line(d.values))
             .attr("stroke", d => color(d.id))
             .attr("stroke-width", 2)
             .attr("fill", "none");
 
+        lineSvg.exit().remove();    
     }
 }

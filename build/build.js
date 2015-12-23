@@ -7767,8 +7767,11 @@ var SvgRenderer = (function (_Renderer) {
 
         _this.easel = _d2.default.selectAll("#chart");
         _this.easel.append("g").attr("transform", "translate(0, 0)");
+        _this.easel.append("g").attr("class", "lines");
 
         _this.color = _d2.default.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
+
+        _this.initAxes();
         return _this;
     }
 
@@ -7787,26 +7790,8 @@ var SvgRenderer = (function (_Renderer) {
             this.redrawAxis();
         }
     }, {
-        key: "setSizes",
-        value: function setSizes() {
-            var size = this.option.size;
-
-            var innerSize = this.innerSize = {
-                width: size.width - _constants.PADDING.LEFT - _constants.PADDING.RIGHT,
-                height: size.height - _constants.PADDING.TOP - _constants.PADDING.BOTTOM
-            };
-
-            console.log(innerSize);
-
-            this.easel.attr("width", size.width).attr("height", size.height);
-
-            this.x = _d2.default.scale.linear().range([0, innerSize.width - _constants.AXIS.WIDTH]);
-
-            this.y = _d2.default.scale.linear().range([innerSize.height - _constants.AXIS.WIDTH, 0]);
-        }
-    }, {
-        key: "redrawAxis",
-        value: function redrawAxis() {
+        key: "initAxes",
+        value: function initAxes() {
             var easel = this.easel,
                 option = this.option,
                 x = this.x,
@@ -7814,12 +7799,44 @@ var SvgRenderer = (function (_Renderer) {
                 size = this.option.size,
                 innerSize = this.innerSize;
 
-            var xAxis = this.xAxis = _d2.default.svg.axis().scale(x).orient("bottom");
-            var yAxis = this.yAxis = _d2.default.svg.axis().scale(y).orient("left");
+            var xAxis = this.xAxis = _d2.default.svg.axis().orient("bottom");
+            var yAxis = this.yAxis = _d2.default.svg.axis().orient("left");
 
-            easel.append("g").attr("class", "axis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").call(xAxis);
+            easel.append("g").attr("class", "axis xAxis");
 
-            easel.append("g").attr("class", "axis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").call(yAxis);
+            easel.append("g").attr("class", "axis yAxis");
+        }
+    }, {
+        key: "setSizes",
+        value: function setSizes() {
+            var easel = this.easel,
+                size = this.option.size;
+
+            var innerSize = this.innerSize = {
+                width: size.width - _constants.PADDING.LEFT - _constants.PADDING.RIGHT,
+                height: size.height - _constants.PADDING.TOP - _constants.PADDING.BOTTOM
+            };
+
+            this.easel.attr("width", size.width).attr("height", size.height);
+
+            var x = this.x = _d2.default.scale.linear().range([0, innerSize.width - _constants.AXIS.WIDTH]);
+
+            var y = this.y = _d2.default.scale.linear().range([innerSize.height - _constants.AXIS.WIDTH, 0]);
+        }
+    }, {
+        key: "redrawAxis",
+        value: function redrawAxis() {
+            var easel = this.easel,
+                size = this.option.size,
+                xAxis = this.xAxis,
+                yAxis = this.yAxis;
+
+            xAxis.scale(this.x);
+            yAxis.scale(this.y);
+
+            easel.select(".xAxis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").call(xAxis);
+
+            easel.select(".yAxis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").call(yAxis);
         }
     }, {
         key: "redrawColumns",
@@ -7910,19 +7927,25 @@ var SvgRenderer = (function (_Renderer) {
                 return line.id;
             }));
 
-            var lineSvg = _d2.default.svg.line().x(function (d) {
+            var line = _d2.default.svg.line().x(function (d) {
                 return x(d.x);
             }).y(function (d) {
                 return y(d.y);
             }).interpolate("basis");
 
-            var linesSvg = easel.selectAll(".lines").data(lines).enter().append("g").attr("class", "lines").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", 0)");
+            var linesSvg = easel.select(".lines");
 
-            linesSvg.append("path").attr("class", "line").attr("d", function (d) {
-                return lineSvg(d.values);
+            var lineSvg = linesSvg.selectAll(".line").data(lines);
+
+            lineSvg.enter().append("g").attr("class", "line").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", 0)");
+
+            lineSvg.append("path").attr("class", "line").attr("d", function (d) {
+                return line(d.values);
             }).attr("stroke", function (d) {
                 return color(d.id);
             }).attr("stroke-width", 2).attr("fill", "none");
+
+            lineSvg.exit().remove();
         }
     }]);
 
