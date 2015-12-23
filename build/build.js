@@ -7741,15 +7741,13 @@ var _d = require("d3");
 
 var _d2 = _interopRequireDefault(_d);
 
-var _underscore = require("underscore");
-
-var _underscore2 = _interopRequireDefault(_underscore);
-
 var _renderer = require("../renderer");
 
 var _renderer2 = _interopRequireDefault(_renderer);
 
 var _constants = require("./constants");
+
+var _utils = require("../../utils");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7833,15 +7831,20 @@ var SvgRenderer = (function (_Renderer) {
         value: function redrawAxis() {
             var easel = this.easel,
                 size = this.option.size,
+                axes = this.option.axes,
                 xAxis = this.xAxis,
                 yAxis = this.yAxis;
 
             xAxis.scale(this.x);
             yAxis.scale(this.y);
 
-            easel.select(".xAxis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").call(xAxis);
+            easel.select(".xAxis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").style("visibility", function (d) {
+                return (0, _utils.svgVisibility)(axes.x.visible);
+            }).call(xAxis);
 
-            easel.select(".yAxis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").call(yAxis);
+            easel.select(".yAxis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").style("visibility", function (d) {
+                return (0, _utils.svgVisibility)(axes.y.visible);
+            }).call(yAxis);
         }
     }, {
         key: "redrawColumns",
@@ -7959,7 +7962,7 @@ var SvgRenderer = (function (_Renderer) {
 
 exports.default = SvgRenderer;
 
-},{"../renderer":206,"./constants":207,"d3":210,"underscore":191}],209:[function(require,module,exports){
+},{"../../utils":209,"../renderer":206,"./constants":207,"d3":210}],209:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7987,6 +7990,7 @@ exports.throwIfNotObject = throwIfNotObject;
 exports.throwIfNotString = throwIfNotString;
 exports.throwIfNotFunction = throwIfNotFunction;
 exports.merge = merge;
+exports.svgVisibility = svgVisibility;
 
 var _underscore = require("underscore");
 
@@ -8169,6 +8173,18 @@ function merge(o1, o2) {
         o[key] = o2[key];
     }
     return o;
+}
+
+/*
+ * SVG utility
+ */
+
+function svgVisibility(b) {
+    if (b) {
+        return "visible";
+    } else {
+        return "hidden";
+    }
 }
 
 },{"underscore":191}],210:[function(require,module,exports){

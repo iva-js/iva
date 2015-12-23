@@ -24,7 +24,6 @@ var optionObject = new Iva.OptionObject({
     handler: "line",
     axes: {
         both: {
-            visible: true
         }
     }
 }, buffer);

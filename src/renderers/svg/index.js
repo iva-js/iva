@@ -1,8 +1,9 @@
 import d3 from "d3";
-import _ from "underscore";
 
 import Renderer from "../renderer";
 import {PADDING, AXIS} from "./constants";
+
+import {svgVisibility} from "../../utils";
 
 export default class SvgRenderer extends Renderer {
 
@@ -63,17 +64,19 @@ export default class SvgRenderer extends Renderer {
     }
 
     redrawAxis(){
-        let easel = this.easel, size = this.option.size, xAxis = this.xAxis, yAxis = this.yAxis;
+        let easel = this.easel, size = this.option.size, axes = this.option.axes, xAxis = this.xAxis, yAxis = this.yAxis;
 
         xAxis.scale(this.x);
         yAxis.scale(this.y);
 
         easel.select(".xAxis")
             .attr("transform", `translate(${AXIS.WIDTH + PADDING.LEFT}, ${size.height - AXIS.WIDTH})`)
+            .style("visibility", d => svgVisibility(axes.x.visible))
             .call(xAxis);
 
         easel.select(".yAxis")
             .attr("transform", `translate(${AXIS.WIDTH}, ${PADDING.TOP})`)
+            .style("visibility", d => svgVisibility(axes.y.visible))
             .call(yAxis);
 
     }
