@@ -140,18 +140,15 @@ export default class SvgRenderer extends Renderer {
 
         let linesSvg = easel.select(".lines");
 
-        let lineSvg = linesSvg.selectAll(".line").data(lines);
+        let lineSvg = linesSvg.selectAll("path").data(lines);
 
-        lineSvg.enter().append("g")
-            .attr("class", "line")
+        lineSvg.enter().append("path")
             .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, 0)`)
-
-        lineSvg.append("path")
-            .attr("class", "line")
-            .attr("d", d => line(d.values))
             .attr("stroke", d => color(d.id))
             .attr("stroke-width", 2)
             .attr("fill", "none");
+
+        lineSvg.attr("d", d => line(d.values))
 
         lineSvg.exit().remove();    
     }

@@ -7167,10 +7167,15 @@ var _default = require("./buffers/default");
 
 var _default2 = _interopRequireDefault(_default);
 
+var _instant = require("./buffers/instant");
+
+var _instant2 = _interopRequireDefault(_instant);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var Buffer = {
-    Default: _default2.default
+    Default: _default2.default,
+    Instant: _instant2.default
 };
 
 exports.DataObject = _dataObject2.default;
@@ -7178,7 +7183,7 @@ exports.OptionObject = _optionObject2.default;
 exports.Chart = _chart2.default;
 exports.Buffer = Buffer;
 
-},{"./buffers/default":192,"./chart":194,"./dataObject/dataObject":199,"./optionObject/optionObject":203}],201:[function(require,module,exports){
+},{"./buffers/default":192,"./buffers/instant":193,"./chart":194,"./dataObject/dataObject":199,"./optionObject/optionObject":203}],201:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7935,15 +7940,15 @@ var SvgRenderer = (function (_Renderer) {
 
             var linesSvg = easel.select(".lines");
 
-            var lineSvg = linesSvg.selectAll(".line").data(lines);
+            var lineSvg = linesSvg.selectAll("path").data(lines);
 
-            lineSvg.enter().append("g").attr("class", "line").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", 0)");
-
-            lineSvg.append("path").attr("class", "line").attr("d", function (d) {
-                return line(d.values);
-            }).attr("stroke", function (d) {
+            lineSvg.enter().append("path").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", 0)").attr("stroke", function (d) {
                 return color(d.id);
             }).attr("stroke-width", 2).attr("fill", "none");
+
+            lineSvg.attr("d", function (d) {
+                return line(d.values);
+            });
 
             lineSvg.exit().remove();
         }
