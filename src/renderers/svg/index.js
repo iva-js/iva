@@ -196,6 +196,7 @@ export default class SvgRenderer extends Renderer {
         areaSvg.enter().append("path")
             .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, ${PADDING.TOP})`)
             .attr("class", "area")
+            .attr("stroke", d => color(d.id))
             .attr("fill", d => color(d.id));
 
         areaSvg.attr("d", d => area(d.values));

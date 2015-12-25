@@ -8230,7 +8230,9 @@ var SvgRenderer = (function (_Renderer) {
 
             var areaSvg = areasSvg.selectAll("path").data(areas);
 
-            areaSvg.enter().append("path").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("class", "area").attr("fill", function (d) {
+            areaSvg.enter().append("path").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("class", "area").attr("stroke", function (d) {
+                return color(d.id);
+            }).attr("fill", function (d) {
                 return color(d.id);
             });
 
