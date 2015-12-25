@@ -2,6 +2,7 @@ import {option} from "./utils";
 
 import ColumnHandler from "./dataHandlers/column";
 import LineHandler from "./dataHandlers/line";
+import AreaHandler from "./dataHandlers/area";
 
 import DefaultBuffer from "./buffers/default";
 import InstantBuffer from "./buffers/instant";
@@ -53,6 +54,8 @@ export default class Chart {
             this.handler = new ColumnHandler(this);
         } else if(handler === "line"){
             this.handler = new LineHandler(this);
+        } else if(handler === "area"){
+            this.handler = new AreaHandler(this);
         } else {
             throw new Error("Uknown type of handler: " + hanlder);
         }

@@ -1,6 +1,8 @@
 
 import Handler from "./basic";
 
+import {isDefined} from "../utils";
+
 /*
  * Rectangular chart is the father of column, line, area and other charts, that are painted on rectangular canvas.
  * It has right-angled axes and grids.
@@ -31,6 +33,25 @@ export default class RectangularHandler extends Handler {
 
         return d;
 
+    }
+
+    processValue(value, x){
+        let v = {};
+
+        if(isDefined(x)){
+            v.x = x;
+        }
+        if(isDefined(value.y)){
+            v.y = value.y;
+        }
+        if(isDefined(value.color)){
+            v.color = value.color;
+        }
+        if(isDefined(value.label)){
+            v.label = value.label;
+        }
+
+        return v;
     }
 
 }

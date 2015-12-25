@@ -13,7 +13,23 @@ var dataObject = new Iva.DataObject({
             values: [5, 3, 1, 4, 10]
         }, {
             id: "data2",
-            values: [-5, 3, 1, 4, 0]
+            values: [5, 3, 6, 4, 0]
+        }, {
+            id: "data3", 
+            values: [
+            {
+                x: 1,
+                y: 0
+            },{
+                x: 2,
+                y: 5
+            }, {
+                x: 3,
+                y: 6
+            }, {
+                x: 4,
+                y: 2
+            }]
         }
     ]
         
@@ -21,9 +37,10 @@ var dataObject = new Iva.DataObject({
 }, buffer);
 
 var optionObject = new Iva.OptionObject({
-    handler: "line",
+    handler: "area",
     axes: {
         both: {
+            visible: true
         }
     }
 }, buffer);

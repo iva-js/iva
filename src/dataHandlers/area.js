@@ -1,14 +1,13 @@
-import RectangularHandler from "./rectangular";
-import {option, toString, isDefined} from "../utils";
 
-export default class LineHandler extends RectangularHandler {
-    constructor(){
-        super();
-    }
+import RectangularHandler from "./rectangular";
+
+export default class AreaHandler extends RectangularHandler {
+
 
     init(){
         let d = this.d();
-        d.data.lines = {
+
+        this.__.areas = {
             dirty: true,
             values: []
         };
@@ -19,32 +18,32 @@ export default class LineHandler extends RectangularHandler {
 
         super.computeRenderObject(data, option);
 
-        d.data.lines = this.processLines(data.columns());
+        d.data.areas = this.processAreas(data.columns());
 
         return d;
     }
 
-    processLines(lines){
+    processAreas(areas){
         let ret = {
             dirty: true,
             values: []
         };
 
-        for(let [id, line] of lines){
-            ret.values.push(this.processLine(line, id));
-        } 
+        for(let [id, area] of areas){
+            ret.values.push(this.processArea(area, id));
+        }
 
         return ret;
     }
 
-    processLine(line, id){
+    processArea(area, id){
         let ret = {
             dirty: true,
             values: [],
             id: id
         };
 
-        for(let [x, value] of line){
+        for(let [x, value] of area){
             ret.values.push(this.processValue(value, x));
         }
 
