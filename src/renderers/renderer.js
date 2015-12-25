@@ -1,5 +1,5 @@
 
-import RenderObject from "../renderObject";
+import RenderObject from "../renderObject/renderObject";
 
 export default class Renderer {
     constructor(){

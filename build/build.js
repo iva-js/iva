@@ -6395,11 +6395,6 @@ var AreaHandler = (function (_RectangularHandler) {
         key: "init",
         value: function init() {
             var d = this.d();
-
-            this.__.areas = {
-                dirty: true,
-                values: []
-            };
         }
     }, {
         key: "computeRenderObject",
@@ -6408,7 +6403,7 @@ var AreaHandler = (function (_RectangularHandler) {
 
             _get(Object.getPrototypeOf(AreaHandler.prototype), "computeRenderObject", this).call(this, data, option);
 
-            d.data.areas = this.processAreas(data.columns());
+            d.data.rectangular.areas = this.processAreas(data.columns());
 
             return d;
         }
@@ -6505,6 +6500,12 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _renderObject = require("../renderObject/renderObject");
+
+var _renderObject2 = _interopRequireDefault(_renderObject);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Handler = (function () {
@@ -6512,13 +6513,7 @@ var Handler = (function () {
         _classCallCheck(this, Handler);
 
         this.__ = {
-            d: {
-                option: {
-                    bindTo: "#chart",
-                    size: {}
-                },
-                data: {}
-            }
+            d: new _renderObject2.default()
         };
 
         this.init();
@@ -6553,7 +6548,7 @@ var Handler = (function () {
 
 exports.default = Handler;
 
-},{}],197:[function(require,module,exports){
+},{"../renderObject/renderObject":206}],197:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -6702,10 +6697,6 @@ var LineHandler = (function (_RectangularHandler) {
         key: "init",
         value: function init() {
             var d = this.d();
-            d.data.lines = {
-                dirty: true,
-                values: []
-            };
         }
     }, {
         key: "computeRenderObject",
@@ -6714,7 +6705,7 @@ var LineHandler = (function (_RectangularHandler) {
 
             _get(Object.getPrototypeOf(LineHandler.prototype), "computeRenderObject", this).call(this, data, option);
 
-            d.data.lines = this.processLines(data.columns());
+            d.data.rectangular.lines = this.processLines(data.columns());
 
             return d;
         }
@@ -7850,26 +7841,59 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _utils = require("./utils");
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+/*
+ * The render object is passed to renderers whenever chart.redraw is called.
+ * Is has no "private" fields because it is basicly just the representation of the rendered chart in code and no private info is needed.
+ */
+
 var RenderObject = (function () {
-    function RenderObject(d) {
+    /*
+     * Init main fields that are required.
+     */
+
+    function RenderObject() {
         _classCallCheck(this, RenderObject);
 
-        d = (0, _utils.option)(d, {});
-
-        this.data = (0, _utils.option)(d.data, {});
-        this.legend = (0, _utils.option)(d.legend, {});
-        this.axes = (0, _utils.option)(d.axes, {});
-        this.title = (0, _utils.option)(d.title, {});
+        this.clear();
     }
 
     _createClass(RenderObject, [{
-        key: "copy",
-        value: function copy() {
-            return new RenderObject(this);
+        key: "clear",
+        value: function clear() {
+            this.clearData();
+            this.clearOption();
+        }
+    }, {
+        key: "clearData",
+        value: function clearData() {
+            this.data = this.getDefaultData();
+        }
+    }, {
+        key: "clearOption",
+        value: function clearOption() {
+            this.option = this.getDefaultOption();
+        }
+    }, {
+        key: "getDefaultData",
+        value: function getDefaultData() {
+            return {
+                rectangular: {},
+                circular: {}
+            };
+        }
+    }, {
+        key: "getDefaultOption",
+        value: function getDefaultOption() {
+            return {
+                bindTo: "",
+                size: {},
+                axes: {
+                    x: {},
+                    y: {}
+                }
+            };
         }
     }]);
 
@@ -7878,14 +7902,14 @@ var RenderObject = (function () {
 
 exports.default = RenderObject;
 
-},{"./utils":210}],207:[function(require,module,exports){
+},{}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _renderObject = require("../renderObject");
+var _renderObject = require("../renderObject/renderObject");
 
 var _renderObject2 = _interopRequireDefault(_renderObject);
 
@@ -7901,7 +7925,7 @@ var Renderer = function Renderer() {
 
 exports.default = Renderer;
 
-},{"../renderObject":206}],208:[function(require,module,exports){
+},{"../renderObject/renderObject":206}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8098,11 +8122,11 @@ var SvgRenderer = (function (_Renderer) {
                 xScale = this.xScale,
                 yScale = this.yScale;
 
-            if ((0, _utils.isUndefined)(this.data.lines)) {
+            if ((0, _utils.isUndefined)(this.data.rectangular.lines)) {
                 return;
             }
 
-            var lines = this.data.lines.values;
+            var lines = this.data.rectangular.lines.values;
 
             var xMin = _d2.default.min(lines, function (line) {
                 return _d2.default.min(line.values, function (value) {
@@ -8161,11 +8185,11 @@ var SvgRenderer = (function (_Renderer) {
                 xScale = this.xScale,
                 yScale = this.yScale;
 
-            if ((0, _utils.isUndefined)(this.data.areas)) {
+            if ((0, _utils.isUndefined)(this.data.rectangular.areas)) {
                 return;
             }
 
-            var areas = this.data.areas.values;
+            var areas = this.data.rectangular.areas.values;
 
             var xMin = _d2.default.min(areas, function (area) {
                 return _d2.default.min(area.values, function (value) {

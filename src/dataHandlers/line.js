@@ -8,10 +8,6 @@ export default class LineHandler extends RectangularHandler {
 
     init(){
         let d = this.d();
-        d.data.lines = {
-            dirty: true,
-            values: []
-        };
     }
 
     computeRenderObject(data, option){
@@ -19,7 +15,7 @@ export default class LineHandler extends RectangularHandler {
 
         super.computeRenderObject(data, option);
 
-        d.data.lines = this.processLines(data.columns());
+        d.data.rectangular.lines = this.processLines(data.columns());
 
         return d;
     }

@@ -126,11 +126,11 @@ export default class SvgRenderer extends Renderer {
     redrawLines(){
         let easel = this.easel, color = this.color, xScale = this.xScale, yScale = this.yScale;
 
-        if(isUndefined(this.data.lines)){
+        if(isUndefined(this.data.rectangular.lines)){
             return;
         }
 
-        let lines = this.data.lines.values;
+        let lines = this.data.rectangular.lines.values;
 
         let xMin = d3.min(lines, line => d3.min(line.values, value => value.x));
         let xMax = d3.max(lines, line => d3.max(line.values, value => value.x));
@@ -166,11 +166,11 @@ export default class SvgRenderer extends Renderer {
     redrawAreas(){
         let easel = this.easel, color = this.color, xScale = this.xScale, yScale = this.yScale;
 
-        if(isUndefined(this.data.areas)){
+        if(isUndefined(this.data.rectangular.areas)){
             return;
         }
 
-        let areas = this.data.areas.values;
+        let areas = this.data.rectangular.areas.values;
 
         let xMin = d3.min(areas, area => d3.min(area.values, value => value.x));
         let xMax = d3.max(areas, area => d3.max(area.values, value => value.x));

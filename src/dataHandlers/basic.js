@@ -1,16 +1,10 @@
+
+import RenderObject from "../renderObject/renderObject";
+
 export default class Handler {
     constructor(){
         this.__ = {
-            d: {
-                option: { 
-                    bindTo: "#chart",
-                    size: {
-                    }
-                },
-                data: {
-
-                }
-            }
+            d: new RenderObject()
         };
 
         this.init();

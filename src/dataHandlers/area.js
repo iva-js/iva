@@ -3,14 +3,8 @@ import RectangularHandler from "./rectangular";
 
 export default class AreaHandler extends RectangularHandler {
 
-
     init(){
         let d = this.d();
-
-        this.__.areas = {
-            dirty: true,
-            values: []
-        };
     }
 
     computeRenderObject(data, option){
@@ -18,7 +12,7 @@ export default class AreaHandler extends RectangularHandler {
 
         super.computeRenderObject(data, option);
 
-        d.data.areas = this.processAreas(data.columns());
+        d.data.rectangular.areas = this.processAreas(data.columns());
 
         return d;
     }
