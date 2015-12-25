@@ -1,0 +1,13 @@
+@import "variables";
+
+.iva-chart {
+    .axis {
+        path,
+        line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }
+
+    }
+}

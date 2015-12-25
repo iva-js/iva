@@ -12,6 +12,7 @@ var browserify = require('browserify');
 var watchify = require('watchify');
 var babel = require('babelify');
 var eslint = require("gulp-eslint");
+var sass = require("gulp-sass");
 
 var source = require('vinyl-source-stream');
 var buffer = require('vinyl-buffer');
@@ -68,12 +69,22 @@ function lint(){
         .pipe(eslint.failAfterError());
 }
 
-gulp.task('build', function() { return compile(); });
-gulp.task('watch', function() { return watch(); });
+gulp.task('js', function() { return compile(); });
+gulp.task('js:watch', function() { return watch(); });
 
 gulp.task('test-integration', function(done){
     new Server({
         configFile: __dirname + '/karma.conf.js',
         singleRun: true
     }, done).start();
+});
+
+gulp.task("sass-default", function(){
+    gulp.src("./styles/default/scss/main.scss")
+       .pipe(sass.sync().on("error", sass.logError))
+       .pipe(gulp.dest("./styles/default/css"));
+});
+
+gulp.task("sass-default:watch", function(){
+    gulp.watch("./styles/default/scss/*.scss", ["sass-default"]);
 });

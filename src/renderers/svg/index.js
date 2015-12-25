@@ -12,7 +12,7 @@ export default class SvgRenderer extends Renderer {
         this.option = chart.option;
         let bindTo = this.option.bindTo;
 
-        this.easel = d3.selectAll("#chart");
+        this.easel = d3.selectAll("#chart").attr("class", "iva-chart");;
         this.easel.append("g").attr("transform", "translate(0, 0)");
 
         this.initLines();

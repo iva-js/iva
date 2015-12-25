@@ -7958,7 +7958,7 @@ var SvgRenderer = (function (_Renderer) {
         _this.option = chart.option;
         var bindTo = _this.option.bindTo;
 
-        _this.easel = _d2.default.selectAll("#chart");
+        _this.easel = _d2.default.selectAll("#chart").attr("class", "iva-chart");;
         _this.easel.append("g").attr("transform", "translate(0, 0)");
 
         _this.initLines();
