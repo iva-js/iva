@@ -1,5 +1,5 @@
 
-import {toString} from "./utils";
+import {option, toString} from "./utils";
 
 export default class Obj {
     constructor(d, parent){
@@ -15,6 +15,8 @@ export default class Obj {
             dirty: true,
             parent: parent
         };
+
+        d = option(d, {});
 
         if(d.fields){
             d.fields.forEach(field => {

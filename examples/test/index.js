@@ -7,41 +7,29 @@
 var buffer = new Iva.Buffer.Default()
 
 var dataObject = new Iva.DataObject({
-    columns: [
-        {
-            id: "data1",
-            values: [5, 3, 1, 4, 10]
-        }, {
-            id: "data2",
-            values: [5, 3, 6, 4, 0]
-        }, {
-            id: "data3", 
-            values: [
+    columns: [{
+        id: "pie1",
+        values: [
             {
-                x: 1,
-                y: 0
-            },{
-                x: 2,
-                y: 5
+                y: 10,
+                x: "data1"
             }, {
-                x: 3,
-                y: 6
+                y: 4,
+                x: "data2"
             }, {
-                x: 4,
-                y: 2
-            }]
-        }
-    ]
+                y: 5,
+                x: "data3"
+            }
+        ]
+    }]
         
        
 }, buffer);
 
 var optionObject = new Iva.OptionObject({
-    handler: "area",
-    axes: {
-        both: {
-            visible: true
-        }
+    handler: "pie",
+    pie: {
+        innerRadius: 50
     }
 }, buffer);
 

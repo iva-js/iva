@@ -3,7 +3,7 @@ import d3 from "d3";
 import Renderer from "../renderer";
 import {PADDING, AXIS} from "./constants";
 
-import {svgVisibility, isUndefined} from "../../utils";
+import {svgVisibility, isUndefined, debug} from "../../utils";
 
 export default class SvgRenderer extends Renderer {
 
@@ -17,6 +17,8 @@ export default class SvgRenderer extends Renderer {
 
         this.initLines();
         this.initAreas();
+
+        this.initPies();
 
         this.color = d3.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
 
@@ -33,8 +35,9 @@ export default class SvgRenderer extends Renderer {
         //this.redrawColumns();
         this.redrawLines();
         this.redrawAreas();
+        this.redrawPies();
 
-        this.redrawAxis();
+        this.redrawAxes();
     }
 
     initLines(){
@@ -43,6 +46,10 @@ export default class SvgRenderer extends Renderer {
 
     initAreas(){
         this.easel.append("g").attr("class", "areas");
+    }
+
+    initPies(){
+        this.easel.append("g").attr("class", "pies");
     }
 
     initAxes(){
@@ -74,7 +81,7 @@ export default class SvgRenderer extends Renderer {
 
     }
 
-    redrawAxis(){
+    redrawAxes(){
         let easel = this.easel, size = this.option.size, axes = this.option.axes, xAxis = this.xAxis, yAxis = this.yAxis;
 
         xAxis.scale(this.xScale);
@@ -202,6 +209,47 @@ export default class SvgRenderer extends Renderer {
         areaSvg.attr("d", d => area(d.values));
 
         areaSvg.exit().remove();
+
+    }
+
+    redrawPies(){
+        let easel = this.easel, color = this.color, yScale = this.yScale, option = this.option;
+
+        if(isUndefined(this.data.circular.pies)){
+            return;
+        }
+
+        let pies = this.data.circular.pies.values;
+
+        let yMin = d3.min(pies, pie => d3.min(pie.values, value => value.y));
+        let yMax = d3.max(pies, pie => d3.max(pie.values, value => value.y));
+
+        yScale.domain([yMin, yMax]);
+
+        let pie = pies[0].values;
+        color.domain(pie.map(value => value.x));
+
+        debug(option);
+
+        let arcSvg = d3.svg.arc()
+            .outerRadius(option.pie.outerRadius)
+            .innerRadius(option.pie.innerRadius);
+
+        let pieLayout = d3.layout.pie()
+            .sort(null)
+            .value(d => d.y);    
+
+        easel.selectAll(".pies").attr("transform", `translate(${this.option.size.width/2}, ${this.option.size.height/2})`);
+        let p = easel.selectAll(".pies").selectAll(".arc").data(pieLayout(pie));
+
+        let g = p.enter().append("g")
+            .attr("class", "arc");
+    
+        g.append("path")
+            .attr("d", arcSvg)
+            .style("fill", d => color(d.data.id));
+
+        p.exit().remove();    
 
     }
 }

@@ -186,3 +186,11 @@ export function svgVisibility(b){
         return "hidden";
     }
 }
+
+/*
+ * Debug
+ */
+
+export function debug(msg){
+    console.log(toString(msg));
+}
