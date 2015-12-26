@@ -12,6 +12,10 @@ export default class AreaHandler extends RectangularHandler {
 
         super.computeRenderObject(data, option);
 
+        d.clearRectangularData({
+            areas: false
+        });
+
         d.data.rectangular.areas = this.processAreas(data.columns());
 
         return d;

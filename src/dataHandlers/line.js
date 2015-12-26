@@ -15,6 +15,10 @@ export default class LineHandler extends RectangularHandler {
 
         super.computeRenderObject(data, option);
 
+        d.clearRectangularData({
+            lines: false
+        });
+
         d.data.rectangular.lines = this.processLines(data.columns());
 
         return d;
