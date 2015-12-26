@@ -8609,7 +8609,6 @@ var SvgRenderer = (function (_Renderer) {
         value: function redrawPies() {
             var easel = this.easel,
                 color = this.color,
-                yScale = this.yScale,
                 option = this.option;
 
             if ((0, _utils.isUndefined)(this.data.circular.pies)) {
@@ -8618,25 +8617,10 @@ var SvgRenderer = (function (_Renderer) {
 
             var pies = this.data.circular.pies.values;
 
-            var yMin = _d2.default.min(pies, function (pie) {
-                return _d2.default.min(pie.values, function (value) {
-                    return value.y;
-                });
-            });
-            var yMax = _d2.default.max(pies, function (pie) {
-                return _d2.default.max(pie.values, function (value) {
-                    return value.y;
-                });
-            });
-
-            yScale.domain([yMin, yMax]);
-
             var pie = pies[0].values;
             color.domain(pie.map(function (value) {
                 return value.x;
             }));
-
-            (0, _utils.debug)(option);
 
             var arcSvg = _d2.default.svg.arc().outerRadius(option.pie.outerRadius).innerRadius(option.pie.innerRadius);
 
@@ -8647,11 +8631,11 @@ var SvgRenderer = (function (_Renderer) {
             easel.selectAll(".pies").attr("transform", "translate(" + this.option.size.width / 2 + ", " + this.option.size.height / 2 + ")");
             var p = easel.selectAll(".pies").selectAll(".arc").data(pieLayout(pie));
 
-            var g = p.enter().append("g").attr("class", "arc");
-
-            g.append("path").attr("d", arcSvg).style("fill", function (d) {
+            p.enter().append("path").attr("class", "arc").style("fill", function (d) {
                 return color(d.data.id);
             });
+
+            p.attr("d", arcSvg);
 
             p.exit().remove();
         }

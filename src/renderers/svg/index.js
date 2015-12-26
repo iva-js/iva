@@ -213,7 +213,7 @@ export default class SvgRenderer extends Renderer {
     }
 
     redrawPies(){
-        let easel = this.easel, color = this.color, yScale = this.yScale, option = this.option;
+        let easel = this.easel, color = this.color, option = this.option;
 
         if(isUndefined(this.data.circular.pies)){
             return;
@@ -221,15 +221,8 @@ export default class SvgRenderer extends Renderer {
 
         let pies = this.data.circular.pies.values;
 
-        let yMin = d3.min(pies, pie => d3.min(pie.values, value => value.y));
-        let yMax = d3.max(pies, pie => d3.max(pie.values, value => value.y));
-
-        yScale.domain([yMin, yMax]);
-
         let pie = pies[0].values;
         color.domain(pie.map(value => value.x));
-
-        debug(option);
 
         let arcSvg = d3.svg.arc()
             .outerRadius(option.pie.outerRadius)
@@ -237,17 +230,16 @@ export default class SvgRenderer extends Renderer {
 
         let pieLayout = d3.layout.pie()
             .sort(null)
-            .value(d => d.y);    
+            .value(d => d.y);
 
         easel.selectAll(".pies").attr("transform", `translate(${this.option.size.width/2}, ${this.option.size.height/2})`);
         let p = easel.selectAll(".pies").selectAll(".arc").data(pieLayout(pie));
 
-        let g = p.enter().append("g")
-            .attr("class", "arc");
-    
-        g.append("path")
-            .attr("d", arcSvg)
+        p.enter().append("path")
+            .attr("class", "arc")
             .style("fill", d => color(d.data.id));
+        
+        p.attr("d", arcSvg);    
 
         p.exit().remove();    
 
