@@ -23,7 +23,10 @@ export default class Size extends Obj {
         let __ = this.__;
 
         if(d === undefined){
-            return __;
+            return {
+                width: this.width(),
+                height: this.height()
+            };
         }
 
         this.width(d.width);

@@ -7784,7 +7784,10 @@ var Size = (function (_Obj) {
             var __ = this.__;
 
             if (d === undefined) {
-                return __;
+                return {
+                    width: this.width(),
+                    height: this.height()
+                };
             }
 
             this.width(d.width);
@@ -7841,6 +7844,8 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _utils = require("../utils");
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /*
@@ -7856,6 +7861,13 @@ var RenderObject = (function () {
     function RenderObject() {
         _classCallCheck(this, RenderObject);
 
+        this.data = {
+            rectangular: {},
+            circular: {}
+        };
+
+        this.option = {};
+
         this.clear();
     }
 
@@ -7864,24 +7876,57 @@ var RenderObject = (function () {
         value: function clear() {
             this.clearData();
             this.clearOption();
+
+            return this;
         }
     }, {
         key: "clearData",
         value: function clearData() {
-            this.data = this.getDefaultData();
+            this.clearRectangularData();
+            this.clearCircularData();
+
+            return this;
         }
     }, {
         key: "clearOption",
         value: function clearOption() {
             this.option = this.getDefaultOption();
+
+            return this;
         }
     }, {
-        key: "getDefaultData",
-        value: function getDefaultData() {
-            return {
-                rectangular: {},
-                circular: {}
-            };
+        key: "clearRectangularData",
+        value: function clearRectangularData(except) {
+            var _this = this;
+
+            except = (0, _utils.option)(except, {});
+
+            var types = ["areas", "columns", "lines"];
+
+            types.forEach(function (type) {
+                if ((0, _utils.isUndefined)(except[type])) {
+                    _this.data.rectangular[type] = _this.getDefaultStore();
+                }
+            });
+
+            return this;
+        }
+    }, {
+        key: "clearCircularData",
+        value: function clearCircularData(except) {
+            var _this2 = this;
+
+            except = (0, _utils.option)(except, {});
+
+            var types = ["pies", "disks"];
+
+            types.forEach(function (type) {
+                if ((0, _utils.isUndefined)(except[type])) {
+                    _this2.data.circular[type] = _this2.getDefaultStore();
+                }
+            });
+
+            return this;
         }
     }, {
         key: "getDefaultOption",
@@ -7895,6 +7940,14 @@ var RenderObject = (function () {
                 }
             };
         }
+    }, {
+        key: "getDefaultStore",
+        value: function getDefaultStore() {
+            return {
+                dirty: true,
+                values: []
+            };
+        }
     }]);
 
     return RenderObject;
@@ -7902,7 +7955,7 @@ var RenderObject = (function () {
 
 exports.default = RenderObject;
 
-},{}],207:[function(require,module,exports){
+},{"../utils":210}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

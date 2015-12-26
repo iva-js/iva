@@ -1,3 +1,4 @@
+import {option, isUndefined} from "../utils";
 
 /*
  * The render object is passed to renderers whenever chart.redraw is called.
@@ -8,27 +9,63 @@ export default class RenderObject {
      * Init main fields that are required.
      */
     constructor(){
+
+        this.data = {
+            rectangular: {},
+            circular: {}
+        };
+
+        this.option = {};
+
         this.clear();
     }
 
     clear(){
         this.clearData();
         this.clearOption();
+
+        return this;
     }
 
     clearData(){
-        this.data = this.getDefaultData();
+        this.clearRectangularData();
+        this.clearCircularData();
+
+        return this;
     }
 
     clearOption(){
         this.option = this.getDefaultOption();
+
+        return this;
     }
 
-    getDefaultData(){
-        return {
-            rectangular: {},
-            circular: {}
-        };
+    clearRectangularData(except){
+        except = option(except, {});
+
+        let types = ["areas", "columns", "lines"];
+
+        types.forEach(type => {
+            if(isUndefined(except[type])){
+                this.data.rectangular[type] = this.getDefaultStore();
+            }
+        });
+
+        return this;
+    }
+
+    clearCircularData(except){
+        except = option(except, {});
+
+        let types = ["pies", "disks"];
+
+        types.forEach(type => {
+            if(isUndefined(except[type])){
+                this.data.circular[type] = this.getDefaultStore();
+            }
+        });
+
+        return this;
     }
 
     getDefaultOption(){
@@ -39,6 +76,13 @@ export default class RenderObject {
                 x: {},
                 y: {}
             }
+        };
+    }
+
+    getDefaultStore(){
+        return {
+            dirty: true,
+            values: []
         };
     }
 
