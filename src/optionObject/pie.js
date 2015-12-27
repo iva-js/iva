@@ -19,12 +19,14 @@ export default class Pie extends Obj {
                 outerRadius: this.outerRadius(),
                 explodeRadius: this.explodeRadius(),
                 padAngle: this.padAngle(),
+                turnAngle: this.turnAngle()
             };
         }
         this.innerRadius(d.innerRadius);
         this.outerRadius(d.outerRadius)
         this.explodeRadius(d.explodeRadius);
         this.padAngle(d.padAngle);
+        this.turnAngle(d.turnAngle);
     }
 
     innerRadius(radius){
@@ -70,6 +72,17 @@ export default class Pie extends Obj {
         __.padAngle = angle;
         this.dirty(true);
     }
+
+    turnAngle(angle){
+        let __ = this.__;
+
+        if(isUndefined(angle)){
+            return __.turnAngle;
+        }
+
+        __.turnAngle = angle;
+        this.dirty(true);
+    }
     
     setDefault(){
         return this.options(this.getDefault());
@@ -79,7 +92,9 @@ export default class Pie extends Obj {
         return {
             innerRadius: 0,
             outerRadius: 150,
-            explodeRadius: 0
+            explodeRadius: 0,
+            padAngle: 0,
+            turnAngle: 0,
         };
     }
 }

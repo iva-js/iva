@@ -7986,13 +7986,15 @@ var Pie = (function (_Obj) {
                     innerRadius: this.innerRadius(),
                     outerRadius: this.outerRadius(),
                     explodeRadius: this.explodeRadius(),
-                    padAngle: this.padAngle()
+                    padAngle: this.padAngle(),
+                    turnAngle: this.turnAngle()
                 };
             }
             this.innerRadius(d.innerRadius);
             this.outerRadius(d.outerRadius);
             this.explodeRadius(d.explodeRadius);
             this.padAngle(d.padAngle);
+            this.turnAngle(d.turnAngle);
         }
     }, {
         key: "innerRadius",
@@ -8043,6 +8045,18 @@ var Pie = (function (_Obj) {
             this.dirty(true);
         }
     }, {
+        key: "turnAngle",
+        value: function turnAngle(angle) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(angle)) {
+                return __.turnAngle;
+            }
+
+            __.turnAngle = angle;
+            this.dirty(true);
+        }
+    }, {
         key: "setDefault",
         value: function setDefault() {
             return this.options(this.getDefault());
@@ -8053,7 +8067,9 @@ var Pie = (function (_Obj) {
             return {
                 innerRadius: 0,
                 outerRadius: 150,
-                explodeRadius: 0
+                explodeRadius: 0,
+                padAngle: 0,
+                turnAngle: 0
             };
         }
     }]);
@@ -8653,7 +8669,13 @@ var SvgRenderer = (function (_Renderer) {
                 return value.x;
             }));
 
-            var arcSvg = _d2.default.svg.arc().outerRadius(option.pie.outerRadius).innerRadius(option.pie.innerRadius).padAngle(option.pie.padAngle);
+            (0, _utils.debug)(option.pie);
+
+            var arcSvg = _d2.default.svg.arc().outerRadius(option.pie.outerRadius).innerRadius(option.pie.innerRadius).startAngle(function (d) {
+                return d.startAngle + option.pie.turnAngle;
+            }).endAngle(function (d) {
+                return d.endAngle + option.pie.turnAngle;
+            }).padAngle(option.pie.padAngle);
 
             var pieLayout = _d2.default.layout.pie().sort(null).value(function (d) {
                 return d.y;
@@ -8833,7 +8855,7 @@ function toString(obj) {
     if ((typeof obj === "undefined" ? "undefined" : _typeof(obj)) === "object") {
         return objToString(obj);
     } else {
-        throw new Error("Can't convert " + (typeof obj === "undefined" ? "undefined" : _typeof(obj)) + " to string");
+        return obj;
     }
 }
 

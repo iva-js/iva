@@ -92,7 +92,7 @@ export function toString(obj){
     if(typeof obj === "object"){
         return objToString(obj);
     } else {
-        throw new Error(`Can't convert ${typeof obj} to string`);
+        return obj;
     }
 }
 

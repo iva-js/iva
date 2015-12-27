@@ -225,9 +225,13 @@ export default class SvgRenderer extends Renderer {
         let pie = pies[0].values;
         color.domain(pie.map(value => value.x));
 
+        debug(option.pie);
+
         let arcSvg = d3.svg.arc()
             .outerRadius(option.pie.outerRadius)
             .innerRadius(option.pie.innerRadius)
+            .startAngle(d => d.startAngle + option.pie.turnAngle)
+            .endAngle(d => d.endAngle + option.pie.turnAngle)
             .padAngle(option.pie.padAngle);
 
         let pieLayout = d3.layout.pie()
