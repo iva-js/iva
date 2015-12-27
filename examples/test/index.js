@@ -26,9 +26,7 @@ var dataObject = new Iva.DataObject({
 
 var optionObject = new Iva.OptionObject({
     handler: "pie",
-    pie: {
-        innerRadius: 50
-    }
+    presets: ["donut"]
 }, buffer);
 
 var chart = new Iva.Chart(dataObject, optionObject);

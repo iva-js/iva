@@ -105,4 +105,6 @@ export default class Chart {
             throw new Error("Uknown type of buffer: " + buffer);
         }
     }
+
+
 }

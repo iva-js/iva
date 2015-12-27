@@ -6363,7 +6363,7 @@ var Chart = (function () {
 
 exports.default = Chart;
 
-},{"./buffers/default":192,"./buffers/instant":193,"./dataHandlers/area":195,"./dataHandlers/column":198,"./dataHandlers/line":199,"./dataHandlers/pie":200,"./dataObject/dataObject":202,"./optionObject/optionObject":206,"./renderers/svg/index":212,"./utils":214}],195:[function(require,module,exports){
+},{"./buffers/default":192,"./buffers/instant":193,"./dataHandlers/area":195,"./dataHandlers/column":198,"./dataHandlers/line":199,"./dataHandlers/pie":200,"./dataObject/dataObject":202,"./optionObject/optionObject":206,"./renderers/svg/index":213,"./utils":215}],195:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -6558,7 +6558,7 @@ var Handler = (function () {
 
 exports.default = Handler;
 
-},{"../renderObject/renderObject":209}],197:[function(require,module,exports){
+},{"../renderObject/renderObject":210}],197:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -6707,7 +6707,7 @@ var ColumnHandler = (function (_RectangularHandler) {
 
 exports.default = ColumnHandler;
 
-},{"../utils":214,"./rectangular":201}],199:[function(require,module,exports){
+},{"../utils":215,"./rectangular":201}],199:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -6847,7 +6847,7 @@ var LineHandler = (function (_RectangularHandler) {
 
 exports.default = LineHandler;
 
-},{"../utils":214,"./rectangular":201}],200:[function(require,module,exports){
+},{"../utils":215,"./rectangular":201}],200:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -6994,7 +6994,7 @@ var PieHandler = (function (_CircularHandler) {
 
 exports.default = PieHandler;
 
-},{"../utils":214,"./circular":197}],201:[function(require,module,exports){
+},{"../utils":215,"./circular":197}],201:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7087,7 +7087,7 @@ var RectangularHandler = (function (_Handler) {
 
 exports.default = RectangularHandler;
 
-},{"../utils":214,"./basic":196}],202:[function(require,module,exports){
+},{"../utils":215,"./basic":196}],202:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -7525,7 +7525,7 @@ var DataObject = (function (_Obj) {
 
 exports.default = DataObject;
 
-},{"../object":204,"../utils":214,"babel-polyfill":1}],203:[function(require,module,exports){
+},{"../object":204,"../utils":215,"babel-polyfill":1}],203:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7701,7 +7701,7 @@ var Obj = (function () {
 
 exports.default = Obj;
 
-},{"./utils":214}],205:[function(require,module,exports){
+},{"./utils":215}],205:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7865,7 +7865,7 @@ var YAxis = (function (_Axis2) {
     return YAxis;
 })(Axis);
 
-},{"../object":204,"../utils":214}],206:[function(require,module,exports){
+},{"../object":204,"../utils":215}],206:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7891,6 +7891,10 @@ var _pie = require("./pie");
 var _pie2 = _interopRequireDefault(_pie);
 
 var _utils = require("../utils");
+
+var _presets = require("./presets");
+
+var _presets2 = _interopRequireDefault(_presets);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7919,6 +7923,10 @@ var OptionObject = (function (_Obj) {
         _this.legend = (0, _utils.option)(d.legend, {});
 
         _this.pie = new _pie2.default(d.pie, _this);
+
+        var presets = (0, _utils.option)(d.presets, []);
+        _this.setPresets(presets);
+        _this.applyPresets();
         return _this;
     }
 
@@ -7935,6 +7943,34 @@ var OptionObject = (function (_Obj) {
         value: function copy() {
             return new OptionObject(this);
         }
+    }, {
+        key: "setPresets",
+        value: function setPresets(prs) {
+            var _this2 = this;
+
+            (0, _utils.throwIfNotArray)(prs, "Presets");
+
+            this.presets = [];
+
+            prs.forEach(function (preset) {
+                if ((0, _utils.isFunction)(preset)) {
+                    _this2.presets.push(preset);
+                } else {
+                    _this2.presets.push(_presets2.default[preset]);
+                }
+            });
+
+            return this;
+        }
+    }, {
+        key: "applyPresets",
+        value: function applyPresets() {
+            var _this3 = this;
+
+            this.presets.forEach(function (preset) {
+                preset(_this3);
+            });
+        }
     }]);
 
     return OptionObject;
@@ -7942,7 +7978,7 @@ var OptionObject = (function (_Obj) {
 
 exports.default = OptionObject;
 
-},{"../object":204,"../utils":214,"./axes":205,"./pie":207,"./size":208}],207:[function(require,module,exports){
+},{"../object":204,"../utils":215,"./axes":205,"./pie":207,"./presets":208,"./size":209}],207:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8079,7 +8115,25 @@ var Pie = (function (_Obj) {
 
 exports.default = Pie;
 
-},{"../object":204,"../utils":214}],208:[function(require,module,exports){
+},{"../object":204,"../utils":215}],208:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var presets = {
+    "donut": function donut(option) {
+        var pie = option.pie;
+
+        pie.innerRadius(60);
+        pie.padAngle(0.03);
+    }
+};
+
+exports.default = presets;
+
+},{}],209:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8181,7 +8235,7 @@ var Size = (function (_Obj) {
 
 exports.default = Size;
 
-},{"../object":204,"../utils":214}],209:[function(require,module,exports){
+},{"../object":204,"../utils":215}],210:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8301,7 +8355,7 @@ var RenderObject = (function () {
 
 exports.default = RenderObject;
 
-},{"../utils":214}],210:[function(require,module,exports){
+},{"../utils":215}],211:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8324,7 +8378,7 @@ var Renderer = function Renderer() {
 
 exports.default = Renderer;
 
-},{"../renderObject/renderObject":209}],211:[function(require,module,exports){
+},{"../renderObject/renderObject":210}],212:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8341,7 +8395,7 @@ var AXIS = exports.AXIS = {
     WIDTH: 30
 };
 
-},{}],212:[function(require,module,exports){
+},{}],213:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8669,8 +8723,6 @@ var SvgRenderer = (function (_Renderer) {
                 return value.x;
             }));
 
-            (0, _utils.debug)(option.pie);
-
             var arcSvg = _d2.default.svg.arc().outerRadius(option.pie.outerRadius).innerRadius(option.pie.innerRadius).startAngle(function (d) {
                 return d.startAngle + option.pie.turnAngle;
             }).endAngle(function (d) {
@@ -8700,7 +8752,7 @@ var SvgRenderer = (function (_Renderer) {
 
 exports.default = SvgRenderer;
 
-},{"../../utils":214,"../renderer":210,"./constants":211,"./svgUtils":213,"d3":215}],213:[function(require,module,exports){
+},{"../../utils":215,"../renderer":211,"./constants":212,"./svgUtils":214,"d3":216}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8725,7 +8777,7 @@ function generateExplode(explodeRadius) {
     };
 }
 
-},{}],214:[function(require,module,exports){
+},{}],215:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8946,7 +8998,7 @@ function debug(msg) {
     console.log(toString(msg));
 }
 
-},{"underscore":191}],215:[function(require,module,exports){
+},{"underscore":191}],216:[function(require,module,exports){
 !function() {
   var d3 = {
     version: "3.5.6"

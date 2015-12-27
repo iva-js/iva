@@ -5,7 +5,8 @@ import Size from "./size";
 import Axes from "./axes";
 import Pie from "./pie";
 
-import {option} from "../utils";
+import {option, throwIfNotArray, isFunction} from "../utils";
+import presets from "./presets";
 
 export default class OptionObject extends Obj {
     constructor(d, parent) {
@@ -22,6 +23,10 @@ export default class OptionObject extends Obj {
         this.legend = option(d.legend, {});
 
         this.pie = new Pie(d.pie, this);
+
+        let presets = option(d.presets, []);
+        this.setPresets(presets);
+        this.applyPresets();
     }
 
     __init(d, parent){
@@ -35,5 +40,27 @@ export default class OptionObject extends Obj {
 
     copy(){
         return new OptionObject(this);
+    }
+
+    setPresets(prs){
+        throwIfNotArray(prs, "Presets");
+
+        this.presets = [];
+
+        prs.forEach(preset => {
+            if(isFunction(preset)){
+                this.presets.push(preset)
+            } else {
+                this.presets.push(presets[preset]);
+            }
+        });
+
+        return this;
+    }
+
+    applyPresets(){
+        this.presets.forEach(preset => {
+            preset(this);
+        });
     }
 }
