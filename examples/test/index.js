@@ -22,8 +22,6 @@ var dataObject = new Iva.DataObject({
             }
         ]
     }]
-        
-       
 }, buffer);
 
 var optionObject = new Iva.OptionObject({
@@ -35,4 +33,3 @@ var optionObject = new Iva.OptionObject({
 
 var chart = new Iva.Chart(dataObject, optionObject);
 chart.redraw();
-

@@ -176,18 +176,6 @@ export function merge(o1, o2){
 }
 
 /*
- * SVG utility
- */
-
-export function svgVisibility(b){
-    if(b){
-        return "visible";
-    } else {
-        return "hidden";
-    }
-}
-
-/*
  * Debug
  */
 

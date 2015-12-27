@@ -3,7 +3,8 @@ import d3 from "d3";
 import Renderer from "../renderer";
 import {PADDING, AXIS} from "./constants";
 
-import {svgVisibility, isUndefined, debug} from "../../utils";
+import {isUndefined, debug} from "../../utils";
+import {generateExplode, visibility} from "./svgUtils";
 
 export default class SvgRenderer extends Renderer {
 
@@ -89,12 +90,12 @@ export default class SvgRenderer extends Renderer {
 
         easel.select(".xAxis")
             .attr("transform", `translate(${AXIS.WIDTH + PADDING.LEFT}, ${size.height - AXIS.WIDTH})`)
-            .style("visibility", d => svgVisibility(axes.x.visible))
+            .style("visibility", d => visibility(axes.x.visible))
             .call(xAxis);
 
         easel.select(".yAxis")
             .attr("transform", `translate(${AXIS.WIDTH}, ${PADDING.TOP})`)
-            .style("visibility", d => svgVisibility(axes.y.visible))
+            .style("visibility", d => visibility(axes.y.visible))
             .call(yAxis);
 
     }
@@ -226,7 +227,8 @@ export default class SvgRenderer extends Renderer {
 
         let arcSvg = d3.svg.arc()
             .outerRadius(option.pie.outerRadius)
-            .innerRadius(option.pie.innerRadius);
+            .innerRadius(option.pie.innerRadius)
+            .padAngle(option.pie.padAngle);
 
         let pieLayout = d3.layout.pie()
             .sort(null)
@@ -239,9 +241,11 @@ export default class SvgRenderer extends Renderer {
             .attr("class", "arc")
             .style("fill", d => color(d.data.id));
         
-        p.attr("d", arcSvg);    
+        p.attr("d", arcSvg);
+        p.attr("transform", generateExplode(option.pie.explodeRadius))
 
         p.exit().remove();    
 
     }
+
 }
