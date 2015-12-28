@@ -175,6 +175,10 @@ export function merge(o1, o2){
     return o;
 }
 
+export function isEmpty(obj){
+    return isUndefined(obj) || obj.length === 0;
+}
+
 /*
  * Debug
  */

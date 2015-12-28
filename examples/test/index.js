@@ -8,25 +8,19 @@ var buffer = new Iva.Buffer.Default()
 
 var dataObject = new Iva.DataObject({
     columns: [{
-        id: "pie1",
-        values: [
-            {
-                y: 10,
-                x: "data1"
-            }, {
-                y: 4,
-                x: "data2"
-            }, {
-                y: 5,
-                x: "data3"
-            }
-        ]
+        id: "data1",
+        values: [10, 30, 40, 0]
+    }, {
+        id: "data2",
+        values: [5, -10, 50, 30]
+    }, {
+        id: "data3",
+        values: [1, 20, -5]
     }]
 }, buffer);
 
 var optionObject = new Iva.OptionObject({
-    handler: "pie",
-    presets: ["donut"]
+    handler: "area",
 }, buffer);
 
 var chart = new Iva.Chart(dataObject, optionObject);

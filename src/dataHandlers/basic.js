@@ -1,6 +1,8 @@
 
 import RenderObject from "../renderObject/renderObject";
 
+import {isUndefined} from "../utils";
+
 export default class Handler {
     constructor(){
         this.__ = {
@@ -9,6 +11,8 @@ export default class Handler {
 
         this.init();
     }
+
+    init(){}
 
     d(){
         return this.__.d;
@@ -28,4 +32,34 @@ export default class Handler {
             height: size.height()
         }
     }
+
+    computeMinMax(table){
+        let xMin, xMax, yMin, yMax;
+
+        table.values.forEach(column => {
+            column.values.forEach(value => {
+                if(isUndefined(xMin) || value.x < xMin){
+                    xMin = value.x;
+                }
+                if(isUndefined(xMax) || value.x > xMax){
+                    xMax = value.x;
+                }               
+                if(isUndefined(yMin) || value.y < yMin){
+                    yMin = value.y;
+                }
+                if(isUndefined(yMax) || value.y > yMax){
+                    yMax = value.y;
+                } 
+            });
+
+        });
+
+        return {
+            xMin,
+            xMax,
+            yMin,
+            yMax
+        };
+    }   
+
 }

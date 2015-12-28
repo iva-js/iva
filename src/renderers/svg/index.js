@@ -3,7 +3,7 @@ import d3 from "d3";
 import Renderer from "../renderer";
 import {PADDING, AXIS} from "./constants";
 
-import {isUndefined, debug} from "../../utils";
+import {isUndefined, isEmpty, debug} from "../../utils";
 import {generateExplode, visibility} from "./svgUtils";
 
 export default class SvgRenderer extends Renderer {
@@ -134,17 +134,13 @@ export default class SvgRenderer extends Renderer {
     redrawLines(){
         let easel = this.easel, color = this.color, xScale = this.xScale, yScale = this.yScale;
 
-        if(isUndefined(this.data.rectangular.lines)){
+        if(isEmpty(this.data.rectangular.lines.values)){
             return;
         }
 
+        let {xMin, xMax, yMin, yMax} = this.data.ranges;
+
         let lines = this.data.rectangular.lines.values;
-
-        let xMin = d3.min(lines, line => d3.min(line.values, value => value.x));
-        let xMax = d3.max(lines, line => d3.max(line.values, value => value.x));
-
-        let yMin = d3.min(lines, line => d3.min(line.values, value => value.y));
-        let yMax = d3.max(lines, line => d3.max(line.values, value => value.y));
 
         xScale.domain([xMin, xMax]);
         yScale.domain([yMin, yMax]);
@@ -174,17 +170,12 @@ export default class SvgRenderer extends Renderer {
     redrawAreas(){
         let easel = this.easel, color = this.color, xScale = this.xScale, yScale = this.yScale;
 
-        if(isUndefined(this.data.rectangular.areas)){
+        if(isEmpty(this.data.rectangular.areas.values)){
             return;
         }
 
+        let {xMin, xMax, yMin, yMax} = this.data.ranges;
         let areas = this.data.rectangular.areas.values;
-
-        let xMin = d3.min(areas, area => d3.min(area.values, value => value.x));
-        let xMax = d3.max(areas, area => d3.max(area.values, value => value.x));
-
-        let yMin = d3.min(areas, area => d3.min(area.values, value => value.y));
-        let yMax = d3.max(areas, area => d3.max(area.values, value => value.y));
 
         xScale.domain([xMin, xMax]);
         yScale.domain([yMin, yMax]);
@@ -216,7 +207,7 @@ export default class SvgRenderer extends Renderer {
     redrawPies(){
         let easel = this.easel, color = this.color, option = this.option;
 
-        if(isUndefined(this.data.circular.pies)){
+        if(isEmpty(this.data.circular.pies.values)){
             return;
         }
 

@@ -6415,6 +6415,8 @@ var AreaHandler = (function (_RectangularHandler) {
 
             d.data.rectangular.areas = this.processAreas(data.columns());
 
+            d.data.ranges = this.computeMinMax(d.data.rectangular.areas);
+
             return d;
         }
     }, {
@@ -6514,6 +6516,8 @@ var _renderObject = require("../renderObject/renderObject");
 
 var _renderObject2 = _interopRequireDefault(_renderObject);
 
+var _utils = require("../utils");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -6530,6 +6534,9 @@ var Handler = (function () {
     }
 
     _createClass(Handler, [{
+        key: "init",
+        value: function init() {}
+    }, {
         key: "d",
         value: function d() {
             return this.__.d;
@@ -6551,6 +6558,38 @@ var Handler = (function () {
                 height: size.height()
             };
         }
+    }, {
+        key: "computeMinMax",
+        value: function computeMinMax(table) {
+            var xMin = undefined,
+                xMax = undefined,
+                yMin = undefined,
+                yMax = undefined;
+
+            table.values.forEach(function (column) {
+                column.values.forEach(function (value) {
+                    if ((0, _utils.isUndefined)(xMin) || value.x < xMin) {
+                        xMin = value.x;
+                    }
+                    if ((0, _utils.isUndefined)(xMax) || value.x > xMax) {
+                        xMax = value.x;
+                    }
+                    if ((0, _utils.isUndefined)(yMin) || value.y < yMin) {
+                        yMin = value.y;
+                    }
+                    if ((0, _utils.isUndefined)(yMax) || value.y > yMax) {
+                        yMax = value.y;
+                    }
+                });
+            });
+
+            return {
+                xMin: xMin,
+                xMax: xMax,
+                yMin: yMin,
+                yMax: yMax
+            };
+        }
     }]);
 
     return Handler;
@@ -6558,7 +6597,7 @@ var Handler = (function () {
 
 exports.default = Handler;
 
-},{"../renderObject/renderObject":210}],197:[function(require,module,exports){
+},{"../renderObject/renderObject":210,"../utils":215}],197:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -6760,6 +6799,8 @@ var LineHandler = (function (_RectangularHandler) {
             });
 
             d.data.rectangular.lines = this.processLines(data.columns());
+
+            d.data.ranges = this.computeMinMax(d.data.rectangular.lines);
 
             return d;
         }
@@ -8585,33 +8626,17 @@ var SvgRenderer = (function (_Renderer) {
                 xScale = this.xScale,
                 yScale = this.yScale;
 
-            if ((0, _utils.isUndefined)(this.data.rectangular.lines)) {
+            if ((0, _utils.isEmpty)(this.data.rectangular.lines.values)) {
                 return;
             }
 
+            var _data$ranges = this.data.ranges;
+            var xMin = _data$ranges.xMin;
+            var xMax = _data$ranges.xMax;
+            var yMin = _data$ranges.yMin;
+            var yMax = _data$ranges.yMax;
+
             var lines = this.data.rectangular.lines.values;
-
-            var xMin = _d2.default.min(lines, function (line) {
-                return _d2.default.min(line.values, function (value) {
-                    return value.x;
-                });
-            });
-            var xMax = _d2.default.max(lines, function (line) {
-                return _d2.default.max(line.values, function (value) {
-                    return value.x;
-                });
-            });
-
-            var yMin = _d2.default.min(lines, function (line) {
-                return _d2.default.min(line.values, function (value) {
-                    return value.y;
-                });
-            });
-            var yMax = _d2.default.max(lines, function (line) {
-                return _d2.default.max(line.values, function (value) {
-                    return value.y;
-                });
-            });
 
             xScale.domain([xMin, xMax]);
             yScale.domain([yMin, yMax]);
@@ -8648,33 +8673,17 @@ var SvgRenderer = (function (_Renderer) {
                 xScale = this.xScale,
                 yScale = this.yScale;
 
-            if ((0, _utils.isUndefined)(this.data.rectangular.areas)) {
+            if ((0, _utils.isEmpty)(this.data.rectangular.areas.values)) {
                 return;
             }
 
+            var _data$ranges2 = this.data.ranges;
+            var xMin = _data$ranges2.xMin;
+            var xMax = _data$ranges2.xMax;
+            var yMin = _data$ranges2.yMin;
+            var yMax = _data$ranges2.yMax;
+
             var areas = this.data.rectangular.areas.values;
-
-            var xMin = _d2.default.min(areas, function (area) {
-                return _d2.default.min(area.values, function (value) {
-                    return value.x;
-                });
-            });
-            var xMax = _d2.default.max(areas, function (area) {
-                return _d2.default.max(area.values, function (value) {
-                    return value.x;
-                });
-            });
-
-            var yMin = _d2.default.min(areas, function (area) {
-                return _d2.default.min(area.values, function (value) {
-                    return value.y;
-                });
-            });
-            var yMax = _d2.default.max(areas, function (area) {
-                return _d2.default.max(area.values, function (value) {
-                    return value.y;
-                });
-            });
 
             xScale.domain([xMin, xMax]);
             yScale.domain([yMin, yMax]);
@@ -8712,7 +8721,7 @@ var SvgRenderer = (function (_Renderer) {
                 color = this.color,
                 option = this.option;
 
-            if ((0, _utils.isUndefined)(this.data.circular.pies)) {
+            if ((0, _utils.isEmpty)(this.data.circular.pies.values)) {
                 return;
             }
 
@@ -8805,6 +8814,7 @@ exports.throwIfNotObject = throwIfNotObject;
 exports.throwIfNotString = throwIfNotString;
 exports.throwIfNotFunction = throwIfNotFunction;
 exports.merge = merge;
+exports.isEmpty = isEmpty;
 exports.debug = debug;
 
 var _underscore = require("underscore");
@@ -8988,6 +8998,10 @@ function merge(o1, o2) {
         o[key] = o2[key];
     }
     return o;
+}
+
+function isEmpty(obj) {
+    return isUndefined(obj) || obj.length === 0;
 }
 
 /*
