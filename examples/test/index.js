@@ -21,6 +21,11 @@ var dataObject = new Iva.DataObject({
 
 var optionObject = new Iva.OptionObject({
     handler: "area",
+    axes:{
+        both:{
+            visible: true
+        }
+    }
 }, buffer);
 
 var chart = new Iva.Chart(dataObject, optionObject);

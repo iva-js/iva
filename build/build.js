@@ -7573,6 +7573,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.Buffer = exports.Chart = exports.OptionObject = exports.DataObject = undefined;
+exports.generateBasicChart = generateBasicChart;
 
 var _dataObject = require("./dataObject/dataObject");
 
@@ -7600,6 +7601,15 @@ var Buffer = {
     Default: _default2.default,
     Instant: _instant2.default
 };
+
+function generateBasicChart() {
+    var buffer = new Buffer.Default();
+    var data = new _dataObject2.default({}, buffer);
+    var option = new _optionObject2.default({}, buffer);
+    var chart = new _chart2.default(data, option);
+
+    return chart;
+}
 
 exports.DataObject = _dataObject2.default;
 exports.OptionObject = _optionObject2.default;
@@ -8655,7 +8665,7 @@ var SvgRenderer = (function (_Renderer) {
 
             var lineSvg = linesSvg.selectAll("path").data(lines);
 
-            lineSvg.enter().append("path").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", 0)").attr("stroke", function (d) {
+            lineSvg.enter().append("path").attr("class", "line").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", 0)").attr("stroke", function (d) {
                 return color(d.id);
             }).attr("stroke-width", 2).attr("fill", "none");
 
@@ -8702,7 +8712,7 @@ var SvgRenderer = (function (_Renderer) {
 
             var areaSvg = areasSvg.selectAll("path").data(areas);
 
-            areaSvg.enter().append("path").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("class", "area").attr("stroke", function (d) {
+            areaSvg.enter().append("path").attr("class", "area").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("class", "area").attr("stroke", function (d) {
                 return color(d.id);
             }).attr("fill", function (d) {
                 return color(d.id);

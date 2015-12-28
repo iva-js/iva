@@ -157,6 +157,7 @@ export default class SvgRenderer extends Renderer {
         let lineSvg = linesSvg.selectAll("path").data(lines);
 
         lineSvg.enter().append("path")
+            .attr("class", "line")
             .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, 0)`)
             .attr("stroke", d => color(d.id))
             .attr("stroke-width", 2)
@@ -193,6 +194,7 @@ export default class SvgRenderer extends Renderer {
         let areaSvg = areasSvg.selectAll("path").data(areas);
 
         areaSvg.enter().append("path")
+            .attr("class", "area")
             .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, ${PADDING.TOP})`)
             .attr("class", "area")
             .attr("stroke", d => color(d.id))

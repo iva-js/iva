@@ -11,6 +11,15 @@ let Buffer = {
     Instant: InstantBuffer
 };
 
+export function generateBasicChart(){
+    var buffer = new Buffer.Default()
+    var data = new DataObject({}, buffer);
+    var option = new OptionObject({}, buffer);
+    var chart = new Chart(data, option);
+
+    return chart;
+}
+
 export { DataObject as DataObject };
 export { OptionObject as OptionObject };
 

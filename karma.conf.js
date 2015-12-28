@@ -16,7 +16,8 @@ module.exports = function(config) {
     // list of files / patterns to load in the browser
     files: [
       'build/build.js',
-      'test-integration/*.js'
+      'test-integration/*.helper.js',
+      'test-integration/*.spec.js'
     ],
 
 
