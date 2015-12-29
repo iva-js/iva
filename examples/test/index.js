@@ -26,7 +26,7 @@ var optionObject = new Iva.OptionObject({
             visible: true
         }
     },
-    normalized: true
+    mode: "stacked"
 }, buffer);
 
 var chart = new Iva.Chart(dataObject, optionObject, buffer);

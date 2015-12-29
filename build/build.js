@@ -6442,9 +6442,9 @@ var AreaHandler = (function (_RectangularHandler) {
 
             d.data.rectangular.areas = this.processAreas(data.columns());
 
-            if (option.stacked()) {
+            if (option.mode() === "stacked") {
                 d.data.rectangular.areas = this.stack(d.data.rectangular.areas);
-            } else if (option.normalized()) {
+            } else if (option.mode() === "normalized") {
                 d.data.rectangular.areas = this.normalize(d.data.rectangular.areas);
             }
 
@@ -8351,8 +8351,7 @@ var OptionObject = (function (_Obj) {
 
         _this.pie = new _pie2.default(d.pie, _this);
 
-        _this.stacked(d.stacked);
-        _this.normalized(d.normalized);
+        _this.mode(d.mode);
 
         var presets = (0, _utils.option)(d.presets, []);
         _this.setPresets(presets);
@@ -8366,43 +8365,22 @@ var OptionObject = (function (_Obj) {
             this.__ = {
                 parent: parent,
                 dirty: true,
-                stacked: false,
-                normalized: false
+                mode: "normal"
             };
         }
     }, {
-        key: "normalized",
-        value: function normalized(_normalized) {
+        key: "mode",
+        value: function mode(_mode) {
             var __ = this.__;
-
-            if ((0, _utils.isUndefined)(_normalized)) {
-                return __.normalized;
+            if ((0, _utils.isUndefined)(_mode)) {
+                return __.mode;
             }
 
-            __.normalized = _normalized;
-
-            if (_normalized) {
-                this.stacked(false);
-            }
+            __.mode = _mode;
 
             this.dirty(true);
-        }
-    }, {
-        key: "stacked",
-        value: function stacked(_stacked) {
-            var __ = this.__;
 
-            if ((0, _utils.isUndefined)(_stacked)) {
-                return __.stacked;
-            }
-
-            __.stacked = _stacked;
-
-            if (_stacked) {
-                this.normalized(false);
-            }
-
-            this.dirty(true);
+            return this;
         }
     }, {
         key: "copy",

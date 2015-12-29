@@ -19,9 +19,9 @@ export default class AreaHandler extends RectangularHandler {
 
         d.data.rectangular.areas = this.processAreas(data.columns());
 
-        if(option.stacked()){
+        if(option.mode() === "stacked"){
             d.data.rectangular.areas = this.stack(d.data.rectangular.areas);
-        } else if(option.normalized()){
+        } else if(option.mode() === "normalized"){
             d.data.rectangular.areas = this.normalize(d.data.rectangular.areas);
         }
 

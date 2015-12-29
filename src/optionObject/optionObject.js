@@ -24,8 +24,7 @@ export default class OptionObject extends Obj {
 
         this.pie = new Pie(d.pie, this);
 
-        this.stacked(d.stacked);
-        this.normalized(d.normalized)
+        this.mode(d.mode);
 
         let presets = option(d.presets, []);
         this.setPresets(presets);
@@ -36,43 +35,23 @@ export default class OptionObject extends Obj {
         this.__ = {
             parent: parent,
             dirty: true,
-            stacked: false,
-            normalized: false
+            mode: "normal"
         };
 
 
     }
 
-    normalized(normalized){
+    mode(mode){
         let __ = this.__;
-
-        if(isUndefined(normalized)){
-            return __.normalized;
+        if(isUndefined(mode)){
+            return __.mode;
         }
 
-        __.normalized = normalized;
-
-        if(normalized){
-            this.stacked(false);
-        }
+        __.mode = mode;
 
         this.dirty(true);
-    }
 
-    stacked(stacked){
-        let __ = this.__;
-
-        if(isUndefined(stacked)){
-            return __.stacked;
-        }
-
-        __.stacked = stacked;
-
-        if(stacked){
-            this.normalized(false);
-        }
-
-        this.dirty(true);
+        return this;
     }
 
     copy(){
