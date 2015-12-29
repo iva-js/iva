@@ -24,17 +24,17 @@ describe("DefaultBuffer", ()=>{
         });
     });
 
-    describe("freeze", ()=>{
-        it("should get freeze", ()=>{
-            expect(buffer.freeze()).to.equal(false);
+    describe("frozen", ()=>{
+        it("should get frozen", ()=>{
+            expect(buffer.frozen()).to.equal(false);
         });
 
-        it("should set freeze", ()=>{
-            buffer.freeze(true);
-            expect(buffer.freeze()).to.equal(true);
+        it("should set frozen", ()=>{
+            buffer.frozen(true);
+            expect(buffer.frozen()).to.equal(true);
 
-            buffer.freeze(false);
-            expect(buffer.freeze()).to.equal(false);
+            buffer.frozen(false);
+            expect(buffer.frozen()).to.equal(false);
         });
     });
 

@@ -5,7 +5,7 @@ declare module Iva {
         class Default {
             constructor(chart: Iva.Chart);
             dirty(dirty: Boolean);
-            freeze(freeze: Boolean);
+            frozen(frozen: Boolean);
         }
 
         class Instant extends Iva.Buffer.Default {

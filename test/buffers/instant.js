@@ -31,17 +31,17 @@ describe("InstanBuffer", ()=>{
         });
 
         it("shouldn't redraw when frozen", ()=>{
-            buffer.freeze(true);
+            buffer.frozen(true);
             buffer.dirty(true);
 
             expect(counter.count).to.equal(0);
 
-            buffer.freeze(false);
+            buffer.frozen(false);
             buffer.dirty(true);
 
             expect(counter.count).to.equal(1);
 
-            buffer.freeze(true);
+            buffer.frozen(true);
             buffer.dirty(true);
 
             expect(counter.count).to.equal(1);

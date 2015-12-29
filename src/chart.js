@@ -98,7 +98,7 @@ export default class Chart {
         }
 
         this.buffer.registerChart(this);
-        this.buffer.freeze(true);
+        this.buffer.frozen(true);
     }
 
     setBufferByName(buffer){
@@ -113,7 +113,7 @@ export default class Chart {
 
     endInit(){
         
-        this.buffer.freeze(false);
+        this.buffer.frozen(false);
         this.buffer.dirty(true);
 
     }
