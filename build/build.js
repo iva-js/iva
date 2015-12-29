@@ -6064,6 +6064,8 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _utils = require("../utils");
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
@@ -6097,14 +6099,20 @@ var DefaultBuffer = (function () {
             }
             __.dirty = _dirty;
 
-            if (!__.freeze) {
+            if (!this.freeze()) {
                 this.actOnDirty(_dirty);
             }
         }
     }, {
         key: "registerChart",
         value: function registerChart(chart) {
-            this.__.charts.push(chart);
+            if ((0, _utils.isDefined)(chart)) {
+                var charts = this.__.charts;
+
+                if (charts.indexOf(chart) === -1) {
+                    charts.push(chart);
+                }
+            }
         }
     }, {
         key: "unregisterChart",
@@ -6120,7 +6128,7 @@ var DefaultBuffer = (function () {
         key: "sendRedraw",
         value: function sendRedraw() {
             this.__.charts.forEach(function (chart) {
-                return chart.redraw();
+                chart.redraw();
             });
         }
 
@@ -6154,7 +6162,7 @@ var DefaultBuffer = (function () {
 
 exports.default = DefaultBuffer;
 
-},{}],193:[function(require,module,exports){
+},{"../utils":215}],193:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -6254,16 +6262,18 @@ function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.const
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Chart = (function () {
-    function Chart(dataObject, optionObject) {
+    function Chart(dataObject, optionObject, buffer) {
         _classCallCheck(this, Chart);
 
-        this.setBuffer(optionObject.buffer);
+        this.setBuffer(buffer);
 
         this.initDataObject(dataObject);
         this.initOptionObject(optionObject);
 
         this.setHandler(this.option.handler);
         this.setRenderer(this.option.renderer);
+
+        this.endInit();
     }
 
     _createClass(Chart, [{
@@ -6344,6 +6354,9 @@ var Chart = (function () {
             } else {
                 this.setBufferByName(buffer);
             }
+
+            this.buffer.registerChart(this);
+            this.buffer.freeze(true);
         }
     }, {
         key: "setBufferByName",
@@ -6355,6 +6368,13 @@ var Chart = (function () {
             } else {
                 throw new Error("Uknown type of buffer: " + buffer);
             }
+        }
+    }, {
+        key: "endInit",
+        value: function endInit() {
+
+            this.buffer.freeze(false);
+            this.buffer.dirty(true);
         }
     }]);
 

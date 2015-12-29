@@ -4,7 +4,7 @@
  * Distributed under terms of the MIT license.
  */
 
-var buffer = new Iva.Buffer.Default()
+var buffer = new Iva.Buffer.Instant()
 
 var dataObject = new Iva.DataObject({
     columns: [{
@@ -28,5 +28,5 @@ var optionObject = new Iva.OptionObject({
     }
 }, buffer);
 
-var chart = new Iva.Chart(dataObject, optionObject);
+var chart = new Iva.Chart(dataObject, optionObject, buffer);
 chart.redraw();

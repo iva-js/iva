@@ -14,15 +14,17 @@ import OptionObject from "./optionObject/optionObject";
 import DataObject from "./dataObject/dataObject";
 
 export default class Chart {
-    constructor(dataObject, optionObject){
+    constructor(dataObject, optionObject, buffer){
 
-        this.setBuffer(optionObject.buffer);
+        this.setBuffer(buffer);
 
         this.initDataObject(dataObject);
         this.initOptionObject(optionObject);
 
         this.setHandler(this.option.handler);
         this.setRenderer(this.option.renderer);
+
+        this.endInit();
     }
 
     redraw(){
@@ -94,6 +96,9 @@ export default class Chart {
         } else {
             this.setBufferByName(buffer);
         }
+
+        this.buffer.registerChart(this);
+        this.buffer.freeze(true);
     }
 
     setBufferByName(buffer){
@@ -106,5 +111,11 @@ export default class Chart {
         }
     }
 
+    endInit(){
+        
+        this.buffer.freeze(false);
+        this.buffer.dirty(true);
+
+    }
 
 }

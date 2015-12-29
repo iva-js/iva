@@ -1,4 +1,6 @@
 
+import {isDefined, debug} from "../utils";
+
 /**
  * Class used for managing redraws.
  * Basic buffer doesn't do anything except marking itself as dirty
@@ -24,13 +26,19 @@ export default class DefaultBuffer {
         }
         __.dirty = dirty;
 
-        if(!__.freeze){
+        if(!this.freeze()){
             this.actOnDirty(dirty);
         }
     }
 
     registerChart(chart){
-        this.__.charts.push(chart);
+        if(isDefined(chart)){
+            let charts = this.__.charts;
+
+            if(charts.indexOf(chart) === -1){
+                charts.push(chart);
+            }
+        }
     }
 
     unregisterChart(chart){
@@ -43,7 +51,9 @@ export default class DefaultBuffer {
     }
 
     sendRedraw(){
-        this.__.charts.forEach(chart => chart.redraw());
+        this.__.charts.forEach(chart => {
+            chart.redraw()
+        });
     }
 
     /**
