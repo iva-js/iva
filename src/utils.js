@@ -184,5 +184,5 @@ export function isEmpty(obj){
  */
 
 export function debug(msg){
-    console.log(toString(msg));
+    console.debug(toString(msg));
 }

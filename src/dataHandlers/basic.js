@@ -1,7 +1,8 @@
 
 import RenderObject from "../renderObject/renderObject";
-
 import {isUndefined, isString} from "../utils";
+
+import "babel-polyfill";
 
 export default class Handler {
     constructor(){
@@ -71,6 +72,61 @@ export default class Handler {
             yMax,
             xStrings
         };
+    }
+
+    /*
+     * Stacks all data, so every sequence is stacked above the previous one.
+     * Changes input instead of copying for time saving.
+     */
+    stack(data){
+        for(let i = 1; i < data.values.length; i++){
+            for(let j = 0; j < data.values[i].values.length; j++){
+                data.values[i].values[j].y0 = data.values[i-1].values[j].y;
+                data.values[i].values[j].y += data.values[i-1].values[j].y
+            }
+        }
+        return data;
+    }
+
+    /*
+     * Normalizes all data, so every row sums up to 1.
+     * Handles all zeros in one row by equally splitting row between all sequences.
+     * Changes input instead of copying for time saving.
+     */
+    normalize(data){
+        let sums = new Map();
+        let numberOf = new Map();
+        
+        for (let column of data.values) {
+            for (let value of column.values) {
+
+                if(value.y < 0){
+                    throw new Error("Y can't be below zero in the normalized chart");
+                }
+
+                if(sums.has(value.x)){
+                    sums.set(value.x, sums.get(value.x) + value.y);
+                    numberOf.set(value.x, numberOf.get(value.x) + 1);
+                } else {
+                    sums.set(value.x, value.y);
+                    numberOf.set(value.x, 1);
+                }
+            }
+        }
+
+        for (let column of data.values) {
+            for (let value of column.values) {
+                let sum = sums.get(value.x);
+                if(sum === 0){
+                    value.y = 1 / numberOf.get(value.x);
+                } else {
+                    value.y /= sums.get(value.x);
+                }
+            }
+        }
+
+        return this.stack(data);
+
     }
 
     hasStringXIn(table){

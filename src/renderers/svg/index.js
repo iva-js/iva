@@ -190,7 +190,7 @@ export default class SvgRenderer extends Renderer {
 
         let area = d3.svg.area()
             .x(d => xScale(d.x))
-            .y0(this.innerSize.height - AXIS.WIDTH)
+            .y0(d => yScale(d.y0) + PADDING.TOP - 10)
             .y1(d => yScale(d.y))
             .interpolate("basis");
 

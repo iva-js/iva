@@ -9,20 +9,24 @@ var buffer = new Iva.Buffer.Instant()
 var dataObject = new Iva.DataObject({
     columns: [{
         id: "data1",
-        values: [{ x: "day1", y: 10 }, { x: "day2", y: 20 }, { x: "day3", y: -10 }]
+        values: [1, 2, 3, 4]
     }, {
         id: "data2",
-        values: [{ x: "day1", y: 10}, { x: "day2", y: 15 }, { x: "day4", y: 10 }]
+        values: [4, 2, 2, 4]
+    }, {
+        id: "data3", 
+        values: [5, 1, 4, 3]
     }] 
 }, buffer);
 
 var optionObject = new Iva.OptionObject({
-    handler: "line",
+    handler: "area",
     axes:{
         both:{
             visible: true
         }
-    }
+    },
+    normalized: true
 }, buffer);
 
 var chart = new Iva.Chart(dataObject, optionObject, buffer);

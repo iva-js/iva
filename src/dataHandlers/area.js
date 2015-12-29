@@ -1,3 +1,4 @@
+import {isDefined, isUndefined} from "../utils";
 
 import RectangularHandler from "./rectangular";
 
@@ -18,7 +19,15 @@ export default class AreaHandler extends RectangularHandler {
 
         d.data.rectangular.areas = this.processAreas(data.columns());
 
+        if(option.stacked()){
+            d.data.rectangular.areas = this.stack(d.data.rectangular.areas);
+        } else if(option.normalized()){
+            d.data.rectangular.areas = this.normalize(d.data.rectangular.areas);
+        }
+
         d.data.ranges = this.computeRanges(d.data.rectangular.areas);
+
+        d.data.rectangular.areas = this.setY0(d.data.rectangular.areas, d.data.ranges.yMin);
 
         return d;
     }
@@ -48,5 +57,28 @@ export default class AreaHandler extends RectangularHandler {
         }
 
         return ret;
+    }
+
+    processValue(value, x){
+        let v = super.processValue(value, x);
+
+        if(isDefined(value.y0)){
+            v.y0 = value.y0;
+        } 
+
+        return v;
+    }
+
+    setY0(areas, yMin){
+        for (let area of areas.values) {
+            for (let value of area.values) {
+                if(isUndefined(value.y0)){
+                    value.y0 = yMin;
+                }
+            }
+
+        }
+
+        return areas;
     }
 }

@@ -5,7 +5,7 @@ import Size from "./size";
 import Axes from "./axes";
 import Pie from "./pie";
 
-import {option, throwIfNotArray, isFunction} from "../utils";
+import {option, throwIfNotArray, isFunction, isUndefined} from "../utils";
 import presets from "./presets";
 
 export default class OptionObject extends Obj {
@@ -24,6 +24,9 @@ export default class OptionObject extends Obj {
 
         this.pie = new Pie(d.pie, this);
 
+        this.stacked(d.stacked);
+        this.normalized(d.normalized)
+
         let presets = option(d.presets, []);
         this.setPresets(presets);
         this.applyPresets();
@@ -32,10 +35,44 @@ export default class OptionObject extends Obj {
     __init(d, parent){
         this.__ = {
             parent: parent,
-            dirty: true
+            dirty: true,
+            stacked: false,
+            normalized: false
         };
 
 
+    }
+
+    normalized(normalized){
+        let __ = this.__;
+
+        if(isUndefined(normalized)){
+            return __.normalized;
+        }
+
+        __.normalized = normalized;
+
+        if(normalized){
+            this.stacked(false);
+        }
+
+        this.dirty(true);
+    }
+
+    stacked(stacked){
+        let __ = this.__;
+
+        if(isUndefined(stacked)){
+            return __.stacked;
+        }
+
+        __.stacked = stacked;
+
+        if(stacked){
+            this.normalized(false);
+        }
+
+        this.dirty(true);
     }
 
     copy(){

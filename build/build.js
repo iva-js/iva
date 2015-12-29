@@ -6401,6 +6401,8 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _utils = require("../utils");
+
 var _rectangular = require("./rectangular");
 
 var _rectangular2 = _interopRequireDefault(_rectangular);
@@ -6440,7 +6442,15 @@ var AreaHandler = (function (_RectangularHandler) {
 
             d.data.rectangular.areas = this.processAreas(data.columns());
 
+            if (option.stacked()) {
+                d.data.rectangular.areas = this.stack(d.data.rectangular.areas);
+            } else if (option.normalized()) {
+                d.data.rectangular.areas = this.normalize(d.data.rectangular.areas);
+            }
+
             d.data.ranges = this.computeRanges(d.data.rectangular.areas);
+
+            d.data.rectangular.areas = this.setY0(d.data.rectangular.areas, d.data.ranges.yMin);
 
             return d;
         }
@@ -6521,6 +6531,71 @@ var AreaHandler = (function (_RectangularHandler) {
 
             return ret;
         }
+    }, {
+        key: "processValue",
+        value: function processValue(value, x) {
+            var v = _get(Object.getPrototypeOf(AreaHandler.prototype), "processValue", this).call(this, value, x);
+
+            if ((0, _utils.isDefined)(value.y0)) {
+                v.y0 = value.y0;
+            }
+
+            return v;
+        }
+    }, {
+        key: "setY0",
+        value: function setY0(areas, yMin) {
+            var _iteratorNormalCompletion3 = true;
+            var _didIteratorError3 = false;
+            var _iteratorError3 = undefined;
+
+            try {
+                for (var _iterator3 = areas.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                    var area = _step3.value;
+                    var _iteratorNormalCompletion4 = true;
+                    var _didIteratorError4 = false;
+                    var _iteratorError4 = undefined;
+
+                    try {
+                        for (var _iterator4 = area.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                            var value = _step4.value;
+
+                            if ((0, _utils.isUndefined)(value.y0)) {
+                                value.y0 = yMin;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError4 = true;
+                        _iteratorError4 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                                _iterator4.return();
+                            }
+                        } finally {
+                            if (_didIteratorError4) {
+                                throw _iteratorError4;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError3 = true;
+                _iteratorError3 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                        _iterator3.return();
+                    }
+                } finally {
+                    if (_didIteratorError3) {
+                        throw _iteratorError3;
+                    }
+                }
+            }
+
+            return areas;
+        }
     }]);
 
     return AreaHandler;
@@ -6528,7 +6603,7 @@ var AreaHandler = (function (_RectangularHandler) {
 
 exports.default = AreaHandler;
 
-},{"./rectangular":201}],196:[function(require,module,exports){
+},{"../utils":215,"./rectangular":201}],196:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -6542,6 +6617,8 @@ var _renderObject = require("../renderObject/renderObject");
 var _renderObject2 = _interopRequireDefault(_renderObject);
 
 var _utils = require("../utils");
+
+require("babel-polyfill");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -6667,39 +6744,74 @@ var Handler = (function () {
                 xStrings: xStrings
             };
         }
+
+        /*
+         * Stacks all data, so every sequence is stacked above the previous one.
+         * Changes input instead of copying for time saving.
+         */
+
     }, {
-        key: "hasStringXIn",
-        value: function hasStringXIn(table) {
+        key: "stack",
+        value: function stack(data) {
+            for (var i = 1; i < data.values.length; i++) {
+                for (var j = 0; j < data.values[i].values.length; j++) {
+                    data.values[i].values[j].y0 = data.values[i - 1].values[j].y;
+                    data.values[i].values[j].y += data.values[i - 1].values[j].y;
+                }
+            }
+            return data;
+        }
+
+        /*
+         * Normalizes all data, so every row sums up to 1.
+         * Handles all zeros in one row by equally splitting row between all sequences.
+         * Changes input instead of copying for time saving.
+         */
+
+    }, {
+        key: "normalize",
+        value: function normalize(data) {
+            var sums = new Map();
+            var numberOf = new Map();
+
             var _iteratorNormalCompletion3 = true;
             var _didIteratorError3 = false;
             var _iteratorError3 = undefined;
 
             try {
-                for (var _iterator3 = table.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                for (var _iterator3 = data.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
                     var column = _step3.value;
-                    var _iteratorNormalCompletion4 = true;
-                    var _didIteratorError4 = false;
-                    var _iteratorError4 = undefined;
+                    var _iteratorNormalCompletion5 = true;
+                    var _didIteratorError5 = false;
+                    var _iteratorError5 = undefined;
 
                     try {
-                        for (var _iterator4 = column.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                            var value = _step4.value;
+                        for (var _iterator5 = column.values[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                            var value = _step5.value;
 
-                            if ((0, _utils.isString)(value.x)) {
-                                return true;
+                            if (value.y < 0) {
+                                throw new Error("Y can't be below zero in the normalized chart");
+                            }
+
+                            if (sums.has(value.x)) {
+                                sums.set(value.x, sums.get(value.x) + value.y);
+                                numberOf.set(value.x, numberOf.get(value.x) + 1);
+                            } else {
+                                sums.set(value.x, value.y);
+                                numberOf.set(value.x, 1);
                             }
                         }
                     } catch (err) {
-                        _didIteratorError4 = true;
-                        _iteratorError4 = err;
+                        _didIteratorError5 = true;
+                        _iteratorError5 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                                _iterator4.return();
+                            if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                                _iterator5.return();
                             }
                         } finally {
-                            if (_didIteratorError4) {
-                                throw _iteratorError4;
+                            if (_didIteratorError5) {
+                                throw _iteratorError5;
                             }
                         }
                     }
@@ -6719,6 +6831,112 @@ var Handler = (function () {
                 }
             }
 
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
+
+            try {
+                for (var _iterator4 = data.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var column = _step4.value;
+                    var _iteratorNormalCompletion6 = true;
+                    var _didIteratorError6 = false;
+                    var _iteratorError6 = undefined;
+
+                    try {
+                        for (var _iterator6 = column.values[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                            var value = _step6.value;
+
+                            var sum = sums.get(value.x);
+                            if (sum === 0) {
+                                value.y = 1 / numberOf.get(value.x);
+                            } else {
+                                value.y /= sums.get(value.x);
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError6 = true;
+                        _iteratorError6 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                                _iterator6.return();
+                            }
+                        } finally {
+                            if (_didIteratorError6) {
+                                throw _iteratorError6;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
+                    }
+                } finally {
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
+                    }
+                }
+            }
+
+            return this.stack(data);
+        }
+    }, {
+        key: "hasStringXIn",
+        value: function hasStringXIn(table) {
+            var _iteratorNormalCompletion7 = true;
+            var _didIteratorError7 = false;
+            var _iteratorError7 = undefined;
+
+            try {
+                for (var _iterator7 = table.values[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                    var column = _step7.value;
+                    var _iteratorNormalCompletion8 = true;
+                    var _didIteratorError8 = false;
+                    var _iteratorError8 = undefined;
+
+                    try {
+                        for (var _iterator8 = column.values[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                            var value = _step8.value;
+
+                            if ((0, _utils.isString)(value.x)) {
+                                return true;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError8 = true;
+                        _iteratorError8 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion8 && _iterator8.return) {
+                                _iterator8.return();
+                            }
+                        } finally {
+                            if (_didIteratorError8) {
+                                throw _iteratorError8;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError7 = true;
+                _iteratorError7 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                        _iterator7.return();
+                    }
+                } finally {
+                    if (_didIteratorError7) {
+                        throw _iteratorError7;
+                    }
+                }
+            }
+
             return false;
         }
     }]);
@@ -6728,7 +6946,7 @@ var Handler = (function () {
 
 exports.default = Handler;
 
-},{"../renderObject/renderObject":210,"../utils":215}],197:[function(require,module,exports){
+},{"../renderObject/renderObject":210,"../utils":215,"babel-polyfill":1}],197:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8133,6 +8351,9 @@ var OptionObject = (function (_Obj) {
 
         _this.pie = new _pie2.default(d.pie, _this);
 
+        _this.stacked(d.stacked);
+        _this.normalized(d.normalized);
+
         var presets = (0, _utils.option)(d.presets, []);
         _this.setPresets(presets);
         _this.applyPresets();
@@ -8144,8 +8365,44 @@ var OptionObject = (function (_Obj) {
         value: function __init(d, parent) {
             this.__ = {
                 parent: parent,
-                dirty: true
+                dirty: true,
+                stacked: false,
+                normalized: false
             };
+        }
+    }, {
+        key: "normalized",
+        value: function normalized(_normalized) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_normalized)) {
+                return __.normalized;
+            }
+
+            __.normalized = _normalized;
+
+            if (_normalized) {
+                this.stacked(false);
+            }
+
+            this.dirty(true);
+        }
+    }, {
+        key: "stacked",
+        value: function stacked(_stacked) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_stacked)) {
+                return __.stacked;
+            }
+
+            __.stacked = _stacked;
+
+            if (_stacked) {
+                this.normalized(false);
+            }
+
+            this.dirty(true);
         }
     }, {
         key: "copy",
@@ -8865,7 +9122,9 @@ var SvgRenderer = (function (_Renderer) {
 
             var area = _d2.default.svg.area().x(function (d) {
                 return xScale(d.x);
-            }).y0(this.innerSize.height - _constants.AXIS.WIDTH).y1(function (d) {
+            }).y0(function (d) {
+                return yScale(d.y0) + _constants.PADDING.TOP - 10;
+            }).y1(function (d) {
                 return yScale(d.y);
             }).interpolate("basis");
 
@@ -9180,7 +9439,7 @@ function isEmpty(obj) {
  */
 
 function debug(msg) {
-    console.log(toString(msg));
+    console.debug(toString(msg));
 }
 
 },{"underscore":191}],216:[function(require,module,exports){
