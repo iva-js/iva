@@ -14,3 +14,6 @@ clean:
 
 check-ts:
 	tsc ts/iva.d.ts
+
+example:
+	phantomjs scripts/screen.js localhost:8000/examples/test examples/test.png

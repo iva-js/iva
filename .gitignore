@@ -1,6 +1,8 @@
 *.js.map
 *.css
 
+*.png
+
 # node
 # Logs
 logs

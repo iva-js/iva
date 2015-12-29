@@ -32,6 +32,7 @@ export default class SvgRenderer extends Renderer {
         this.option = this.render.option;
 
         this.setSizes();
+        this.setDomainsToScales();
 
         //this.redrawColumns();
         this.redrawLines();
@@ -76,9 +77,22 @@ export default class SvgRenderer extends Renderer {
 
         this.easel.attr("width", size.width).attr("height", size.height);
 
-        let xScale = this.xScale = d3.scale.linear().range([0, innerSize.width - AXIS.WIDTH]);
+        let xScale = this.xScale = d3.scale.ordinal().rangePoints([0, innerSize.width - AXIS.WIDTH]);
 
         let yScale = this.yScale = d3.scale.linear().range([innerSize.height - AXIS.WIDTH, 0]);
+
+    }
+
+    setDomainsToScales(){
+        let {xMin, xMax, yMin, yMax, xStrings} = this.data.ranges;
+        let xScale = this.xScale, yScale = this.yScale;
+
+        if(!isEmpty(xStrings)){
+            xScale.domain(xStrings);
+        } else {
+            xScale.domain(d3.range(xMin, xMax+1));
+        }
+        yScale.domain([yMin, yMax]);
 
     }
 
@@ -90,12 +104,12 @@ export default class SvgRenderer extends Renderer {
 
         easel.select(".xAxis")
             .attr("transform", `translate(${AXIS.WIDTH + PADDING.LEFT}, ${size.height - AXIS.WIDTH})`)
-            .style("visibility", d => visibility(axes.x.visible))
+            .style("opacity", d => (axes.x.visible) ? 100 : 0)
             .call(xAxis);
 
         easel.select(".yAxis")
             .attr("transform", `translate(${AXIS.WIDTH}, ${PADDING.TOP})`)
-            .style("visibility", d => visibility(axes.y.visible))
+            .style("opacity", d => (axes.y.visible) ? 100 : 0)
             .call(yAxis);
 
     }
@@ -138,12 +152,7 @@ export default class SvgRenderer extends Renderer {
             return;
         }
 
-        let {xMin, xMax, yMin, yMax} = this.data.ranges;
-
         let lines = this.data.rectangular.lines.values;
-
-        xScale.domain([xMin, xMax]);
-        yScale.domain([yMin, yMax]);
 
         color.domain(lines.map(line => line.id));
 
@@ -175,11 +184,7 @@ export default class SvgRenderer extends Renderer {
             return;
         }
 
-        let {xMin, xMax, yMin, yMax} = this.data.ranges;
         let areas = this.data.rectangular.areas.values;
-
-        xScale.domain([xMin, xMax]);
-        yScale.domain([yMin, yMax]);
 
         color.domain(areas.map(area => area.id));
 

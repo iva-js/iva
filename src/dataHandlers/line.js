@@ -21,7 +21,7 @@ export default class LineHandler extends RectangularHandler {
 
         d.data.rectangular.lines = this.processLines(data.columns());
 
-        d.data.ranges = this.computeMinMax(d.data.rectangular.lines);
+        d.data.ranges = this.computeRanges(d.data.rectangular.lines);
 
         return d;
     }

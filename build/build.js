@@ -6345,6 +6345,11 @@ var Chart = (function () {
     }, {
         key: "setBuffer",
         value: function setBuffer(buffer) {
+
+            if ((0, _utils.isDefined)(this.buffer)) {
+                this.buffer.unregisterChart(this);
+            }
+
             buffer = (0, _utils.option)(buffer, "default");
 
             if (typeof buffer === "function") {
@@ -6435,7 +6440,7 @@ var AreaHandler = (function (_RectangularHandler) {
 
             d.data.rectangular.areas = this.processAreas(data.columns());
 
-            d.data.ranges = this.computeMinMax(d.data.rectangular.areas);
+            d.data.ranges = this.computeRanges(d.data.rectangular.areas);
 
             return d;
         }
@@ -6579,12 +6584,13 @@ var Handler = (function () {
             };
         }
     }, {
-        key: "computeMinMax",
-        value: function computeMinMax(table) {
+        key: "computeRanges",
+        value: function computeRanges(table) {
             var xMin = undefined,
                 xMax = undefined,
                 yMin = undefined,
                 yMax = undefined;
+            var xStrings = [];
 
             table.values.forEach(function (column) {
                 column.values.forEach(function (value) {
@@ -6603,12 +6609,117 @@ var Handler = (function () {
                 });
             });
 
+            if (this.hasStringXIn(table)) {
+                var _iteratorNormalCompletion = true;
+                var _didIteratorError = false;
+                var _iteratorError = undefined;
+
+                try {
+                    for (var _iterator = table.values[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                        var column = _step.value;
+                        var _iteratorNormalCompletion2 = true;
+                        var _didIteratorError2 = false;
+                        var _iteratorError2 = undefined;
+
+                        try {
+                            for (var _iterator2 = column.values[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                                var value = _step2.value;
+
+                                // Convert all x to strings
+                                xStrings.push("" + value.x);
+                            }
+                        } catch (err) {
+                            _didIteratorError2 = true;
+                            _iteratorError2 = err;
+                        } finally {
+                            try {
+                                if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                    _iterator2.return();
+                                }
+                            } finally {
+                                if (_didIteratorError2) {
+                                    throw _iteratorError2;
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+                    } finally {
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
+                    }
+                }
+            }
+
             return {
                 xMin: xMin,
                 xMax: xMax,
                 yMin: yMin,
-                yMax: yMax
+                yMax: yMax,
+                xStrings: xStrings
             };
+        }
+    }, {
+        key: "hasStringXIn",
+        value: function hasStringXIn(table) {
+            var _iteratorNormalCompletion3 = true;
+            var _didIteratorError3 = false;
+            var _iteratorError3 = undefined;
+
+            try {
+                for (var _iterator3 = table.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                    var column = _step3.value;
+                    var _iteratorNormalCompletion4 = true;
+                    var _didIteratorError4 = false;
+                    var _iteratorError4 = undefined;
+
+                    try {
+                        for (var _iterator4 = column.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                            var value = _step4.value;
+
+                            if ((0, _utils.isString)(value.x)) {
+                                return true;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError4 = true;
+                        _iteratorError4 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                                _iterator4.return();
+                            }
+                        } finally {
+                            if (_didIteratorError4) {
+                                throw _iteratorError4;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError3 = true;
+                _iteratorError3 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                        _iterator3.return();
+                    }
+                } finally {
+                    if (_didIteratorError3) {
+                        throw _iteratorError3;
+                    }
+                }
+            }
+
+            return false;
         }
     }]);
 
@@ -6820,7 +6931,7 @@ var LineHandler = (function (_RectangularHandler) {
 
             d.data.rectangular.lines = this.processLines(data.columns());
 
-            d.data.ranges = this.computeMinMax(d.data.rectangular.lines);
+            d.data.ranges = this.computeRanges(d.data.rectangular.lines);
 
             return d;
         }
@@ -7611,6 +7722,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.Buffer = exports.Chart = exports.OptionObject = exports.DataObject = undefined;
 exports.generateBasicChart = generateBasicChart;
+exports.generateInstantChart = generateInstantChart;
 
 var _dataObject = require("./dataObject/dataObject");
 
@@ -7643,7 +7755,16 @@ function generateBasicChart() {
     var buffer = new Buffer.Default();
     var data = new _dataObject2.default({}, buffer);
     var option = new _optionObject2.default({}, buffer);
-    var chart = new _chart2.default(data, option);
+    var chart = new _chart2.default(data, option, buffer);
+
+    return chart;
+}
+
+function generateInstantChart() {
+    var buffer = new Buffer.Instant();
+    var data = new _dataObject2.default({}, buffer);
+    var option = new _optionObject2.default({}, buffer);
+    var chart = new _chart2.default(data, option, buffer);
 
     return chart;
 }
@@ -8547,6 +8668,7 @@ var SvgRenderer = (function (_Renderer) {
             this.option = this.render.option;
 
             this.setSizes();
+            this.setDomainsToScales();
 
             //this.redrawColumns();
             this.redrawLines();
@@ -8595,9 +8717,29 @@ var SvgRenderer = (function (_Renderer) {
 
             this.easel.attr("width", size.width).attr("height", size.height);
 
-            var xScale = this.xScale = _d2.default.scale.linear().range([0, innerSize.width - _constants.AXIS.WIDTH]);
+            var xScale = this.xScale = _d2.default.scale.ordinal().rangePoints([0, innerSize.width - _constants.AXIS.WIDTH]);
 
             var yScale = this.yScale = _d2.default.scale.linear().range([innerSize.height - _constants.AXIS.WIDTH, 0]);
+        }
+    }, {
+        key: "setDomainsToScales",
+        value: function setDomainsToScales() {
+            var _data$ranges = this.data.ranges;
+            var xMin = _data$ranges.xMin;
+            var xMax = _data$ranges.xMax;
+            var yMin = _data$ranges.yMin;
+            var yMax = _data$ranges.yMax;
+            var xStrings = _data$ranges.xStrings;
+
+            var xScale = this.xScale,
+                yScale = this.yScale;
+
+            if (!(0, _utils.isEmpty)(xStrings)) {
+                xScale.domain(xStrings);
+            } else {
+                xScale.domain(_d2.default.range(xMin, xMax + 1));
+            }
+            yScale.domain([yMin, yMax]);
         }
     }, {
         key: "redrawAxes",
@@ -8611,12 +8753,12 @@ var SvgRenderer = (function (_Renderer) {
             xAxis.scale(this.xScale);
             yAxis.scale(this.yScale);
 
-            easel.select(".xAxis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").style("visibility", function (d) {
-                return (0, _svgUtils.visibility)(axes.x.visible);
+            easel.select(".xAxis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").style("opacity", function (d) {
+                return axes.x.visible ? 100 : 0;
             }).call(xAxis);
 
-            easel.select(".yAxis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").style("visibility", function (d) {
-                return (0, _svgUtils.visibility)(axes.y.visible);
+            easel.select(".yAxis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").style("opacity", function (d) {
+                return axes.y.visible ? 100 : 0;
             }).call(yAxis);
         }
     }, {
@@ -8677,16 +8819,7 @@ var SvgRenderer = (function (_Renderer) {
                 return;
             }
 
-            var _data$ranges = this.data.ranges;
-            var xMin = _data$ranges.xMin;
-            var xMax = _data$ranges.xMax;
-            var yMin = _data$ranges.yMin;
-            var yMax = _data$ranges.yMax;
-
             var lines = this.data.rectangular.lines.values;
-
-            xScale.domain([xMin, xMax]);
-            yScale.domain([yMin, yMax]);
 
             color.domain(lines.map(function (line) {
                 return line.id;
@@ -8724,16 +8857,7 @@ var SvgRenderer = (function (_Renderer) {
                 return;
             }
 
-            var _data$ranges2 = this.data.ranges;
-            var xMin = _data$ranges2.xMin;
-            var xMax = _data$ranges2.xMax;
-            var yMin = _data$ranges2.yMin;
-            var yMax = _data$ranges2.yMax;
-
             var areas = this.data.rectangular.areas.values;
-
-            xScale.domain([xMin, xMax]);
-            yScale.domain([yMin, yMax]);
 
             color.domain(areas.map(function (area) {
                 return area.id;

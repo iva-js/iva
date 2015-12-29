@@ -18,7 +18,7 @@ export default class AreaHandler extends RectangularHandler {
 
         d.data.rectangular.areas = this.processAreas(data.columns());
 
-        d.data.ranges = this.computeMinMax(d.data.rectangular.areas);
+        d.data.ranges = this.computeRanges(d.data.rectangular.areas);
 
         return d;
     }

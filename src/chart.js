@@ -1,4 +1,4 @@
-import {option} from "./utils";
+import {option, isDefined} from "./utils";
 
 import ColumnHandler from "./dataHandlers/column";
 import LineHandler from "./dataHandlers/line";
@@ -87,6 +87,11 @@ export default class Chart {
     }
 
     setBuffer(buffer){
+
+        if(isDefined(this.buffer)){
+            this.buffer.unregisterChart(this);
+        }
+
         buffer = option(buffer, "default");
 
         if(typeof buffer === "function"){

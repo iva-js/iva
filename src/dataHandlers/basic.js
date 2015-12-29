@@ -1,7 +1,7 @@
 
 import RenderObject from "../renderObject/renderObject";
 
-import {isUndefined} from "../utils";
+import {isUndefined, isString} from "../utils";
 
 export default class Handler {
     constructor(){
@@ -33,8 +33,9 @@ export default class Handler {
         }
     }
 
-    computeMinMax(table){
+    computeRanges(table){
         let xMin, xMax, yMin, yMax;
+        let xStrings = [];
 
         table.values.forEach(column => {
             column.values.forEach(value => {
@@ -54,12 +55,34 @@ export default class Handler {
 
         });
 
+        if(this.hasStringXIn(table)){
+            for (let column of table.values) {
+                for (let value of column.values) {
+                    // Convert all x to strings
+                    xStrings.push("" + value.x);
+                }
+            }
+        }
+
         return {
             xMin,
             xMax,
             yMin,
-            yMax
+            yMax,
+            xStrings
         };
-    }   
+    }
+
+    hasStringXIn(table){
+        for(let column of table.values){
+            for(let value of column.values){
+                if(isString(value.x)){
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
 }
