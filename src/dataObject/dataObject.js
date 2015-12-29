@@ -10,6 +10,10 @@ import {option, copy, isObject, isNumeric, isArray, isUndefined, toInt, throwIfN
  * Columns are determined by their ids that must be strings.
  * Rows are determined by the value of their xs. X can either be number or string.
  * Columns and rows are not sorted in any way and stored in the order they were added.
+ *
+ * Note that not every set method calls dirty(true) itself but rather calls other methods that will.
+ * This is done for not calling dirty(true) extra times. E.g. calling addColumn([...]) will always call setValuesToColumn([...]),
+ * and then it will call dirty(true).
  */
 export default class DataObject extends Obj {
     constructor(d, parent) {
@@ -31,6 +35,7 @@ export default class DataObject extends Obj {
 
     clear(){
         this.__.table.clear();
+        this.dirty(true);
         return this;
     }
 
@@ -102,10 +107,13 @@ export default class DataObject extends Obj {
             if(column === undefined){
                 column = this.addEmptyColumn(id);
             }
-            column.set(x, this.__value(value));
 
-            return this;
+            column.set(x, this.__value(value));
         }
+
+        this.dirty(true);
+
+        return this;
     }
 
     setValuesToColumn(id, values){
@@ -126,6 +134,8 @@ export default class DataObject extends Obj {
             }
         }
 
+        this.dirty(true);
+
         return this;
     }
 
@@ -144,11 +154,16 @@ export default class DataObject extends Obj {
             this.addEmptyColumn(id);
         }
 
+        this.dirty();
+
         return this;
     }
 
     removeColumn(id){
         this.__.table.delete(id);
+
+        this.dirty(true);
+
         return this;
     }
 
@@ -202,6 +217,8 @@ export default class DataObject extends Obj {
                 column.delete(x);
             }
         }
+
+        this.dirty(true);
 
         return this;
     }
@@ -280,6 +297,5 @@ export default class DataObject extends Obj {
             };
         }
     }
-
 
 }

@@ -7182,6 +7182,10 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * Columns are determined by their ids that must be strings.
  * Rows are determined by the value of their xs. X can either be number or string.
  * Columns and rows are not sorted in any way and stored in the order they were added.
+ *
+ * Note that not every set method calls dirty(true) itself but rather calls other methods that will.
+ * This is done for not calling dirty(true) extra times. E.g. calling addColumn([...]) will always call setValuesToColumn([...]),
+ * and then it will call dirty(true).
  */
 
 var DataObject = (function (_Obj) {
@@ -7211,6 +7215,7 @@ var DataObject = (function (_Obj) {
         key: "clear",
         value: function clear() {
             this.__.table.clear();
+            this.dirty(true);
             return this;
         }
     }, {
@@ -7289,10 +7294,13 @@ var DataObject = (function (_Obj) {
                 if (column === undefined) {
                     column = this.addEmptyColumn(id);
                 }
-                column.set(x, this.__value(value));
 
-                return this;
+                column.set(x, this.__value(value));
             }
+
+            this.dirty(true);
+
+            return this;
         }
     }, {
         key: "setValuesToColumn",
@@ -7314,6 +7322,8 @@ var DataObject = (function (_Obj) {
                 }
             }
 
+            this.dirty(true);
+
             return this;
         }
     }, {
@@ -7334,12 +7344,17 @@ var DataObject = (function (_Obj) {
                 this.addEmptyColumn(id);
             }
 
+            this.dirty();
+
             return this;
         }
     }, {
         key: "removeColumn",
         value: function removeColumn(id) {
             this.__.table.delete(id);
+
+            this.dirty(true);
+
             return this;
         }
     }, {
@@ -7426,6 +7441,8 @@ var DataObject = (function (_Obj) {
                     }
                 }
             }
+
+            this.dirty(true);
 
             return this;
         }
