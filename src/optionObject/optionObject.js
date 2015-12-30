@@ -3,6 +3,9 @@ import Obj from "../object";
 
 import Size from "./size";
 import Axes from "./axes";
+
+import Area from "./area";
+import Line from "./line";
 import Pie from "./pie";
 
 import {option, throwIfNotArray, isFunction, isUndefined} from "../utils";
@@ -22,6 +25,8 @@ export default class OptionObject extends Obj {
 
         this.legend = option(d.legend, {});
 
+        this.area = new Area(d.area, this);
+        this.line = new Line(d.line, this);
         this.pie = new Pie(d.pie, this);
 
         this.mode(d.mode);

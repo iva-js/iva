@@ -29,6 +29,8 @@ export default class AreaHandler extends RectangularHandler {
 
         d.data.rectangular.areas = this.setY0(d.data.rectangular.areas, d.data.ranges.yMin);
 
+        d.option.area = option.area.options();
+
         return d;
     }
 

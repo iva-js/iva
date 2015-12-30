@@ -1,0 +1,7 @@
+@import "variables";
+
+.iva-chart {
+    .point {
+        fill-opacity: $area-fill-opacity + 0.2;
+    }
+}

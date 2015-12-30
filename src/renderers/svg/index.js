@@ -21,9 +21,10 @@ export default class SvgRenderer extends Renderer {
 
         this.initPies();
 
-        this.color = d3.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
-
         this.initAxes();
+        this.initPoints();
+
+        this.color = d3.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
     }
 
     redraw(renderObject){
@@ -65,6 +66,10 @@ export default class SvgRenderer extends Renderer {
 
         easel.append("g")
             .attr("class", "axis yAxis");
+    }
+
+    initPoints(){
+        this.easel.append("g").attr("class", "points");
     }
 
     setSizes(){
@@ -159,7 +164,7 @@ export default class SvgRenderer extends Renderer {
         let line = d3.svg.line()
             .x(d => xScale(d.x))
             .y(d => yScale(d.y))
-            .interpolate("basis");
+            .interpolate(this.option.line.interpolate);
 
         let linesSvg = easel.select(".lines");
 
@@ -167,7 +172,7 @@ export default class SvgRenderer extends Renderer {
 
         lineSvg.enter().append("path")
             .attr("class", "line")
-            .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, 0)`)
+            .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, ${PADDING.TOP})`)
             .attr("stroke", d => color(d.id))
             .attr("stroke-width", 2)
             .attr("fill", "none");
@@ -175,6 +180,10 @@ export default class SvgRenderer extends Renderer {
         lineSvg.attr("d", d => line(d.values))
 
         lineSvg.exit().remove();    
+
+        if(this.option.line.points){
+            this.redrawPoints(lines);
+        }
     }
 
     redrawAreas(){
@@ -192,7 +201,7 @@ export default class SvgRenderer extends Renderer {
             .x(d => xScale(d.x))
             .y0(d => yScale(d.y0) + PADDING.TOP - 10)
             .y1(d => yScale(d.y))
-            .interpolate("basis");
+            .interpolate(this.option.area.interpolate);
 
         let areasSvg = easel.select(".areas");
 
@@ -209,6 +218,9 @@ export default class SvgRenderer extends Renderer {
 
         areaSvg.exit().remove();
 
+        if(this.option.area.points){
+            this.redrawPoints(areas);
+        }
     }
 
     redrawPies(){
@@ -248,4 +260,38 @@ export default class SvgRenderer extends Renderer {
 
     }
 
+    redrawPoints(sequences){
+        if(isEmpty(sequences)){
+            return;
+        }
+
+        let easel = this.easel, option = this.option, xScale = this.xScale, yScale = this.yScale;
+
+        let points = [];
+        
+        sequences.forEach(sequence => {
+            sequence.values.forEach(value => {
+                points.push({
+                    x: value.x,
+                    y: value.y,
+                    id: sequence.id
+                });
+            });
+        });
+
+
+        let pointsSvg = easel.selectAll(".points").attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, ${PADDING.TOP})`);
+
+        let pointSvg = pointsSvg.selectAll(".point").data(points);
+
+        pointSvg.enter().append("circle")
+            .attr("class", "point")
+            .attr("fill", d => this.color(d.id))
+            .attr("r", 3);
+
+        pointSvg.attr("cx", d => xScale(d.x))
+        pointSvg.attr("cy", d => yScale(d.y))
+
+        pointSvg.exit().remove();
+    }
 }

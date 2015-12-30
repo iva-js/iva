@@ -6162,7 +6162,7 @@ var DefaultBuffer = (function () {
 
 exports.default = DefaultBuffer;
 
-},{"../utils":215}],193:[function(require,module,exports){
+},{"../utils":217}],193:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -6388,7 +6388,7 @@ var Chart = (function () {
 
 exports.default = Chart;
 
-},{"./buffers/default":192,"./buffers/instant":193,"./dataHandlers/area":195,"./dataHandlers/column":198,"./dataHandlers/line":199,"./dataHandlers/pie":200,"./dataObject/dataObject":202,"./optionObject/optionObject":206,"./renderers/svg/index":213,"./utils":215}],195:[function(require,module,exports){
+},{"./buffers/default":192,"./buffers/instant":193,"./dataHandlers/area":195,"./dataHandlers/column":198,"./dataHandlers/line":199,"./dataHandlers/pie":200,"./dataObject/dataObject":202,"./optionObject/optionObject":208,"./renderers/svg/index":215,"./utils":217}],195:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -6451,6 +6451,8 @@ var AreaHandler = (function (_RectangularHandler) {
             d.data.ranges = this.computeRanges(d.data.rectangular.areas);
 
             d.data.rectangular.areas = this.setY0(d.data.rectangular.areas, d.data.ranges.yMin);
+
+            d.option.area = option.area.options();
 
             return d;
         }
@@ -6603,7 +6605,7 @@ var AreaHandler = (function (_RectangularHandler) {
 
 exports.default = AreaHandler;
 
-},{"../utils":215,"./rectangular":201}],196:[function(require,module,exports){
+},{"../utils":217,"./rectangular":201}],196:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -6946,7 +6948,7 @@ var Handler = (function () {
 
 exports.default = Handler;
 
-},{"../renderObject/renderObject":210,"../utils":215,"babel-polyfill":1}],197:[function(require,module,exports){
+},{"../renderObject/renderObject":212,"../utils":217,"babel-polyfill":1}],197:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7095,7 +7097,7 @@ var ColumnHandler = (function (_RectangularHandler) {
 
 exports.default = ColumnHandler;
 
-},{"../utils":215,"./rectangular":201}],199:[function(require,module,exports){
+},{"../utils":217,"./rectangular":201}],199:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -7150,6 +7152,8 @@ var LineHandler = (function (_RectangularHandler) {
             d.data.rectangular.lines = this.processLines(data.columns());
 
             d.data.ranges = this.computeRanges(d.data.rectangular.lines);
+
+            d.option.line = option.line.options();
 
             return d;
         }
@@ -7237,7 +7241,7 @@ var LineHandler = (function (_RectangularHandler) {
 
 exports.default = LineHandler;
 
-},{"../utils":215,"./rectangular":201}],200:[function(require,module,exports){
+},{"../utils":217,"./rectangular":201}],200:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -7384,7 +7388,7 @@ var PieHandler = (function (_CircularHandler) {
 
 exports.default = PieHandler;
 
-},{"../utils":215,"./circular":197}],201:[function(require,module,exports){
+},{"../utils":217,"./circular":197}],201:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -7477,7 +7481,7 @@ var RectangularHandler = (function (_Handler) {
 
 exports.default = RectangularHandler;
 
-},{"../utils":215,"./basic":196}],202:[function(require,module,exports){
+},{"../utils":217,"./basic":196}],202:[function(require,module,exports){
 "use strict";
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
@@ -7932,7 +7936,7 @@ var DataObject = (function (_Obj) {
 
 exports.default = DataObject;
 
-},{"../object":204,"../utils":215,"babel-polyfill":1}],203:[function(require,module,exports){
+},{"../object":204,"../utils":217,"babel-polyfill":1}],203:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7992,7 +7996,7 @@ exports.OptionObject = _optionObject2.default;
 exports.Chart = _chart2.default;
 exports.Buffer = Buffer;
 
-},{"./buffers/default":192,"./buffers/instant":193,"./chart":194,"./dataObject/dataObject":202,"./optionObject/optionObject":206}],204:[function(require,module,exports){
+},{"./buffers/default":192,"./buffers/instant":193,"./chart":194,"./dataObject/dataObject":202,"./optionObject/optionObject":208}],204:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8121,6 +8125,17 @@ var Obj = (function () {
 
             this.setField(q.slice(1).join("."), value, obj[q[0]]);
         }
+
+        /*
+         * Options and getDefault should be implemented in
+         * child classes.
+         */
+
+    }, {
+        key: "setDefault",
+        value: function setDefault() {
+            this.options(this.getDefault());
+        }
     }]);
 
     return Obj;
@@ -8128,7 +8143,98 @@ var Obj = (function () {
 
 exports.default = Obj;
 
-},{"./utils":215}],205:[function(require,module,exports){
+},{"./utils":217}],205:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Area = (function (_Obj) {
+    _inherits(Area, _Obj);
+
+    function Area(d, parent) {
+        _classCallCheck(this, Area);
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Area).call(this, d, parent));
+
+        _this.setDefault();
+        _this.options(d);
+        return _this;
+    }
+
+    _createClass(Area, [{
+        key: "options",
+        value: function options(d) {
+            if ((0, _utils.isUndefined)(d)) {
+                return {
+                    points: this.points(),
+                    interpolate: this.interpolate()
+                };
+            }
+
+            this.points(d.points);
+        }
+    }, {
+        key: "points",
+        value: function points(_points) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_points)) {
+                return __.points;
+            }
+
+            __.points = _points;
+
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "interpolate",
+        value: function interpolate(_interpolate) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_interpolate)) {
+                return __.interpolate;
+            }
+
+            __.interpolate = _interpolate;
+
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "getDefault",
+        value: function getDefault() {
+            return {
+                points: false,
+                interpolate: "linear"
+            };
+        }
+    }]);
+
+    return Area;
+})(_object2.default);
+
+exports.default = Area;
+
+},{"../object":204,"../utils":217}],206:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8292,7 +8398,98 @@ var YAxis = (function (_Axis2) {
     return YAxis;
 })(Axis);
 
-},{"../object":204,"../utils":215}],206:[function(require,module,exports){
+},{"../object":204,"../utils":217}],207:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Line = (function (_Obj) {
+    _inherits(Line, _Obj);
+
+    function Line(d, parent) {
+        _classCallCheck(this, Line);
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Line).call(this, d, parent));
+
+        _this.setDefault();
+        _this.options(d);
+        return _this;
+    }
+
+    _createClass(Line, [{
+        key: "options",
+        value: function options(d) {
+            if ((0, _utils.isUndefined)(d)) {
+                return {
+                    points: this.points(),
+                    interpolate: this.interpolate()
+                };
+            }
+
+            this.points(d.points);
+        }
+    }, {
+        key: "points",
+        value: function points(_points) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_points)) {
+                return __.points;
+            }
+
+            __.points = _points;
+
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "interpolate",
+        value: function interpolate(_interpolate) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_interpolate)) {
+                return __.interpolate;
+            }
+
+            __.interpolate = _interpolate;
+
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "getDefault",
+        value: function getDefault() {
+            return {
+                points: false,
+                interpolate: "linear"
+            };
+        }
+    }]);
+
+    return Line;
+})(_object2.default);
+
+exports.default = Line;
+
+},{"../object":204,"../utils":217}],208:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8312,6 +8509,14 @@ var _size2 = _interopRequireDefault(_size);
 var _axes = require("./axes");
 
 var _axes2 = _interopRequireDefault(_axes);
+
+var _area = require("./area");
+
+var _area2 = _interopRequireDefault(_area);
+
+var _line = require("./line");
+
+var _line2 = _interopRequireDefault(_line);
 
 var _pie = require("./pie");
 
@@ -8349,6 +8554,8 @@ var OptionObject = (function (_Obj) {
 
         _this.legend = (0, _utils.option)(d.legend, {});
 
+        _this.area = new _area2.default(d.area, _this);
+        _this.line = new _line2.default(d.line, _this);
         _this.pie = new _pie2.default(d.pie, _this);
 
         _this.mode(d.mode);
@@ -8422,7 +8629,7 @@ var OptionObject = (function (_Obj) {
 
 exports.default = OptionObject;
 
-},{"../object":204,"../utils":215,"./axes":205,"./pie":207,"./presets":208,"./size":209}],207:[function(require,module,exports){
+},{"../object":204,"../utils":217,"./area":205,"./axes":206,"./line":207,"./pie":209,"./presets":210,"./size":211}],209:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8559,7 +8766,7 @@ var Pie = (function (_Obj) {
 
 exports.default = Pie;
 
-},{"../object":204,"../utils":215}],208:[function(require,module,exports){
+},{"../object":204,"../utils":217}],210:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8577,7 +8784,7 @@ var presets = {
 
 exports.default = presets;
 
-},{}],209:[function(require,module,exports){
+},{}],211:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8679,7 +8886,7 @@ var Size = (function (_Obj) {
 
 exports.default = Size;
 
-},{"../object":204,"../utils":215}],210:[function(require,module,exports){
+},{"../object":204,"../utils":217}],212:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8799,7 +9006,7 @@ var RenderObject = (function () {
 
 exports.default = RenderObject;
 
-},{"../utils":215}],211:[function(require,module,exports){
+},{"../utils":217}],213:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8822,7 +9029,7 @@ var Renderer = function Renderer() {
 
 exports.default = Renderer;
 
-},{"../renderObject/renderObject":210}],212:[function(require,module,exports){
+},{"../renderObject/renderObject":212}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8839,7 +9046,7 @@ var AXIS = exports.AXIS = {
     WIDTH: 30
 };
 
-},{}],213:[function(require,module,exports){
+},{}],215:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -8889,9 +9096,10 @@ var SvgRenderer = (function (_Renderer) {
 
         _this.initPies();
 
-        _this.color = _d2.default.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
-
         _this.initAxes();
+        _this.initPoints();
+
+        _this.color = _d2.default.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
         return _this;
     }
 
@@ -8938,6 +9146,11 @@ var SvgRenderer = (function (_Renderer) {
             easel.append("g").attr("class", "axis xAxis");
 
             easel.append("g").attr("class", "axis yAxis");
+        }
+    }, {
+        key: "initPoints",
+        value: function initPoints() {
+            this.easel.append("g").attr("class", "points");
         }
     }, {
         key: "setSizes",
@@ -9064,13 +9277,13 @@ var SvgRenderer = (function (_Renderer) {
                 return xScale(d.x);
             }).y(function (d) {
                 return yScale(d.y);
-            }).interpolate("basis");
+            }).interpolate(this.option.line.interpolate);
 
             var linesSvg = easel.select(".lines");
 
             var lineSvg = linesSvg.selectAll("path").data(lines);
 
-            lineSvg.enter().append("path").attr("class", "line").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", 0)").attr("stroke", function (d) {
+            lineSvg.enter().append("path").attr("class", "line").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("stroke", function (d) {
                 return color(d.id);
             }).attr("stroke-width", 2).attr("fill", "none");
 
@@ -9079,6 +9292,10 @@ var SvgRenderer = (function (_Renderer) {
             });
 
             lineSvg.exit().remove();
+
+            if (this.option.line.points) {
+                this.redrawPoints(lines);
+            }
         }
     }, {
         key: "redrawAreas",
@@ -9104,7 +9321,7 @@ var SvgRenderer = (function (_Renderer) {
                 return yScale(d.y0) + _constants.PADDING.TOP - 10;
             }).y1(function (d) {
                 return yScale(d.y);
-            }).interpolate("basis");
+            }).interpolate(this.option.area.interpolate);
 
             var areasSvg = easel.select(".areas");
 
@@ -9121,6 +9338,10 @@ var SvgRenderer = (function (_Renderer) {
             });
 
             areaSvg.exit().remove();
+
+            if (this.option.area.points) {
+                this.redrawPoints(areas);
+            }
         }
     }, {
         key: "redrawPies",
@@ -9162,6 +9383,49 @@ var SvgRenderer = (function (_Renderer) {
 
             p.exit().remove();
         }
+    }, {
+        key: "redrawPoints",
+        value: function redrawPoints(sequences) {
+            var _this3 = this;
+
+            if ((0, _utils.isEmpty)(sequences)) {
+                return;
+            }
+
+            var easel = this.easel,
+                option = this.option,
+                xScale = this.xScale,
+                yScale = this.yScale;
+
+            var points = [];
+
+            sequences.forEach(function (sequence) {
+                sequence.values.forEach(function (value) {
+                    points.push({
+                        x: value.x,
+                        y: value.y,
+                        id: sequence.id
+                    });
+                });
+            });
+
+            var pointsSvg = easel.selectAll(".points").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")");
+
+            var pointSvg = pointsSvg.selectAll(".point").data(points);
+
+            pointSvg.enter().append("circle").attr("class", "point").attr("fill", function (d) {
+                return _this3.color(d.id);
+            }).attr("r", 3);
+
+            pointSvg.attr("cx", function (d) {
+                return xScale(d.x);
+            });
+            pointSvg.attr("cy", function (d) {
+                return yScale(d.y);
+            });
+
+            pointSvg.exit().remove();
+        }
     }]);
 
     return SvgRenderer;
@@ -9169,7 +9433,7 @@ var SvgRenderer = (function (_Renderer) {
 
 exports.default = SvgRenderer;
 
-},{"../../utils":215,"../renderer":211,"./constants":212,"./svgUtils":214,"d3":216}],214:[function(require,module,exports){
+},{"../../utils":217,"../renderer":213,"./constants":214,"./svgUtils":216,"d3":218}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9194,7 +9458,7 @@ function generateExplode(explodeRadius) {
     };
 }
 
-},{}],215:[function(require,module,exports){
+},{}],217:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9420,7 +9684,7 @@ function debug(msg) {
     console.debug(toString(msg));
 }
 
-},{"underscore":191}],216:[function(require,module,exports){
+},{"underscore":191}],218:[function(require,module,exports){
 !function() {
   var d3 = {
     version: "3.5.6"

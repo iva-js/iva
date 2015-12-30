@@ -108,4 +108,12 @@ export default class Obj {
         this.setField(q.slice(1).join("."), value, obj[q[0]]);
     }
 
+    /*
+     * Options and getDefault should be implemented in
+     * child classes.
+     */
+    setDefault(){
+        this.options(this.getDefault());
+    }
+
 }
