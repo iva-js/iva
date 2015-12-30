@@ -28,11 +28,11 @@ function compile(watch) {
     function rebundle() {
         lint();
 
-        rmdir("./build", function(err, dirs, files){
+        rmdir("./build", (err, dirs, files) => {
             console.log('-> bundling at ' + new Date());
 
             bundler.bundle()
-                .on('error', function(err) { console.error(err); this.emit('end'); })
+                .on('error', (err) => { console.error(err); this.emit('end'); })
                 .pipe(source('build.js'))
                 .pipe(buffer())
                 .pipe(sourcemaps.init({ loadMaps: true }))
@@ -69,22 +69,22 @@ function lint(){
         .pipe(eslint.failAfterError());
 }
 
-gulp.task('js', function() { return compile(); });
-gulp.task('js:watch', function() { return watch(); });
+gulp.task('js', () => { return compile(); });
+gulp.task('js:watch', () =>  { return watch(); });
 
-gulp.task('test-integration', function(done){
+gulp.task('test-integration', (done) => {
     new Server({
         configFile: __dirname + '/karma.conf.js',
         singleRun: true
     }, done).start();
 });
 
-gulp.task("sass-default", function(){
+gulp.task("sass-default", () => {
     gulp.src("./styles/default/scss/main.scss")
        .pipe(sass.sync().on("error", sass.logError))
        .pipe(gulp.dest("./styles/default/css"));
 });
 
-gulp.task("sass-default:watch", function(){
+gulp.task("sass-default:watch", () => {
     gulp.watch("./styles/default/scss/*.scss", ["sass-default"]);
 });
