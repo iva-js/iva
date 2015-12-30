@@ -154,6 +154,7 @@ export default class SvgRenderer extends Renderer {
         let easel = this.easel, color = this.color, xScale = this.xScale, yScale = this.yScale;
 
         if(isEmpty(this.data.rectangular.lines.values)){
+            this.clear(".lines");
             return;
         }
 
@@ -190,6 +191,7 @@ export default class SvgRenderer extends Renderer {
         let easel = this.easel, color = this.color, xScale = this.xScale, yScale = this.yScale;
 
         if(isEmpty(this.data.rectangular.areas.values)){
+            this.clear(".areas");
             return;
         }
 
@@ -293,5 +295,9 @@ export default class SvgRenderer extends Renderer {
         pointSvg.attr("cy", d => yScale(d.y))
 
         pointSvg.exit().remove();
+    }
+
+    clear(select){
+        this.easel.selectAll(select).selectAll("*").remove();
     }
 }

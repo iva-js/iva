@@ -7151,6 +7151,12 @@ var LineHandler = (function (_RectangularHandler) {
 
             d.data.rectangular.lines = this.processLines(data.columns());
 
+            if (option.mode() === "stacked") {
+                d.data.rectangular.lines = this.stack(d.data.rectangular.lines);
+            } else if (option.mode() === "normalized") {
+                d.data.rectangular.lines = this.normalize(d.data.rectangular.lines);
+            }
+
             d.data.ranges = this.computeRanges(d.data.rectangular.lines);
 
             d.option.line = option.line.options();
@@ -9264,6 +9270,7 @@ var SvgRenderer = (function (_Renderer) {
                 yScale = this.yScale;
 
             if ((0, _utils.isEmpty)(this.data.rectangular.lines.values)) {
+                this.clear(".lines");
                 return;
             }
 
@@ -9306,6 +9313,7 @@ var SvgRenderer = (function (_Renderer) {
                 yScale = this.yScale;
 
             if ((0, _utils.isEmpty)(this.data.rectangular.areas.values)) {
+                this.clear(".areas");
                 return;
             }
 
@@ -9425,6 +9433,11 @@ var SvgRenderer = (function (_Renderer) {
             });
 
             pointSvg.exit().remove();
+        }
+    }, {
+        key: "clear",
+        value: function clear(select) {
+            this.easel.selectAll(select).selectAll("*").remove();
         }
     }]);
 

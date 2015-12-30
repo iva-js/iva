@@ -21,6 +21,13 @@ export default class LineHandler extends RectangularHandler {
 
         d.data.rectangular.lines = this.processLines(data.columns());
 
+        if(option.mode() === "stacked"){
+            d.data.rectangular.lines = this.stack(d.data.rectangular.lines);
+        } else if(option.mode() === "normalized"){
+            d.data.rectangular.lines = this.normalize(d.data.rectangular.lines);
+        }
+
+
         d.data.ranges = this.computeRanges(d.data.rectangular.lines);
 
         d.option.line = option.line.options();
