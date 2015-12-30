@@ -298,6 +298,6 @@ export default class SvgRenderer extends Renderer {
     }
 
     clear(select){
-        this.easel.selectAll(select).selectAll("*").remove();
+        this.easel.selectAll(select).selectAll("*").transition().duration(500).style("opacity", 0).remove();
     }
 }

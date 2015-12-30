@@ -6304,6 +6304,10 @@ var Chart = (function () {
             } else {
                 this.setHandlerByName(handler);
             }
+
+            if (this.renderer) {
+                this.redraw();
+            }
         }
     }, {
         key: "setHandlerByName",
@@ -9437,7 +9441,7 @@ var SvgRenderer = (function (_Renderer) {
     }, {
         key: "clear",
         value: function clear(select) {
-            this.easel.selectAll(select).selectAll("*").remove();
+            this.easel.selectAll(select).selectAll("*").transition().duration(500).style("opacity", 0).remove();
         }
     }]);
 

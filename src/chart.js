@@ -50,6 +50,10 @@ export default class Chart {
         } else {
             this.setHandlerByName(handler);
         }
+
+        if(this.renderer){
+            this.redraw();
+        }
     }
 
     setHandlerByName(handler){
@@ -104,6 +108,7 @@ export default class Chart {
 
         this.buffer.registerChart(this);
         this.buffer.frozen(true);
+
     }
 
     setBufferByName(buffer){
