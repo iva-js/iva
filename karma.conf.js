@@ -15,6 +15,8 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
+      'node_modules/d3/d3.js',
+      'node_modules/babel-polyfill/browser.js',
       'build/build.js',
       'test-integration/*.helper.js',
       'test-integration/*.spec.js'

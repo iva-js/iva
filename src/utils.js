@@ -1,4 +1,3 @@
-import _ from "underscore";
 
 export function option(value, _default){
     if(value === undefined){

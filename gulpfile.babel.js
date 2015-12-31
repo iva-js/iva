@@ -27,7 +27,11 @@ let rmdir = require("rmdir");
 
 function compile(watch) {
     let bundler = watchify(browserify({ debug: true, entries: ["src/index.js"], standalone: "Iva"})
-                         .transform(babel, { sourceMapRelative: path.resolve(__dirname, 'src'), presets: ["es2015"] }));
+                         .transform(babel, { 
+                             sourceMapRelative: path.resolve(__dirname, 'src'), 
+                             presets: ["es2015"],
+                             ignore: /d3/ig
+                         }));
 
     function rebundle() {
         lint();

@@ -83,4 +83,14 @@ declare module Iva {
         color?: Iva.Color;
         label?: String
     }
+
+    /*
+     * CONSTANTS
+     */
+    class INTERPOLATE {
+        static LINEAR: string;
+        static CARDINAL: string;
+        static MONOTONE: string;
+    }
 }
+

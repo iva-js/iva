@@ -242,6 +242,10 @@ export default class DataObject extends Obj {
     copy(){
     }
 
+    isEmpty(){
+        return this.__.table.size === 0;
+    }
+
     /*
      * Gets next available x in column with given id.
      * Say column is [{ x: 10 }, { x: 11 }, { x: 22 }].

@@ -41,6 +41,8 @@ export default class SvgRenderer extends Renderer {
         this.redrawPies();
 
         this.redrawAxes();
+
+        this.endRender();
     }
 
     initLines(){
@@ -264,6 +266,7 @@ export default class SvgRenderer extends Renderer {
 
     redrawPoints(sequences){
         if(isEmpty(sequences)){
+            this.clear(".points");
             return;
         }
 
@@ -299,5 +302,13 @@ export default class SvgRenderer extends Renderer {
 
     clear(select){
         this.easel.selectAll(select).selectAll("*").transition().duration(500).style("opacity", 0).remove();
+    }
+
+    endRender(){
+        let data = this.data;
+
+        if(data.isEmpty){
+            this.clear(".points");
+        } 
     }
 }

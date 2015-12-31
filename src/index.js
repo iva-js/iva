@@ -1,3 +1,4 @@
+
 import DataObject from "./dataObject/dataObject";
 import OptionObject from "./optionObject/optionObject";
 
@@ -6,7 +7,7 @@ import Chart from "./chart";
 import DefaultBuffer from "./buffers/default";
 import InstantBuffer from "./buffers/instant";
 
-//import "babel-polyfill";
+import {INTERPOLATE} from "./constants";
 
 let Buffer = {
     Default: DefaultBuffer,
@@ -37,3 +38,5 @@ export { OptionObject as OptionObject };
 export { Chart as Chart };
 
 export { Buffer as Buffer };
+
+export { INTERPOLATE as INTERPOLATE };
