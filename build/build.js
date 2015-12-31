@@ -11731,6 +11731,9 @@ var Handler = (function () {
                     if ((0, _utils.isUndefined)(yMin) || value.y < yMin) {
                         yMin = value.y;
                     }
+                    if ((0, _utils.isDefined)(value.y0) && value.y0 < yMin) {
+                        yMin = value.y0;
+                    }
                     if ((0, _utils.isUndefined)(yMax) || value.y > yMax) {
                         yMax = value.y;
                     }

@@ -1,6 +1,6 @@
 
 import RenderObject from "../renderObject/renderObject";
-import {isUndefined, isString} from "../utils";
+import {isUndefined, isDefined, isString} from "../utils";
 
 export default class Handler {
     constructor(){
@@ -46,6 +46,9 @@ export default class Handler {
                 }               
                 if(isUndefined(yMin) || value.y < yMin){
                     yMin = value.y;
+                }
+                if(isDefined(value.y0) && value.y0 < yMin){
+                    yMin = value.y0;
                 }
                 if(isUndefined(yMax) || value.y > yMax){
                     yMax = value.y;
