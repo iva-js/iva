@@ -2,6 +2,8 @@
 import RenderObject from "../renderObject/renderObject";
 import {isUndefined, isDefined, isString} from "../utils";
 
+import {debug} from "../utils";
+
 export default class Handler {
     constructor(){
         this.__ = {
@@ -21,6 +23,10 @@ export default class Handler {
         let d = this.d();
 
         d.option.size = this.processSize(option.size);
+
+        d.option.easel = option.easel();
+
+        d.option.legend = option.legend.options();
     }
 
     processSize(size){

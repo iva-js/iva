@@ -11,10 +11,9 @@ export default class SvgRenderer extends Renderer {
     constructor(chart){
         super();
         this.option = chart.option;
-        let bindTo = this.option.bindTo;
 
-        this.easel = d3.selectAll("#chart").attr("class", "iva-chart");;
-        this.easel.append("g").attr("transform", "translate(0, 0)");
+        this.initEasel();
+        this.initScene();
 
         this.initLines();
         this.initAreas();
@@ -23,6 +22,7 @@ export default class SvgRenderer extends Renderer {
 
         this.initAxes();
         this.initPoints();
+        this.initLegend();
 
         this.color = d3.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
     }
@@ -45,16 +45,31 @@ export default class SvgRenderer extends Renderer {
         this.endRender();
     }
 
+    /*
+     * Easel is where all the things are drawn
+     */
+    initEasel(){
+        this.easel = d3.selectAll(this.option.easel()).attr("class", "iva-chart");
+        this.clear();
+    }
+
+    /*
+     * Scene is where all the data is drawn
+     */
+    initScene(){
+        this.scene = this.easel.append("g").attr("class", "scene");
+    }
+
     initLines(){
-        this.easel.append("g").attr("class", "lines");
+        this.scene.append("g").attr("class", "lines");
     }
 
     initAreas(){
-        this.easel.append("g").attr("class", "areas");
+        this.scene.append("g").attr("class", "areas");
     }
 
     initPies(){
-        this.easel.append("g").attr("class", "pies");
+        this.scene.append("g").attr("class", "pies");
     }
 
     initAxes(){
@@ -70,12 +85,16 @@ export default class SvgRenderer extends Renderer {
             .attr("class", "axis yAxis");
     }
 
+    initLegend(){
+        this.legend = this.easel.append("g").attr("class", "legend");
+    }
+
     initPoints(){
-        this.easel.append("g").attr("class", "points");
+        this.scene.append("g").attr("class", "points");
     }
 
     setSizes(){
-        let easel = this.easel, size = this.option.size;
+        let easel = this.easel, option = this.option, size = option.size;
 
         let innerSize = this.innerSize = {
             width: size.width - PADDING.LEFT - PADDING.RIGHT,
@@ -84,9 +103,22 @@ export default class SvgRenderer extends Renderer {
 
         this.easel.attr("width", size.width).attr("height", size.height);
 
-        let xScale = this.xScale = d3.scale.ordinal().rangePoints([0, innerSize.width - AXIS.WIDTH]);
+        let legend = option.legend;
+        let legendPadding = legend.visible ? legend.width : 0;
 
-        let yScale = this.yScale = d3.scale.linear().range([innerSize.height - AXIS.WIDTH, 0]);
+        this.scene.attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, ${PADDING.TOP})`)
+        this.scene.attr("width", innerSize.width - AXIS.WIDTH - legendPadding).attr("height", innerSize.height - AXIS.WIDTH)
+
+        this.legend.attr("width", legend.width)
+            .attr("height", legend.height)
+            .attr("visibility", visibility(legend.visible))
+            .attr("transform", `translate(${innerSize.width + PADDING.LEFT - legend.width + 20}, ${size.height/2 - legend.height / 2})`);
+
+        this.legendScale = d3.scale.ordinal().rangePoints([0, legend.height]);    
+
+        let xScale = this.xScale = d3.scale.ordinal().rangePoints([0, this.scene.attr("width")]);
+
+        let yScale = this.yScale = d3.scale.linear().range([this.scene.attr("height"), 0]);
 
     }
 
@@ -153,7 +185,7 @@ export default class SvgRenderer extends Renderer {
     }
 
     redrawLines(){
-        let easel = this.easel, color = this.color, xScale = this.xScale, yScale = this.yScale;
+        let scene = this.scene, color = this.color, xScale = this.xScale, yScale = this.yScale;
 
         if(isEmpty(this.data.rectangular.lines.values)){
             this.clear(".lines");
@@ -169,13 +201,12 @@ export default class SvgRenderer extends Renderer {
             .y(d => yScale(d.y))
             .interpolate(this.option.line.interpolate);
 
-        let linesSvg = easel.select(".lines");
+        let linesSvg = scene.select(".lines");
 
         let lineSvg = linesSvg.selectAll("path").data(lines);
 
         lineSvg.enter().append("path")
             .attr("class", "line")
-            .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, ${PADDING.TOP})`)
             .attr("stroke", d => color(d.id))
             .attr("stroke-width", 2)
             .attr("fill", "none");
@@ -187,10 +218,12 @@ export default class SvgRenderer extends Renderer {
         if(this.option.line.points){
             this.redrawPoints(lines);
         }
+
+        this.redrawLegend(lines);
     }
 
     redrawAreas(){
-        let easel = this.easel, color = this.color, xScale = this.xScale, yScale = this.yScale;
+        let scene = this.scene, color = this.color, xScale = this.xScale, yScale = this.yScale;
 
         if(isEmpty(this.data.rectangular.areas.values)){
             this.clear(".areas");
@@ -207,13 +240,12 @@ export default class SvgRenderer extends Renderer {
             .y1(d => yScale(d.y))
             .interpolate(this.option.area.interpolate);
 
-        let areasSvg = easel.select(".areas");
+        let areasSvg = scene.select(".areas");
 
         let areaSvg = areasSvg.selectAll("path").data(areas);
 
         areaSvg.enter().append("path")
             .attr("class", "area")
-            .attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, ${PADDING.TOP})`)
             .attr("class", "area")
             .attr("stroke", d => color(d.id))
             .attr("fill", d => color(d.id));
@@ -225,10 +257,12 @@ export default class SvgRenderer extends Renderer {
         if(this.option.area.points){
             this.redrawPoints(areas);
         }
+
+        this.redrawLegend(areas);
     }
 
     redrawPies(){
-        let easel = this.easel, color = this.color, option = this.option;
+        let scene = this.scene, color = this.color, option = this.option;
 
         if(isEmpty(this.data.circular.pies.values)){
             return;
@@ -250,8 +284,8 @@ export default class SvgRenderer extends Renderer {
             .sort(null)
             .value(d => d.y);
 
-        easel.selectAll(".pies").attr("transform", `translate(${this.option.size.width/2}, ${this.option.size.height/2})`);
-        let p = easel.selectAll(".pies").selectAll(".arc").data(pieLayout(pie));
+        scene.selectAll(".pies").attr("transform", `translate(${this.option.size.width/2}, ${this.option.size.height/2})`);
+        let p = scene.selectAll(".pies").selectAll(".arc").data(pieLayout(pie));
 
         p.enter().append("path")
             .attr("class", "arc")
@@ -264,13 +298,49 @@ export default class SvgRenderer extends Renderer {
 
     }
 
+    redrawLegend(sequences){
+        if(isEmpty(sequences)){
+            this.clear(".legend");
+            return;
+        }
+
+        if(!this.option.legend.visible){
+            return;
+        }
+
+        let legend = this.legend, legendScale = this.legendScale, color = this.color;
+
+        legendScale.domain(sequences.map(sequence => sequence.id));
+
+        let legendItem = legend.selectAll(".legendItem").data(sequences);
+
+        legendItem.enter().append("text")
+            .attr("class", "legendItem");
+
+        legendItem.attr("transform", d => `translate(20, ${legendScale(d.id)})`);
+        legendItem.text(d => d.id);
+        
+        let legendPicture = legend.selectAll(".legendPicture").data(sequences);  
+
+        legendPicture.enter().append("rect")
+            .attr("class", "legendPicture")
+            .attr("width", 10)
+            .attr("height", 10);
+            
+        legendPicture.attr("transform", d => `translate(0, ${legendScale(d.id) - 10})`)
+            .attr("fill", d => color(d.id));
+
+        legendItem.exit().remove();
+        legendPicture.exit().remove();
+    }
+
     redrawPoints(sequences){
         if(isEmpty(sequences)){
             this.clear(".points");
             return;
         }
 
-        let easel = this.easel, option = this.option, xScale = this.xScale, yScale = this.yScale;
+        let scene = this.scene, option = this.option, xScale = this.xScale, yScale = this.yScale;
 
         let points = [];
         
@@ -285,9 +355,7 @@ export default class SvgRenderer extends Renderer {
         });
 
 
-        let pointsSvg = easel.selectAll(".points").attr("transform", `translate(${PADDING.LEFT + AXIS.WIDTH}, ${PADDING.TOP})`);
-
-        let pointSvg = pointsSvg.selectAll(".point").data(points);
+        let pointSvg = scene.selectAll(".points").pointsSvg.selectAll(".point").data(points);
 
         pointSvg.enter().append("circle")
             .attr("class", "point")
@@ -301,7 +369,15 @@ export default class SvgRenderer extends Renderer {
     }
 
     clear(select){
-        this.easel.selectAll(select).selectAll("*").transition().duration(500).style("opacity", 0).remove();
+        let obj;
+
+        if(isUndefined(select)){
+            obj = this.easel;
+        } else {
+            obj = this.easel.selectAll(select);
+        }
+
+        obj.selectAll("*").transition().duration(500).style("opacity", 0).remove();
     }
 
     endRender(){

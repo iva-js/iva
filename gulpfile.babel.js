@@ -99,14 +99,12 @@ gulp.task("sass-default:watch", () => {
 
 gulp.task("examples", ()=>{
     gulp.src("examples/jade/**/*.jade")
+        .pipe(jade())
         .pipe(gulp.dest("examples/html"));
 
     gulp.src("examples/jade/**/*.js")
         .pipe(gulp.dest("examples/html"));
 
-    gulp.src("examples/html/**/*.jade")
-        .pipe(jade())
-        .pipe(gulp.dest("examples/html"));
 });
 
 gulp.task("examples:watch", ()=>{

@@ -8,13 +8,13 @@ var buffer = new Iva.Buffer.Instant()
 
 var dataObject = new Iva.DataObject({
     columns: [{
-        id: "data1",
+        id: "Здрасти",
         values: [1, 2, 3, 4]
     }, {
-        id: "data2",
+        id: "Я данные",
         values: [4, 2, 2, 4]
     }, {
-        id: "data3", 
+        id: "И я! :)", 
         values: [5, 1, 4, 3]
     }] 
 }, buffer);
@@ -26,8 +26,11 @@ var optionObject = new Iva.OptionObject({
             visible: true
         }
     },
-    area: {
+    line: {
         points: true
+    },
+    legend: {
+        visible: true
     }
 }, buffer);
 

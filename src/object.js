@@ -35,6 +35,8 @@ export default class Obj {
         if(d === true){
             __.parent.dirty(true);
         }
+
+        return this;
     }
 
     /**

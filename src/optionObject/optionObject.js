@@ -3,6 +3,7 @@ import Obj from "../object";
 
 import Size from "./size";
 import Axes from "./axes";
+import Legend from "./legend";
 
 import Area from "./area";
 import Line from "./line";
@@ -23,13 +24,14 @@ export default class OptionObject extends Obj {
 
         this.axes = new Axes(d.axes, this);
 
-        this.legend = option(d.legend, {});
+        this.legend = new Legend(d.legend, this);
 
         this.area = new Area(d.area, this);
         this.line = new Line(d.line, this);
         this.pie = new Pie(d.pie, this);
 
-        this.mode(d.mode);
+        this.setDefault();
+        this.options(d);
 
         let presets = option(d.presets, []);
         this.setPresets(presets);
@@ -44,6 +46,34 @@ export default class OptionObject extends Obj {
         };
 
 
+    }
+
+    options(d){
+        if(isUndefined(d)){
+            return {
+                mode: this.mode(),
+                easel: this.easel()
+            };
+        }
+
+        this.mode(d.mode);
+        this.easel(d.easel);
+
+        return this;
+    }
+
+    easel(easel){
+        let __ = this.__;
+
+        if(isUndefined(easel)){
+            return __.easel;
+        }
+
+        __.easel = easel;
+
+        this.dirty(true);
+
+        return this;
     }
 
     mode(mode){
@@ -83,5 +113,16 @@ export default class OptionObject extends Obj {
         this.presets.forEach(preset => {
             preset(this);
         });
+    }
+
+    setDefault(){
+        this.options(this.getDefault());
+    }
+
+    getDefault(){
+        return {
+            easel: "#chart",
+            mode: "normal"
+        };
     }
 }
