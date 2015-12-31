@@ -11,9 +11,9 @@ export function generateValues(a){
 
         for (let i = 0; i < values.length; i++) {
             tmp.values.push({
-                y: values[i],
+                y: (values[i].y ? values[i].y : values[i]),
                 y0: 0,
-                x: i
+                x: (values[i].x ? values[i].x : i)
             })
         }
 
