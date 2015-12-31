@@ -3,6 +3,8 @@
 
 *.png
 
+examples/html
+
 # node
 # Logs
 logs

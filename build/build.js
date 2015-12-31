@@ -1,5215 +1,7 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Iva = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-//     Underscore.js 1.8.3
-//     http://underscorejs.org
-//     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
-//     Underscore may be freely distributed under the MIT license.
-
-(function() {
-
-  // Baseline setup
-  // --------------
-
-  // Establish the root object, `window` in the browser, or `exports` on the server.
-  var root = this;
-
-  // Save the previous value of the `_` variable.
-  var previousUnderscore = root._;
-
-  // Save bytes in the minified (but not gzipped) version:
-  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
-
-  // Create quick reference variables for speed access to core prototypes.
-  var
-    push             = ArrayProto.push,
-    slice            = ArrayProto.slice,
-    toString         = ObjProto.toString,
-    hasOwnProperty   = ObjProto.hasOwnProperty;
-
-  // All **ECMAScript 5** native function implementations that we hope to use
-  // are declared here.
-  var
-    nativeIsArray      = Array.isArray,
-    nativeKeys         = Object.keys,
-    nativeBind         = FuncProto.bind,
-    nativeCreate       = Object.create;
-
-  // Naked function reference for surrogate-prototype-swapping.
-  var Ctor = function(){};
-
-  // Create a safe reference to the Underscore object for use below.
-  var _ = function(obj) {
-    if (obj instanceof _) return obj;
-    if (!(this instanceof _)) return new _(obj);
-    this._wrapped = obj;
-  };
-
-  // Export the Underscore object for **Node.js**, with
-  // backwards-compatibility for the old `require()` API. If we're in
-  // the browser, add `_` as a global object.
-  if (typeof exports !== 'undefined') {
-    if (typeof module !== 'undefined' && module.exports) {
-      exports = module.exports = _;
-    }
-    exports._ = _;
-  } else {
-    root._ = _;
-  }
-
-  // Current version.
-  _.VERSION = '1.8.3';
-
-  // Internal function that returns an efficient (for current engines) version
-  // of the passed-in callback, to be repeatedly applied in other Underscore
-  // functions.
-  var optimizeCb = function(func, context, argCount) {
-    if (context === void 0) return func;
-    switch (argCount == null ? 3 : argCount) {
-      case 1: return function(value) {
-        return func.call(context, value);
-      };
-      case 2: return function(value, other) {
-        return func.call(context, value, other);
-      };
-      case 3: return function(value, index, collection) {
-        return func.call(context, value, index, collection);
-      };
-      case 4: return function(accumulator, value, index, collection) {
-        return func.call(context, accumulator, value, index, collection);
-      };
-    }
-    return function() {
-      return func.apply(context, arguments);
-    };
-  };
-
-  // A mostly-internal function to generate callbacks that can be applied
-  // to each element in a collection, returning the desired result — either
-  // identity, an arbitrary callback, a property matcher, or a property accessor.
-  var cb = function(value, context, argCount) {
-    if (value == null) return _.identity;
-    if (_.isFunction(value)) return optimizeCb(value, context, argCount);
-    if (_.isObject(value)) return _.matcher(value);
-    return _.property(value);
-  };
-  _.iteratee = function(value, context) {
-    return cb(value, context, Infinity);
-  };
-
-  // An internal function for creating assigner functions.
-  var createAssigner = function(keysFunc, undefinedOnly) {
-    return function(obj) {
-      var length = arguments.length;
-      if (length < 2 || obj == null) return obj;
-      for (var index = 1; index < length; index++) {
-        var source = arguments[index],
-            keys = keysFunc(source),
-            l = keys.length;
-        for (var i = 0; i < l; i++) {
-          var key = keys[i];
-          if (!undefinedOnly || obj[key] === void 0) obj[key] = source[key];
-        }
-      }
-      return obj;
-    };
-  };
-
-  // An internal function for creating a new object that inherits from another.
-  var baseCreate = function(prototype) {
-    if (!_.isObject(prototype)) return {};
-    if (nativeCreate) return nativeCreate(prototype);
-    Ctor.prototype = prototype;
-    var result = new Ctor;
-    Ctor.prototype = null;
-    return result;
-  };
-
-  var property = function(key) {
-    return function(obj) {
-      return obj == null ? void 0 : obj[key];
-    };
-  };
-
-  // Helper for collection methods to determine whether a collection
-  // should be iterated as an array or as an object
-  // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
-  // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
-  var MAX_ARRAY_INDEX = Math.pow(2, 53) - 1;
-  var getLength = property('length');
-  var isArrayLike = function(collection) {
-    var length = getLength(collection);
-    return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
-  };
-
-  // Collection Functions
-  // --------------------
-
-  // The cornerstone, an `each` implementation, aka `forEach`.
-  // Handles raw objects in addition to array-likes. Treats all
-  // sparse array-likes as if they were dense.
-  _.each = _.forEach = function(obj, iteratee, context) {
-    iteratee = optimizeCb(iteratee, context);
-    var i, length;
-    if (isArrayLike(obj)) {
-      for (i = 0, length = obj.length; i < length; i++) {
-        iteratee(obj[i], i, obj);
-      }
-    } else {
-      var keys = _.keys(obj);
-      for (i = 0, length = keys.length; i < length; i++) {
-        iteratee(obj[keys[i]], keys[i], obj);
-      }
-    }
-    return obj;
-  };
-
-  // Return the results of applying the iteratee to each element.
-  _.map = _.collect = function(obj, iteratee, context) {
-    iteratee = cb(iteratee, context);
-    var keys = !isArrayLike(obj) && _.keys(obj),
-        length = (keys || obj).length,
-        results = Array(length);
-    for (var index = 0; index < length; index++) {
-      var currentKey = keys ? keys[index] : index;
-      results[index] = iteratee(obj[currentKey], currentKey, obj);
-    }
-    return results;
-  };
-
-  // Create a reducing function iterating left or right.
-  function createReduce(dir) {
-    // Optimized iterator function as using arguments.length
-    // in the main function will deoptimize the, see #1991.
-    function iterator(obj, iteratee, memo, keys, index, length) {
-      for (; index >= 0 && index < length; index += dir) {
-        var currentKey = keys ? keys[index] : index;
-        memo = iteratee(memo, obj[currentKey], currentKey, obj);
-      }
-      return memo;
-    }
-
-    return function(obj, iteratee, memo, context) {
-      iteratee = optimizeCb(iteratee, context, 4);
-      var keys = !isArrayLike(obj) && _.keys(obj),
-          length = (keys || obj).length,
-          index = dir > 0 ? 0 : length - 1;
-      // Determine the initial value if none is provided.
-      if (arguments.length < 3) {
-        memo = obj[keys ? keys[index] : index];
-        index += dir;
-      }
-      return iterator(obj, iteratee, memo, keys, index, length);
-    };
-  }
-
-  // **Reduce** builds up a single result from a list of values, aka `inject`,
-  // or `foldl`.
-  _.reduce = _.foldl = _.inject = createReduce(1);
-
-  // The right-associative version of reduce, also known as `foldr`.
-  _.reduceRight = _.foldr = createReduce(-1);
-
-  // Return the first value which passes a truth test. Aliased as `detect`.
-  _.find = _.detect = function(obj, predicate, context) {
-    var key;
-    if (isArrayLike(obj)) {
-      key = _.findIndex(obj, predicate, context);
-    } else {
-      key = _.findKey(obj, predicate, context);
-    }
-    if (key !== void 0 && key !== -1) return obj[key];
-  };
-
-  // Return all the elements that pass a truth test.
-  // Aliased as `select`.
-  _.filter = _.select = function(obj, predicate, context) {
-    var results = [];
-    predicate = cb(predicate, context);
-    _.each(obj, function(value, index, list) {
-      if (predicate(value, index, list)) results.push(value);
-    });
-    return results;
-  };
-
-  // Return all the elements for which a truth test fails.
-  _.reject = function(obj, predicate, context) {
-    return _.filter(obj, _.negate(cb(predicate)), context);
-  };
-
-  // Determine whether all of the elements match a truth test.
-  // Aliased as `all`.
-  _.every = _.all = function(obj, predicate, context) {
-    predicate = cb(predicate, context);
-    var keys = !isArrayLike(obj) && _.keys(obj),
-        length = (keys || obj).length;
-    for (var index = 0; index < length; index++) {
-      var currentKey = keys ? keys[index] : index;
-      if (!predicate(obj[currentKey], currentKey, obj)) return false;
-    }
-    return true;
-  };
-
-  // Determine if at least one element in the object matches a truth test.
-  // Aliased as `any`.
-  _.some = _.any = function(obj, predicate, context) {
-    predicate = cb(predicate, context);
-    var keys = !isArrayLike(obj) && _.keys(obj),
-        length = (keys || obj).length;
-    for (var index = 0; index < length; index++) {
-      var currentKey = keys ? keys[index] : index;
-      if (predicate(obj[currentKey], currentKey, obj)) return true;
-    }
-    return false;
-  };
-
-  // Determine if the array or object contains a given item (using `===`).
-  // Aliased as `includes` and `include`.
-  _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
-    if (!isArrayLike(obj)) obj = _.values(obj);
-    if (typeof fromIndex != 'number' || guard) fromIndex = 0;
-    return _.indexOf(obj, item, fromIndex) >= 0;
-  };
-
-  // Invoke a method (with arguments) on every item in a collection.
-  _.invoke = function(obj, method) {
-    var args = slice.call(arguments, 2);
-    var isFunc = _.isFunction(method);
-    return _.map(obj, function(value) {
-      var func = isFunc ? method : value[method];
-      return func == null ? func : func.apply(value, args);
-    });
-  };
-
-  // Convenience version of a common use case of `map`: fetching a property.
-  _.pluck = function(obj, key) {
-    return _.map(obj, _.property(key));
-  };
-
-  // Convenience version of a common use case of `filter`: selecting only objects
-  // containing specific `key:value` pairs.
-  _.where = function(obj, attrs) {
-    return _.filter(obj, _.matcher(attrs));
-  };
-
-  // Convenience version of a common use case of `find`: getting the first object
-  // containing specific `key:value` pairs.
-  _.findWhere = function(obj, attrs) {
-    return _.find(obj, _.matcher(attrs));
-  };
-
-  // Return the maximum element (or element-based computation).
-  _.max = function(obj, iteratee, context) {
-    var result = -Infinity, lastComputed = -Infinity,
-        value, computed;
-    if (iteratee == null && obj != null) {
-      obj = isArrayLike(obj) ? obj : _.values(obj);
-      for (var i = 0, length = obj.length; i < length; i++) {
-        value = obj[i];
-        if (value > result) {
-          result = value;
-        }
-      }
-    } else {
-      iteratee = cb(iteratee, context);
-      _.each(obj, function(value, index, list) {
-        computed = iteratee(value, index, list);
-        if (computed > lastComputed || computed === -Infinity && result === -Infinity) {
-          result = value;
-          lastComputed = computed;
-        }
-      });
-    }
-    return result;
-  };
-
-  // Return the minimum element (or element-based computation).
-  _.min = function(obj, iteratee, context) {
-    var result = Infinity, lastComputed = Infinity,
-        value, computed;
-    if (iteratee == null && obj != null) {
-      obj = isArrayLike(obj) ? obj : _.values(obj);
-      for (var i = 0, length = obj.length; i < length; i++) {
-        value = obj[i];
-        if (value < result) {
-          result = value;
-        }
-      }
-    } else {
-      iteratee = cb(iteratee, context);
-      _.each(obj, function(value, index, list) {
-        computed = iteratee(value, index, list);
-        if (computed < lastComputed || computed === Infinity && result === Infinity) {
-          result = value;
-          lastComputed = computed;
-        }
-      });
-    }
-    return result;
-  };
-
-  // Shuffle a collection, using the modern version of the
-  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
-  _.shuffle = function(obj) {
-    var set = isArrayLike(obj) ? obj : _.values(obj);
-    var length = set.length;
-    var shuffled = Array(length);
-    for (var index = 0, rand; index < length; index++) {
-      rand = _.random(0, index);
-      if (rand !== index) shuffled[index] = shuffled[rand];
-      shuffled[rand] = set[index];
-    }
-    return shuffled;
-  };
-
-  // Sample **n** random values from a collection.
-  // If **n** is not specified, returns a single random element.
-  // The internal `guard` argument allows it to work with `map`.
-  _.sample = function(obj, n, guard) {
-    if (n == null || guard) {
-      if (!isArrayLike(obj)) obj = _.values(obj);
-      return obj[_.random(obj.length - 1)];
-    }
-    return _.shuffle(obj).slice(0, Math.max(0, n));
-  };
-
-  // Sort the object's values by a criterion produced by an iteratee.
-  _.sortBy = function(obj, iteratee, context) {
-    iteratee = cb(iteratee, context);
-    return _.pluck(_.map(obj, function(value, index, list) {
-      return {
-        value: value,
-        index: index,
-        criteria: iteratee(value, index, list)
-      };
-    }).sort(function(left, right) {
-      var a = left.criteria;
-      var b = right.criteria;
-      if (a !== b) {
-        if (a > b || a === void 0) return 1;
-        if (a < b || b === void 0) return -1;
-      }
-      return left.index - right.index;
-    }), 'value');
-  };
-
-  // An internal function used for aggregate "group by" operations.
-  var group = function(behavior) {
-    return function(obj, iteratee, context) {
-      var result = {};
-      iteratee = cb(iteratee, context);
-      _.each(obj, function(value, index) {
-        var key = iteratee(value, index, obj);
-        behavior(result, value, key);
-      });
-      return result;
-    };
-  };
-
-  // Groups the object's values by a criterion. Pass either a string attribute
-  // to group by, or a function that returns the criterion.
-  _.groupBy = group(function(result, value, key) {
-    if (_.has(result, key)) result[key].push(value); else result[key] = [value];
-  });
-
-  // Indexes the object's values by a criterion, similar to `groupBy`, but for
-  // when you know that your index values will be unique.
-  _.indexBy = group(function(result, value, key) {
-    result[key] = value;
-  });
-
-  // Counts instances of an object that group by a certain criterion. Pass
-  // either a string attribute to count by, or a function that returns the
-  // criterion.
-  _.countBy = group(function(result, value, key) {
-    if (_.has(result, key)) result[key]++; else result[key] = 1;
-  });
-
-  // Safely create a real, live array from anything iterable.
-  _.toArray = function(obj) {
-    if (!obj) return [];
-    if (_.isArray(obj)) return slice.call(obj);
-    if (isArrayLike(obj)) return _.map(obj, _.identity);
-    return _.values(obj);
-  };
-
-  // Return the number of elements in an object.
-  _.size = function(obj) {
-    if (obj == null) return 0;
-    return isArrayLike(obj) ? obj.length : _.keys(obj).length;
-  };
-
-  // Split a collection into two arrays: one whose elements all satisfy the given
-  // predicate, and one whose elements all do not satisfy the predicate.
-  _.partition = function(obj, predicate, context) {
-    predicate = cb(predicate, context);
-    var pass = [], fail = [];
-    _.each(obj, function(value, key, obj) {
-      (predicate(value, key, obj) ? pass : fail).push(value);
-    });
-    return [pass, fail];
-  };
-
-  // Array Functions
-  // ---------------
-
-  // Get the first element of an array. Passing **n** will return the first N
-  // values in the array. Aliased as `head` and `take`. The **guard** check
-  // allows it to work with `_.map`.
-  _.first = _.head = _.take = function(array, n, guard) {
-    if (array == null) return void 0;
-    if (n == null || guard) return array[0];
-    return _.initial(array, array.length - n);
-  };
-
-  // Returns everything but the last entry of the array. Especially useful on
-  // the arguments object. Passing **n** will return all the values in
-  // the array, excluding the last N.
-  _.initial = function(array, n, guard) {
-    return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
-  };
-
-  // Get the last element of an array. Passing **n** will return the last N
-  // values in the array.
-  _.last = function(array, n, guard) {
-    if (array == null) return void 0;
-    if (n == null || guard) return array[array.length - 1];
-    return _.rest(array, Math.max(0, array.length - n));
-  };
-
-  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
-  // Especially useful on the arguments object. Passing an **n** will return
-  // the rest N values in the array.
-  _.rest = _.tail = _.drop = function(array, n, guard) {
-    return slice.call(array, n == null || guard ? 1 : n);
-  };
-
-  // Trim out all falsy values from an array.
-  _.compact = function(array) {
-    return _.filter(array, _.identity);
-  };
-
-  // Internal implementation of a recursive `flatten` function.
-  var flatten = function(input, shallow, strict, startIndex) {
-    var output = [], idx = 0;
-    for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
-      var value = input[i];
-      if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
-        //flatten current level of array or arguments object
-        if (!shallow) value = flatten(value, shallow, strict);
-        var j = 0, len = value.length;
-        output.length += len;
-        while (j < len) {
-          output[idx++] = value[j++];
-        }
-      } else if (!strict) {
-        output[idx++] = value;
-      }
-    }
-    return output;
-  };
-
-  // Flatten out an array, either recursively (by default), or just one level.
-  _.flatten = function(array, shallow) {
-    return flatten(array, shallow, false);
-  };
-
-  // Return a version of the array that does not contain the specified value(s).
-  _.without = function(array) {
-    return _.difference(array, slice.call(arguments, 1));
-  };
-
-  // Produce a duplicate-free version of the array. If the array has already
-  // been sorted, you have the option of using a faster algorithm.
-  // Aliased as `unique`.
-  _.uniq = _.unique = function(array, isSorted, iteratee, context) {
-    if (!_.isBoolean(isSorted)) {
-      context = iteratee;
-      iteratee = isSorted;
-      isSorted = false;
-    }
-    if (iteratee != null) iteratee = cb(iteratee, context);
-    var result = [];
-    var seen = [];
-    for (var i = 0, length = getLength(array); i < length; i++) {
-      var value = array[i],
-          computed = iteratee ? iteratee(value, i, array) : value;
-      if (isSorted) {
-        if (!i || seen !== computed) result.push(value);
-        seen = computed;
-      } else if (iteratee) {
-        if (!_.contains(seen, computed)) {
-          seen.push(computed);
-          result.push(value);
-        }
-      } else if (!_.contains(result, value)) {
-        result.push(value);
-      }
-    }
-    return result;
-  };
-
-  // Produce an array that contains the union: each distinct element from all of
-  // the passed-in arrays.
-  _.union = function() {
-    return _.uniq(flatten(arguments, true, true));
-  };
-
-  // Produce an array that contains every item shared between all the
-  // passed-in arrays.
-  _.intersection = function(array) {
-    var result = [];
-    var argsLength = arguments.length;
-    for (var i = 0, length = getLength(array); i < length; i++) {
-      var item = array[i];
-      if (_.contains(result, item)) continue;
-      for (var j = 1; j < argsLength; j++) {
-        if (!_.contains(arguments[j], item)) break;
-      }
-      if (j === argsLength) result.push(item);
-    }
-    return result;
-  };
-
-  // Take the difference between one array and a number of other arrays.
-  // Only the elements present in just the first array will remain.
-  _.difference = function(array) {
-    var rest = flatten(arguments, true, true, 1);
-    return _.filter(array, function(value){
-      return !_.contains(rest, value);
-    });
-  };
-
-  // Zip together multiple lists into a single array -- elements that share
-  // an index go together.
-  _.zip = function() {
-    return _.unzip(arguments);
-  };
-
-  // Complement of _.zip. Unzip accepts an array of arrays and groups
-  // each array's elements on shared indices
-  _.unzip = function(array) {
-    var length = array && _.max(array, getLength).length || 0;
-    var result = Array(length);
-
-    for (var index = 0; index < length; index++) {
-      result[index] = _.pluck(array, index);
-    }
-    return result;
-  };
-
-  // Converts lists into objects. Pass either a single array of `[key, value]`
-  // pairs, or two parallel arrays of the same length -- one of keys, and one of
-  // the corresponding values.
-  _.object = function(list, values) {
-    var result = {};
-    for (var i = 0, length = getLength(list); i < length; i++) {
-      if (values) {
-        result[list[i]] = values[i];
-      } else {
-        result[list[i][0]] = list[i][1];
-      }
-    }
-    return result;
-  };
-
-  // Generator function to create the findIndex and findLastIndex functions
-  function createPredicateIndexFinder(dir) {
-    return function(array, predicate, context) {
-      predicate = cb(predicate, context);
-      var length = getLength(array);
-      var index = dir > 0 ? 0 : length - 1;
-      for (; index >= 0 && index < length; index += dir) {
-        if (predicate(array[index], index, array)) return index;
-      }
-      return -1;
-    };
-  }
-
-  // Returns the first index on an array-like that passes a predicate test
-  _.findIndex = createPredicateIndexFinder(1);
-  _.findLastIndex = createPredicateIndexFinder(-1);
-
-  // Use a comparator function to figure out the smallest index at which
-  // an object should be inserted so as to maintain order. Uses binary search.
-  _.sortedIndex = function(array, obj, iteratee, context) {
-    iteratee = cb(iteratee, context, 1);
-    var value = iteratee(obj);
-    var low = 0, high = getLength(array);
-    while (low < high) {
-      var mid = Math.floor((low + high) / 2);
-      if (iteratee(array[mid]) < value) low = mid + 1; else high = mid;
-    }
-    return low;
-  };
-
-  // Generator function to create the indexOf and lastIndexOf functions
-  function createIndexFinder(dir, predicateFind, sortedIndex) {
-    return function(array, item, idx) {
-      var i = 0, length = getLength(array);
-      if (typeof idx == 'number') {
-        if (dir > 0) {
-            i = idx >= 0 ? idx : Math.max(idx + length, i);
-        } else {
-            length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
-        }
-      } else if (sortedIndex && idx && length) {
-        idx = sortedIndex(array, item);
-        return array[idx] === item ? idx : -1;
-      }
-      if (item !== item) {
-        idx = predicateFind(slice.call(array, i, length), _.isNaN);
-        return idx >= 0 ? idx + i : -1;
-      }
-      for (idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir) {
-        if (array[idx] === item) return idx;
-      }
-      return -1;
-    };
-  }
-
-  // Return the position of the first occurrence of an item in an array,
-  // or -1 if the item is not included in the array.
-  // If the array is large and already in sort order, pass `true`
-  // for **isSorted** to use binary search.
-  _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
-  _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
-
-  // Generate an integer Array containing an arithmetic progression. A port of
-  // the native Python `range()` function. See
-  // [the Python documentation](http://docs.python.org/library/functions.html#range).
-  _.range = function(start, stop, step) {
-    if (stop == null) {
-      stop = start || 0;
-      start = 0;
-    }
-    step = step || 1;
-
-    var length = Math.max(Math.ceil((stop - start) / step), 0);
-    var range = Array(length);
-
-    for (var idx = 0; idx < length; idx++, start += step) {
-      range[idx] = start;
-    }
-
-    return range;
-  };
-
-  // Function (ahem) Functions
-  // ------------------
-
-  // Determines whether to execute a function as a constructor
-  // or a normal function with the provided arguments
-  var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
-    if (!(callingContext instanceof boundFunc)) return sourceFunc.apply(context, args);
-    var self = baseCreate(sourceFunc.prototype);
-    var result = sourceFunc.apply(self, args);
-    if (_.isObject(result)) return result;
-    return self;
-  };
-
-  // Create a function bound to a given object (assigning `this`, and arguments,
-  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
-  // available.
-  _.bind = function(func, context) {
-    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
-    if (!_.isFunction(func)) throw new TypeError('Bind must be called on a function');
-    var args = slice.call(arguments, 2);
-    var bound = function() {
-      return executeBound(func, bound, context, this, args.concat(slice.call(arguments)));
-    };
-    return bound;
-  };
-
-  // Partially apply a function by creating a version that has had some of its
-  // arguments pre-filled, without changing its dynamic `this` context. _ acts
-  // as a placeholder, allowing any combination of arguments to be pre-filled.
-  _.partial = function(func) {
-    var boundArgs = slice.call(arguments, 1);
-    var bound = function() {
-      var position = 0, length = boundArgs.length;
-      var args = Array(length);
-      for (var i = 0; i < length; i++) {
-        args[i] = boundArgs[i] === _ ? arguments[position++] : boundArgs[i];
-      }
-      while (position < arguments.length) args.push(arguments[position++]);
-      return executeBound(func, bound, this, this, args);
-    };
-    return bound;
-  };
-
-  // Bind a number of an object's methods to that object. Remaining arguments
-  // are the method names to be bound. Useful for ensuring that all callbacks
-  // defined on an object belong to it.
-  _.bindAll = function(obj) {
-    var i, length = arguments.length, key;
-    if (length <= 1) throw new Error('bindAll must be passed function names');
-    for (i = 1; i < length; i++) {
-      key = arguments[i];
-      obj[key] = _.bind(obj[key], obj);
-    }
-    return obj;
-  };
-
-  // Memoize an expensive function by storing its results.
-  _.memoize = function(func, hasher) {
-    var memoize = function(key) {
-      var cache = memoize.cache;
-      var address = '' + (hasher ? hasher.apply(this, arguments) : key);
-      if (!_.has(cache, address)) cache[address] = func.apply(this, arguments);
-      return cache[address];
-    };
-    memoize.cache = {};
-    return memoize;
-  };
-
-  // Delays a function for the given number of milliseconds, and then calls
-  // it with the arguments supplied.
-  _.delay = function(func, wait) {
-    var args = slice.call(arguments, 2);
-    return setTimeout(function(){
-      return func.apply(null, args);
-    }, wait);
-  };
-
-  // Defers a function, scheduling it to run after the current call stack has
-  // cleared.
-  _.defer = _.partial(_.delay, _, 1);
-
-  // Returns a function, that, when invoked, will only be triggered at most once
-  // during a given window of time. Normally, the throttled function will run
-  // as much as it can, without ever going more than once per `wait` duration;
-  // but if you'd like to disable the execution on the leading edge, pass
-  // `{leading: false}`. To disable execution on the trailing edge, ditto.
-  _.throttle = function(func, wait, options) {
-    var context, args, result;
-    var timeout = null;
-    var previous = 0;
-    if (!options) options = {};
-    var later = function() {
-      previous = options.leading === false ? 0 : _.now();
-      timeout = null;
-      result = func.apply(context, args);
-      if (!timeout) context = args = null;
-    };
-    return function() {
-      var now = _.now();
-      if (!previous && options.leading === false) previous = now;
-      var remaining = wait - (now - previous);
-      context = this;
-      args = arguments;
-      if (remaining <= 0 || remaining > wait) {
-        if (timeout) {
-          clearTimeout(timeout);
-          timeout = null;
-        }
-        previous = now;
-        result = func.apply(context, args);
-        if (!timeout) context = args = null;
-      } else if (!timeout && options.trailing !== false) {
-        timeout = setTimeout(later, remaining);
-      }
-      return result;
-    };
-  };
-
-  // Returns a function, that, as long as it continues to be invoked, will not
-  // be triggered. The function will be called after it stops being called for
-  // N milliseconds. If `immediate` is passed, trigger the function on the
-  // leading edge, instead of the trailing.
-  _.debounce = function(func, wait, immediate) {
-    var timeout, args, context, timestamp, result;
-
-    var later = function() {
-      var last = _.now() - timestamp;
-
-      if (last < wait && last >= 0) {
-        timeout = setTimeout(later, wait - last);
-      } else {
-        timeout = null;
-        if (!immediate) {
-          result = func.apply(context, args);
-          if (!timeout) context = args = null;
-        }
-      }
-    };
-
-    return function() {
-      context = this;
-      args = arguments;
-      timestamp = _.now();
-      var callNow = immediate && !timeout;
-      if (!timeout) timeout = setTimeout(later, wait);
-      if (callNow) {
-        result = func.apply(context, args);
-        context = args = null;
-      }
-
-      return result;
-    };
-  };
-
-  // Returns the first function passed as an argument to the second,
-  // allowing you to adjust arguments, run code before and after, and
-  // conditionally execute the original function.
-  _.wrap = function(func, wrapper) {
-    return _.partial(wrapper, func);
-  };
-
-  // Returns a negated version of the passed-in predicate.
-  _.negate = function(predicate) {
-    return function() {
-      return !predicate.apply(this, arguments);
-    };
-  };
-
-  // Returns a function that is the composition of a list of functions, each
-  // consuming the return value of the function that follows.
-  _.compose = function() {
-    var args = arguments;
-    var start = args.length - 1;
-    return function() {
-      var i = start;
-      var result = args[start].apply(this, arguments);
-      while (i--) result = args[i].call(this, result);
-      return result;
-    };
-  };
-
-  // Returns a function that will only be executed on and after the Nth call.
-  _.after = function(times, func) {
-    return function() {
-      if (--times < 1) {
-        return func.apply(this, arguments);
-      }
-    };
-  };
-
-  // Returns a function that will only be executed up to (but not including) the Nth call.
-  _.before = function(times, func) {
-    var memo;
-    return function() {
-      if (--times > 0) {
-        memo = func.apply(this, arguments);
-      }
-      if (times <= 1) func = null;
-      return memo;
-    };
-  };
-
-  // Returns a function that will be executed at most one time, no matter how
-  // often you call it. Useful for lazy initialization.
-  _.once = _.partial(_.before, 2);
-
-  // Object Functions
-  // ----------------
-
-  // Keys in IE < 9 that won't be iterated by `for key in ...` and thus missed.
-  var hasEnumBug = !{toString: null}.propertyIsEnumerable('toString');
-  var nonEnumerableProps = ['valueOf', 'isPrototypeOf', 'toString',
-                      'propertyIsEnumerable', 'hasOwnProperty', 'toLocaleString'];
-
-  function collectNonEnumProps(obj, keys) {
-    var nonEnumIdx = nonEnumerableProps.length;
-    var constructor = obj.constructor;
-    var proto = (_.isFunction(constructor) && constructor.prototype) || ObjProto;
-
-    // Constructor is a special case.
-    var prop = 'constructor';
-    if (_.has(obj, prop) && !_.contains(keys, prop)) keys.push(prop);
-
-    while (nonEnumIdx--) {
-      prop = nonEnumerableProps[nonEnumIdx];
-      if (prop in obj && obj[prop] !== proto[prop] && !_.contains(keys, prop)) {
-        keys.push(prop);
-      }
-    }
-  }
-
-  // Retrieve the names of an object's own properties.
-  // Delegates to **ECMAScript 5**'s native `Object.keys`
-  _.keys = function(obj) {
-    if (!_.isObject(obj)) return [];
-    if (nativeKeys) return nativeKeys(obj);
-    var keys = [];
-    for (var key in obj) if (_.has(obj, key)) keys.push(key);
-    // Ahem, IE < 9.
-    if (hasEnumBug) collectNonEnumProps(obj, keys);
-    return keys;
-  };
-
-  // Retrieve all the property names of an object.
-  _.allKeys = function(obj) {
-    if (!_.isObject(obj)) return [];
-    var keys = [];
-    for (var key in obj) keys.push(key);
-    // Ahem, IE < 9.
-    if (hasEnumBug) collectNonEnumProps(obj, keys);
-    return keys;
-  };
-
-  // Retrieve the values of an object's properties.
-  _.values = function(obj) {
-    var keys = _.keys(obj);
-    var length = keys.length;
-    var values = Array(length);
-    for (var i = 0; i < length; i++) {
-      values[i] = obj[keys[i]];
-    }
-    return values;
-  };
-
-  // Returns the results of applying the iteratee to each element of the object
-  // In contrast to _.map it returns an object
-  _.mapObject = function(obj, iteratee, context) {
-    iteratee = cb(iteratee, context);
-    var keys =  _.keys(obj),
-          length = keys.length,
-          results = {},
-          currentKey;
-      for (var index = 0; index < length; index++) {
-        currentKey = keys[index];
-        results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
-      }
-      return results;
-  };
-
-  // Convert an object into a list of `[key, value]` pairs.
-  _.pairs = function(obj) {
-    var keys = _.keys(obj);
-    var length = keys.length;
-    var pairs = Array(length);
-    for (var i = 0; i < length; i++) {
-      pairs[i] = [keys[i], obj[keys[i]]];
-    }
-    return pairs;
-  };
-
-  // Invert the keys and values of an object. The values must be serializable.
-  _.invert = function(obj) {
-    var result = {};
-    var keys = _.keys(obj);
-    for (var i = 0, length = keys.length; i < length; i++) {
-      result[obj[keys[i]]] = keys[i];
-    }
-    return result;
-  };
-
-  // Return a sorted list of the function names available on the object.
-  // Aliased as `methods`
-  _.functions = _.methods = function(obj) {
-    var names = [];
-    for (var key in obj) {
-      if (_.isFunction(obj[key])) names.push(key);
-    }
-    return names.sort();
-  };
-
-  // Extend a given object with all the properties in passed-in object(s).
-  _.extend = createAssigner(_.allKeys);
-
-  // Assigns a given object with all the own properties in the passed-in object(s)
-  // (https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)
-  _.extendOwn = _.assign = createAssigner(_.keys);
-
-  // Returns the first key on an object that passes a predicate test
-  _.findKey = function(obj, predicate, context) {
-    predicate = cb(predicate, context);
-    var keys = _.keys(obj), key;
-    for (var i = 0, length = keys.length; i < length; i++) {
-      key = keys[i];
-      if (predicate(obj[key], key, obj)) return key;
-    }
-  };
-
-  // Return a copy of the object only containing the whitelisted properties.
-  _.pick = function(object, oiteratee, context) {
-    var result = {}, obj = object, iteratee, keys;
-    if (obj == null) return result;
-    if (_.isFunction(oiteratee)) {
-      keys = _.allKeys(obj);
-      iteratee = optimizeCb(oiteratee, context);
-    } else {
-      keys = flatten(arguments, false, false, 1);
-      iteratee = function(value, key, obj) { return key in obj; };
-      obj = Object(obj);
-    }
-    for (var i = 0, length = keys.length; i < length; i++) {
-      var key = keys[i];
-      var value = obj[key];
-      if (iteratee(value, key, obj)) result[key] = value;
-    }
-    return result;
-  };
-
-   // Return a copy of the object without the blacklisted properties.
-  _.omit = function(obj, iteratee, context) {
-    if (_.isFunction(iteratee)) {
-      iteratee = _.negate(iteratee);
-    } else {
-      var keys = _.map(flatten(arguments, false, false, 1), String);
-      iteratee = function(value, key) {
-        return !_.contains(keys, key);
-      };
-    }
-    return _.pick(obj, iteratee, context);
-  };
-
-  // Fill in a given object with default properties.
-  _.defaults = createAssigner(_.allKeys, true);
-
-  // Creates an object that inherits from the given prototype object.
-  // If additional properties are provided then they will be added to the
-  // created object.
-  _.create = function(prototype, props) {
-    var result = baseCreate(prototype);
-    if (props) _.extendOwn(result, props);
-    return result;
-  };
-
-  // Create a (shallow-cloned) duplicate of an object.
-  _.clone = function(obj) {
-    if (!_.isObject(obj)) return obj;
-    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
-  };
-
-  // Invokes interceptor with the obj, and then returns obj.
-  // The primary purpose of this method is to "tap into" a method chain, in
-  // order to perform operations on intermediate results within the chain.
-  _.tap = function(obj, interceptor) {
-    interceptor(obj);
-    return obj;
-  };
-
-  // Returns whether an object has a given set of `key:value` pairs.
-  _.isMatch = function(object, attrs) {
-    var keys = _.keys(attrs), length = keys.length;
-    if (object == null) return !length;
-    var obj = Object(object);
-    for (var i = 0; i < length; i++) {
-      var key = keys[i];
-      if (attrs[key] !== obj[key] || !(key in obj)) return false;
-    }
-    return true;
-  };
-
-
-  // Internal recursive comparison function for `isEqual`.
-  var eq = function(a, b, aStack, bStack) {
-    // Identical objects are equal. `0 === -0`, but they aren't identical.
-    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
-    if (a === b) return a !== 0 || 1 / a === 1 / b;
-    // A strict comparison is necessary because `null == undefined`.
-    if (a == null || b == null) return a === b;
-    // Unwrap any wrapped objects.
-    if (a instanceof _) a = a._wrapped;
-    if (b instanceof _) b = b._wrapped;
-    // Compare `[[Class]]` names.
-    var className = toString.call(a);
-    if (className !== toString.call(b)) return false;
-    switch (className) {
-      // Strings, numbers, regular expressions, dates, and booleans are compared by value.
-      case '[object RegExp]':
-      // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
-      case '[object String]':
-        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
-        // equivalent to `new String("5")`.
-        return '' + a === '' + b;
-      case '[object Number]':
-        // `NaN`s are equivalent, but non-reflexive.
-        // Object(NaN) is equivalent to NaN
-        if (+a !== +a) return +b !== +b;
-        // An `egal` comparison is performed for other numeric values.
-        return +a === 0 ? 1 / +a === 1 / b : +a === +b;
-      case '[object Date]':
-      case '[object Boolean]':
-        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
-        // millisecond representations. Note that invalid dates with millisecond representations
-        // of `NaN` are not equivalent.
-        return +a === +b;
-    }
-
-    var areArrays = className === '[object Array]';
-    if (!areArrays) {
-      if (typeof a != 'object' || typeof b != 'object') return false;
-
-      // Objects with different constructors are not equivalent, but `Object`s or `Array`s
-      // from different frames are.
-      var aCtor = a.constructor, bCtor = b.constructor;
-      if (aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
-                               _.isFunction(bCtor) && bCtor instanceof bCtor)
-                          && ('constructor' in a && 'constructor' in b)) {
-        return false;
-      }
-    }
-    // Assume equality for cyclic structures. The algorithm for detecting cyclic
-    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
-
-    // Initializing stack of traversed objects.
-    // It's done here since we only need them for objects and arrays comparison.
-    aStack = aStack || [];
-    bStack = bStack || [];
-    var length = aStack.length;
-    while (length--) {
-      // Linear search. Performance is inversely proportional to the number of
-      // unique nested structures.
-      if (aStack[length] === a) return bStack[length] === b;
-    }
-
-    // Add the first object to the stack of traversed objects.
-    aStack.push(a);
-    bStack.push(b);
-
-    // Recursively compare objects and arrays.
-    if (areArrays) {
-      // Compare array lengths to determine if a deep comparison is necessary.
-      length = a.length;
-      if (length !== b.length) return false;
-      // Deep compare the contents, ignoring non-numeric properties.
-      while (length--) {
-        if (!eq(a[length], b[length], aStack, bStack)) return false;
-      }
-    } else {
-      // Deep compare objects.
-      var keys = _.keys(a), key;
-      length = keys.length;
-      // Ensure that both objects contain the same number of properties before comparing deep equality.
-      if (_.keys(b).length !== length) return false;
-      while (length--) {
-        // Deep compare each member
-        key = keys[length];
-        if (!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
-      }
-    }
-    // Remove the first object from the stack of traversed objects.
-    aStack.pop();
-    bStack.pop();
-    return true;
-  };
-
-  // Perform a deep comparison to check if two objects are equal.
-  _.isEqual = function(a, b) {
-    return eq(a, b);
-  };
-
-  // Is a given array, string, or object empty?
-  // An "empty" object has no enumerable own-properties.
-  _.isEmpty = function(obj) {
-    if (obj == null) return true;
-    if (isArrayLike(obj) && (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))) return obj.length === 0;
-    return _.keys(obj).length === 0;
-  };
-
-  // Is a given value a DOM element?
-  _.isElement = function(obj) {
-    return !!(obj && obj.nodeType === 1);
-  };
-
-  // Is a given value an array?
-  // Delegates to ECMA5's native Array.isArray
-  _.isArray = nativeIsArray || function(obj) {
-    return toString.call(obj) === '[object Array]';
-  };
-
-  // Is a given variable an object?
-  _.isObject = function(obj) {
-    var type = typeof obj;
-    return type === 'function' || type === 'object' && !!obj;
-  };
-
-  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp, isError.
-  _.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error'], function(name) {
-    _['is' + name] = function(obj) {
-      return toString.call(obj) === '[object ' + name + ']';
-    };
-  });
-
-  // Define a fallback version of the method in browsers (ahem, IE < 9), where
-  // there isn't any inspectable "Arguments" type.
-  if (!_.isArguments(arguments)) {
-    _.isArguments = function(obj) {
-      return _.has(obj, 'callee');
-    };
-  }
-
-  // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
-  // IE 11 (#1621), and in Safari 8 (#1929).
-  if (typeof /./ != 'function' && typeof Int8Array != 'object') {
-    _.isFunction = function(obj) {
-      return typeof obj == 'function' || false;
-    };
-  }
-
-  // Is a given object a finite number?
-  _.isFinite = function(obj) {
-    return isFinite(obj) && !isNaN(parseFloat(obj));
-  };
-
-  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
-  _.isNaN = function(obj) {
-    return _.isNumber(obj) && obj !== +obj;
-  };
-
-  // Is a given value a boolean?
-  _.isBoolean = function(obj) {
-    return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
-  };
-
-  // Is a given value equal to null?
-  _.isNull = function(obj) {
-    return obj === null;
-  };
-
-  // Is a given variable undefined?
-  _.isUndefined = function(obj) {
-    return obj === void 0;
-  };
-
-  // Shortcut function for checking if an object has a given property directly
-  // on itself (in other words, not on a prototype).
-  _.has = function(obj, key) {
-    return obj != null && hasOwnProperty.call(obj, key);
-  };
-
-  // Utility Functions
-  // -----------------
-
-  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
-  // previous owner. Returns a reference to the Underscore object.
-  _.noConflict = function() {
-    root._ = previousUnderscore;
-    return this;
-  };
-
-  // Keep the identity function around for default iteratees.
-  _.identity = function(value) {
-    return value;
-  };
-
-  // Predicate-generating functions. Often useful outside of Underscore.
-  _.constant = function(value) {
-    return function() {
-      return value;
-    };
-  };
-
-  _.noop = function(){};
-
-  _.property = property;
-
-  // Generates a function for a given object that returns a given property.
-  _.propertyOf = function(obj) {
-    return obj == null ? function(){} : function(key) {
-      return obj[key];
-    };
-  };
-
-  // Returns a predicate for checking whether an object has a given set of
-  // `key:value` pairs.
-  _.matcher = _.matches = function(attrs) {
-    attrs = _.extendOwn({}, attrs);
-    return function(obj) {
-      return _.isMatch(obj, attrs);
-    };
-  };
-
-  // Run a function **n** times.
-  _.times = function(n, iteratee, context) {
-    var accum = Array(Math.max(0, n));
-    iteratee = optimizeCb(iteratee, context, 1);
-    for (var i = 0; i < n; i++) accum[i] = iteratee(i);
-    return accum;
-  };
-
-  // Return a random integer between min and max (inclusive).
-  _.random = function(min, max) {
-    if (max == null) {
-      max = min;
-      min = 0;
-    }
-    return min + Math.floor(Math.random() * (max - min + 1));
-  };
-
-  // A (possibly faster) way to get the current timestamp as an integer.
-  _.now = Date.now || function() {
-    return new Date().getTime();
-  };
-
-   // List of HTML entities for escaping.
-  var escapeMap = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#x27;',
-    '`': '&#x60;'
-  };
-  var unescapeMap = _.invert(escapeMap);
-
-  // Functions for escaping and unescaping strings to/from HTML interpolation.
-  var createEscaper = function(map) {
-    var escaper = function(match) {
-      return map[match];
-    };
-    // Regexes for identifying a key that needs to be escaped
-    var source = '(?:' + _.keys(map).join('|') + ')';
-    var testRegexp = RegExp(source);
-    var replaceRegexp = RegExp(source, 'g');
-    return function(string) {
-      string = string == null ? '' : '' + string;
-      return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
-    };
-  };
-  _.escape = createEscaper(escapeMap);
-  _.unescape = createEscaper(unescapeMap);
-
-  // If the value of the named `property` is a function then invoke it with the
-  // `object` as context; otherwise, return it.
-  _.result = function(object, property, fallback) {
-    var value = object == null ? void 0 : object[property];
-    if (value === void 0) {
-      value = fallback;
-    }
-    return _.isFunction(value) ? value.call(object) : value;
-  };
-
-  // Generate a unique integer id (unique within the entire client session).
-  // Useful for temporary DOM ids.
-  var idCounter = 0;
-  _.uniqueId = function(prefix) {
-    var id = ++idCounter + '';
-    return prefix ? prefix + id : id;
-  };
-
-  // By default, Underscore uses ERB-style template delimiters, change the
-  // following template settings to use alternative delimiters.
-  _.templateSettings = {
-    evaluate    : /<%([\s\S]+?)%>/g,
-    interpolate : /<%=([\s\S]+?)%>/g,
-    escape      : /<%-([\s\S]+?)%>/g
-  };
-
-  // When customizing `templateSettings`, if you don't want to define an
-  // interpolation, evaluation or escaping regex, we need one that is
-  // guaranteed not to match.
-  var noMatch = /(.)^/;
-
-  // Certain characters need to be escaped so that they can be put into a
-  // string literal.
-  var escapes = {
-    "'":      "'",
-    '\\':     '\\',
-    '\r':     'r',
-    '\n':     'n',
-    '\u2028': 'u2028',
-    '\u2029': 'u2029'
-  };
-
-  var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
-
-  var escapeChar = function(match) {
-    return '\\' + escapes[match];
-  };
-
-  // JavaScript micro-templating, similar to John Resig's implementation.
-  // Underscore templating handles arbitrary delimiters, preserves whitespace,
-  // and correctly escapes quotes within interpolated code.
-  // NB: `oldSettings` only exists for backwards compatibility.
-  _.template = function(text, settings, oldSettings) {
-    if (!settings && oldSettings) settings = oldSettings;
-    settings = _.defaults({}, settings, _.templateSettings);
-
-    // Combine delimiters into one regular expression via alternation.
-    var matcher = RegExp([
-      (settings.escape || noMatch).source,
-      (settings.interpolate || noMatch).source,
-      (settings.evaluate || noMatch).source
-    ].join('|') + '|$', 'g');
-
-    // Compile the template source, escaping string literals appropriately.
-    var index = 0;
-    var source = "__p+='";
-    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
-      source += text.slice(index, offset).replace(escaper, escapeChar);
-      index = offset + match.length;
-
-      if (escape) {
-        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
-      } else if (interpolate) {
-        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
-      } else if (evaluate) {
-        source += "';\n" + evaluate + "\n__p+='";
-      }
-
-      // Adobe VMs need the match returned to produce the correct offest.
-      return match;
-    });
-    source += "';\n";
-
-    // If a variable is not specified, place data values in local scope.
-    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
-
-    source = "var __t,__p='',__j=Array.prototype.join," +
-      "print=function(){__p+=__j.call(arguments,'');};\n" +
-      source + 'return __p;\n';
-
-    try {
-      var render = new Function(settings.variable || 'obj', '_', source);
-    } catch (e) {
-      e.source = source;
-      throw e;
-    }
-
-    var template = function(data) {
-      return render.call(this, data, _);
-    };
-
-    // Provide the compiled source as a convenience for precompilation.
-    var argument = settings.variable || 'obj';
-    template.source = 'function(' + argument + '){\n' + source + '}';
-
-    return template;
-  };
-
-  // Add a "chain" function. Start chaining a wrapped Underscore object.
-  _.chain = function(obj) {
-    var instance = _(obj);
-    instance._chain = true;
-    return instance;
-  };
-
-  // OOP
-  // ---------------
-  // If Underscore is called as a function, it returns a wrapped object that
-  // can be used OO-style. This wrapper holds altered versions of all the
-  // underscore functions. Wrapped objects may be chained.
-
-  // Helper function to continue chaining intermediate results.
-  var result = function(instance, obj) {
-    return instance._chain ? _(obj).chain() : obj;
-  };
-
-  // Add your own custom functions to the Underscore object.
-  _.mixin = function(obj) {
-    _.each(_.functions(obj), function(name) {
-      var func = _[name] = obj[name];
-      _.prototype[name] = function() {
-        var args = [this._wrapped];
-        push.apply(args, arguments);
-        return result(this, func.apply(_, args));
-      };
-    });
-  };
-
-  // Add all of the Underscore functions to the wrapper object.
-  _.mixin(_);
-
-  // Add all mutator Array functions to the wrapper.
-  _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
-    var method = ArrayProto[name];
-    _.prototype[name] = function() {
-      var obj = this._wrapped;
-      method.apply(obj, arguments);
-      if ((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
-      return result(this, obj);
-    };
-  });
-
-  // Add all accessor Array functions to the wrapper.
-  _.each(['concat', 'join', 'slice'], function(name) {
-    var method = ArrayProto[name];
-    _.prototype[name] = function() {
-      return result(this, method.apply(this._wrapped, arguments));
-    };
-  });
-
-  // Extracts the result from a wrapped and chained object.
-  _.prototype.value = function() {
-    return this._wrapped;
-  };
-
-  // Provide unwrapping proxy for some methods used in engine operations
-  // such as arithmetic and JSON stringification.
-  _.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
-
-  _.prototype.toString = function() {
-    return '' + this._wrapped;
-  };
-
-  // AMD registration happens at the end for compatibility with AMD loaders
-  // that may not enforce next-turn semantics on modules. Even though general
-  // practice for AMD registration is to be anonymous, underscore registers
-  // as a named module because, like jQuery, it is a base library that is
-  // popular enough to be bundled in a third party lib, but not be part of
-  // an AMD load request. Those cases could generate an error when an
-  // anonymous define() is called outside of a loader request.
-  if (typeof define === 'function' && define.amd) {
-    define('underscore', [], function() {
-      return _;
-    });
-  }
-}.call(this));
-
-},{}],2:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _utils = require("../utils");
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * Class used for managing redraws.
- * Basic buffer doesn't do anything except marking itself as dirty
- */
-
-var DefaultBuffer = (function () {
-    function DefaultBuffer(chart) {
-        _classCallCheck(this, DefaultBuffer);
-
-        this.__init();
-        this.registerChart(chart);
-    }
-
-    _createClass(DefaultBuffer, [{
-        key: "__init",
-        value: function __init() {
-            this.__ = {
-                dirty: false,
-                frozen: false,
-                charts: []
-            };
-        }
-    }, {
-        key: "dirty",
-        value: function dirty(_dirty) {
-            var __ = this.__;
-            if (_dirty === undefined) {
-                return __.dirty;
-            }
-            __.dirty = _dirty;
-
-            if (!this.frozen()) {
-                this.actOnDirty(_dirty);
-            }
-        }
-    }, {
-        key: "registerChart",
-        value: function registerChart(chart) {
-            if ((0, _utils.isDefined)(chart)) {
-                var charts = this.__.charts;
-
-                if (charts.indexOf(chart) === -1) {
-                    charts.push(chart);
-                }
-            }
-        }
-    }, {
-        key: "unregisterChart",
-        value: function unregisterChart(chart) {
-            var charts = this.__.charts;
-            for (var i = 0; i < charts.length; i++) {
-                if (chart === charts[i]) {
-                    charts.splice(i, 1);
-                }
-            }
-        }
-    }, {
-        key: "sendRedraw",
-        value: function sendRedraw() {
-            this.__.charts.forEach(function (chart) {
-                chart.redraw();
-            });
-        }
-
-        /**
-         * If frozen, buffer won't activate actOnDirty.
-         * This is needed for chart initialization when 'dirty' happens all the time
-         * but we don't need to redraw when initializing.
-         */
-
-    }, {
-        key: "frozen",
-        value: function frozen(_frozen) {
-            var __ = this.__;
-
-            if (_frozen === undefined) {
-                return __.frozen;
-            }
-
-            __.frozen = _frozen;
-        }
-
-        // Don't do anything
-
-    }, {
-        key: "actOnDirty",
-        value: function actOnDirty(dirty) {}
-    }]);
-
-    return DefaultBuffer;
-})();
-
-exports.default = DefaultBuffer;
-
-},{"../utils":27}],3:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _default = require("./default");
-
-var _default2 = _interopRequireDefault(_default);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var InstantBuffer = (function (_DefaultBuffer) {
-    _inherits(InstantBuffer, _DefaultBuffer);
-
-    function InstantBuffer(chart) {
-        _classCallCheck(this, InstantBuffer);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(InstantBuffer).call(this, chart));
-    }
-
-    _createClass(InstantBuffer, [{
-        key: "actOnDirty",
-        value: function actOnDirty(dirty) {
-            var __ = this.__;
-
-            if (dirty) {
-                this.sendRedraw();
-            }
-        }
-    }]);
-
-    return InstantBuffer;
-})(_default2.default);
-
-exports.default = InstantBuffer;
-
-},{"./default":2}],4:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _utils = require("./utils");
-
-var _column = require("./dataHandlers/column");
-
-var _column2 = _interopRequireDefault(_column);
-
-var _line = require("./dataHandlers/line");
-
-var _line2 = _interopRequireDefault(_line);
-
-var _area = require("./dataHandlers/area");
-
-var _area2 = _interopRequireDefault(_area);
-
-var _pie = require("./dataHandlers/pie");
-
-var _pie2 = _interopRequireDefault(_pie);
-
-var _default = require("./buffers/default");
-
-var _default2 = _interopRequireDefault(_default);
-
-var _instant = require("./buffers/instant");
-
-var _instant2 = _interopRequireDefault(_instant);
-
-var _index = require("./renderers/svg/index");
-
-var _index2 = _interopRequireDefault(_index);
-
-var _optionObject = require("./optionObject/optionObject");
-
-var _optionObject2 = _interopRequireDefault(_optionObject);
-
-var _dataObject = require("./dataObject/dataObject");
-
-var _dataObject2 = _interopRequireDefault(_dataObject);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Chart = (function () {
-    function Chart(dataObject, optionObject, buffer) {
-        _classCallCheck(this, Chart);
-
-        this.setBuffer(buffer);
-
-        this.initDataObject(dataObject);
-        this.initOptionObject(optionObject);
-
-        this.setHandler(this.option.handler);
-        this.setRenderer(this.option.renderer);
-
-        this.endInit();
-    }
-
-    _createClass(Chart, [{
-        key: "redraw",
-        value: function redraw() {
-            var renderObject = this.handler.computeRenderObject(this.data, this.option);
-            this.renderer.redraw(renderObject);
-        }
-    }, {
-        key: "initDataObject",
-        value: function initDataObject(dataObject) {
-            this.data = (0, _utils.option)(dataObject, new _dataObject2.default({}, this.buffer));
-        }
-    }, {
-        key: "initOptionObject",
-        value: function initOptionObject(optionObject) {
-            this.option = (0, _utils.option)(optionObject, new _optionObject2.default({}, this.buffer));
-        }
-    }, {
-        key: "setHandler",
-        value: function setHandler(handler) {
-            handler = (0, _utils.option)(handler, "line");
-
-            if (typeof handler === "function") {
-                this.handler = new handler(this);
-            } else if ((typeof handler === "undefined" ? "undefined" : _typeof(handler)) === "object") {
-                this.handler = handler;
-            } else {
-                this.setHandlerByName(handler);
-            }
-
-            if (this.renderer) {
-                this.redraw();
-            }
-        }
-    }, {
-        key: "setHandlerByName",
-        value: function setHandlerByName(handler) {
-            if (handler === "column") {
-                this.handler = new _column2.default(this);
-            } else if (handler === "line") {
-                this.handler = new _line2.default(this);
-            } else if (handler === "area") {
-                this.handler = new _area2.default(this);
-            } else if (handler === "pie") {
-                this.handler = new _pie2.default(this);
-            } else {
-                throw new Error("Uknown type of handler: " + hanlder);
-            }
-        }
-    }, {
-        key: "setRenderer",
-        value: function setRenderer(renderer) {
-            renderer = (0, _utils.option)(renderer, "default");
-
-            if (typeof renderer === "function") {
-                this.renderer = new renderer(this);
-            } else if ((typeof renderer === "undefined" ? "undefined" : _typeof(renderer)) === "object") {
-                this.renderer = renderer;
-            } else {
-                this.setRendererByName(renderer);
-            }
-        }
-    }, {
-        key: "setRendererByName",
-        value: function setRendererByName(renderer) {
-            if (renderer === "default") {
-                this.renderer = new _index2.default(this);
-            } else {
-                throw new Error("Uknown type of renderer: " + renderer);
-            }
-        }
-    }, {
-        key: "setBuffer",
-        value: function setBuffer(buffer) {
-
-            if ((0, _utils.isDefined)(this.buffer)) {
-                this.buffer.unregisterChart(this);
-            }
-
-            buffer = (0, _utils.option)(buffer, "default");
-
-            if (typeof buffer === "function") {
-                this.buffer = new buffer(this);
-            } else if ((typeof buffer === "undefined" ? "undefined" : _typeof(buffer)) === "object") {
-                this.buffer = buffer;
-            } else {
-                this.setBufferByName(buffer);
-            }
-
-            this.buffer.registerChart(this);
-            this.buffer.frozen(true);
-        }
-    }, {
-        key: "setBufferByName",
-        value: function setBufferByName(buffer) {
-            if (buffer === "default") {
-                this.buffer = new _default2.default(this);
-            } else if (buffer === "instant") {
-                this.buffer = new _instant2.default(this);
-            } else {
-                throw new Error("Uknown type of buffer: " + buffer);
-            }
-        }
-    }, {
-        key: "endInit",
-        value: function endInit() {
-
-            this.buffer.frozen(false);
-            this.buffer.dirty(true);
-        }
-    }]);
-
-    return Chart;
-})();
-
-exports.default = Chart;
-
-},{"./buffers/default":2,"./buffers/instant":3,"./dataHandlers/area":5,"./dataHandlers/column":8,"./dataHandlers/line":9,"./dataHandlers/pie":10,"./dataObject/dataObject":12,"./optionObject/optionObject":18,"./renderers/svg/index":25,"./utils":27}],5:[function(require,module,exports){
-"use strict";
-
-var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _utils = require("../utils");
-
-var _rectangular = require("./rectangular");
-
-var _rectangular2 = _interopRequireDefault(_rectangular);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var AreaHandler = (function (_RectangularHandler) {
-    _inherits(AreaHandler, _RectangularHandler);
-
-    function AreaHandler() {
-        _classCallCheck(this, AreaHandler);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(AreaHandler).apply(this, arguments));
-    }
-
-    _createClass(AreaHandler, [{
-        key: "init",
-        value: function init() {
-            var d = this.d();
-        }
-    }, {
-        key: "computeRenderObject",
-        value: function computeRenderObject(data, option) {
-            var d = this.d();
-
-            _get(Object.getPrototypeOf(AreaHandler.prototype), "computeRenderObject", this).call(this, data, option);
-
-            d.clearRectangularData({
-                areas: false
-            });
-
-            d.data.rectangular.areas = this.processAreas(data.columns());
-
-            if (option.mode() === "stacked") {
-                d.data.rectangular.areas = this.stack(d.data.rectangular.areas);
-            } else if (option.mode() === "normalized") {
-                d.data.rectangular.areas = this.normalize(d.data.rectangular.areas);
-            }
-
-            d.data.ranges = this.computeRanges(d.data.rectangular.areas);
-
-            d.data.rectangular.areas = this.setY0(d.data.rectangular.areas, d.data.ranges.yMin);
-
-            d.option.area = option.area.options();
-
-            return d;
-        }
-    }, {
-        key: "processAreas",
-        value: function processAreas(areas) {
-            var ret = {
-                dirty: true,
-                values: []
-            };
-
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = areas[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var _step$value = _slicedToArray(_step.value, 2);
-
-                    var id = _step$value[0];
-                    var area = _step$value[1];
-
-                    ret.values.push(this.processArea(area, id));
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-
-            return ret;
-        }
-    }, {
-        key: "processArea",
-        value: function processArea(area, id) {
-            var ret = {
-                dirty: true,
-                values: [],
-                id: id
-            };
-
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
-
-            try {
-                for (var _iterator2 = area[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var _step2$value = _slicedToArray(_step2.value, 2);
-
-                    var x = _step2$value[0];
-                    var value = _step2$value[1];
-
-                    ret.values.push(this.processValue(value, x));
-                }
-            } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
-                    }
-                } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
-                    }
-                }
-            }
-
-            return ret;
-        }
-    }, {
-        key: "processValue",
-        value: function processValue(value, x) {
-            var v = _get(Object.getPrototypeOf(AreaHandler.prototype), "processValue", this).call(this, value, x);
-
-            if ((0, _utils.isDefined)(value.y0)) {
-                v.y0 = value.y0;
-            }
-
-            return v;
-        }
-    }, {
-        key: "setY0",
-        value: function setY0(areas, yMin) {
-            var _iteratorNormalCompletion3 = true;
-            var _didIteratorError3 = false;
-            var _iteratorError3 = undefined;
-
-            try {
-                for (var _iterator3 = areas.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                    var area = _step3.value;
-                    var _iteratorNormalCompletion4 = true;
-                    var _didIteratorError4 = false;
-                    var _iteratorError4 = undefined;
-
-                    try {
-                        for (var _iterator4 = area.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                            var value = _step4.value;
-
-                            if ((0, _utils.isUndefined)(value.y0)) {
-                                value.y0 = yMin;
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError4 = true;
-                        _iteratorError4 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                                _iterator4.return();
-                            }
-                        } finally {
-                            if (_didIteratorError4) {
-                                throw _iteratorError4;
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                _didIteratorError3 = true;
-                _iteratorError3 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                        _iterator3.return();
-                    }
-                } finally {
-                    if (_didIteratorError3) {
-                        throw _iteratorError3;
-                    }
-                }
-            }
-
-            return areas;
-        }
-    }]);
-
-    return AreaHandler;
-})(_rectangular2.default);
-
-exports.default = AreaHandler;
-
-},{"../utils":27,"./rectangular":11}],6:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _renderObject = require("../renderObject/renderObject");
-
-var _renderObject2 = _interopRequireDefault(_renderObject);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Handler = (function () {
-    function Handler() {
-        _classCallCheck(this, Handler);
-
-        this.__ = {
-            d: new _renderObject2.default()
-        };
-
-        this.init();
-    }
-
-    _createClass(Handler, [{
-        key: "init",
-        value: function init() {}
-    }, {
-        key: "d",
-        value: function d() {
-            return this.__.d;
-        }
-    }, {
-        key: "computeRenderObject",
-        value: function computeRenderObject(data, option) {
-            var d = this.d();
-
-            d.option.size = this.processSize(option.size);
-        }
-    }, {
-        key: "processSize",
-        value: function processSize(size) {
-
-            return {
-                dirty: true,
-                width: size.width(),
-                height: size.height()
-            };
-        }
-    }, {
-        key: "computeRanges",
-        value: function computeRanges(table) {
-            var xMin = undefined,
-                xMax = undefined,
-                yMin = undefined,
-                yMax = undefined;
-            var xStrings = [];
-
-            table.values.forEach(function (column) {
-                column.values.forEach(function (value) {
-                    if ((0, _utils.isUndefined)(xMin) || value.x < xMin) {
-                        xMin = value.x;
-                    }
-                    if ((0, _utils.isUndefined)(xMax) || value.x > xMax) {
-                        xMax = value.x;
-                    }
-                    if ((0, _utils.isUndefined)(yMin) || value.y < yMin) {
-                        yMin = value.y;
-                    }
-                    if ((0, _utils.isUndefined)(yMax) || value.y > yMax) {
-                        yMax = value.y;
-                    }
-                });
-            });
-
-            if (this.hasStringXIn(table)) {
-                var _iteratorNormalCompletion = true;
-                var _didIteratorError = false;
-                var _iteratorError = undefined;
-
-                try {
-                    for (var _iterator = table.values[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                        var column = _step.value;
-                        var _iteratorNormalCompletion2 = true;
-                        var _didIteratorError2 = false;
-                        var _iteratorError2 = undefined;
-
-                        try {
-                            for (var _iterator2 = column.values[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                                var value = _step2.value;
-
-                                // Convert all x to strings
-                                xStrings.push("" + value.x);
-                            }
-                        } catch (err) {
-                            _didIteratorError2 = true;
-                            _iteratorError2 = err;
-                        } finally {
-                            try {
-                                if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                                    _iterator2.return();
-                                }
-                            } finally {
-                                if (_didIteratorError2) {
-                                    throw _iteratorError2;
-                                }
-                            }
-                        }
-                    }
-                } catch (err) {
-                    _didIteratorError = true;
-                    _iteratorError = err;
-                } finally {
-                    try {
-                        if (!_iteratorNormalCompletion && _iterator.return) {
-                            _iterator.return();
-                        }
-                    } finally {
-                        if (_didIteratorError) {
-                            throw _iteratorError;
-                        }
-                    }
-                }
-            }
-
-            return {
-                xMin: xMin,
-                xMax: xMax,
-                yMin: yMin,
-                yMax: yMax,
-                xStrings: xStrings
-            };
-        }
-
-        /*
-         * Stacks all data, so every sequence is stacked above the previous one.
-         * Changes input instead of copying for time saving.
-         */
-
-    }, {
-        key: "stack",
-        value: function stack(data) {
-
-            var stacked = new Map();
-
-            for (var i = 0; i < data.values.length; i++) {
-                for (var j = 0; j < data.values[i].values.length; j++) {
-                    var value = data.values[i].values[j];
-
-                    if (!stacked.has(value.x)) {
-                        stacked.set(value.x, 0);
-                    }
-
-                    var padding = stacked.get(value.x);
-
-                    value.y0 = padding;
-                    value.y += padding;
-
-                    stacked.set(value.x, value.y);
-                }
-            }
-
-            return data;
-        }
-
-        /*
-         * Normalizes all data, so every row sums up to 1.
-         * Handles all zeros in one row by equally splitting row between all sequences.
-         * Changes input instead of copying for time saving.
-         */
-
-    }, {
-        key: "normalize",
-        value: function normalize(data) {
-            var sums = new Map();
-            var numberOf = new Map();
-
-            var _iteratorNormalCompletion3 = true;
-            var _didIteratorError3 = false;
-            var _iteratorError3 = undefined;
-
-            try {
-                for (var _iterator3 = data.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                    var column = _step3.value;
-                    var _iteratorNormalCompletion5 = true;
-                    var _didIteratorError5 = false;
-                    var _iteratorError5 = undefined;
-
-                    try {
-                        for (var _iterator5 = column.values[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                            var value = _step5.value;
-
-                            if (value.y < 0) {
-                                throw new Error("Y can't be below zero in the normalized chart");
-                            }
-
-                            if (sums.has(value.x)) {
-                                sums.set(value.x, sums.get(value.x) + value.y);
-                                numberOf.set(value.x, numberOf.get(value.x) + 1);
-                            } else {
-                                sums.set(value.x, value.y);
-                                numberOf.set(value.x, 1);
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError5 = true;
-                        _iteratorError5 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                                _iterator5.return();
-                            }
-                        } finally {
-                            if (_didIteratorError5) {
-                                throw _iteratorError5;
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                _didIteratorError3 = true;
-                _iteratorError3 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                        _iterator3.return();
-                    }
-                } finally {
-                    if (_didIteratorError3) {
-                        throw _iteratorError3;
-                    }
-                }
-            }
-
-            var _iteratorNormalCompletion4 = true;
-            var _didIteratorError4 = false;
-            var _iteratorError4 = undefined;
-
-            try {
-                for (var _iterator4 = data.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                    var column = _step4.value;
-                    var _iteratorNormalCompletion6 = true;
-                    var _didIteratorError6 = false;
-                    var _iteratorError6 = undefined;
-
-                    try {
-                        for (var _iterator6 = column.values[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                            var value = _step6.value;
-
-                            var sum = sums.get(value.x);
-                            if (sum === 0) {
-                                value.y = 1 / numberOf.get(value.x);
-                            } else {
-                                value.y /= sums.get(value.x);
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError6 = true;
-                        _iteratorError6 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                                _iterator6.return();
-                            }
-                        } finally {
-                            if (_didIteratorError6) {
-                                throw _iteratorError6;
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                _didIteratorError4 = true;
-                _iteratorError4 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                        _iterator4.return();
-                    }
-                } finally {
-                    if (_didIteratorError4) {
-                        throw _iteratorError4;
-                    }
-                }
-            }
-
-            return this.stack(data);
-        }
-    }, {
-        key: "hasStringXIn",
-        value: function hasStringXIn(table) {
-            var _iteratorNormalCompletion7 = true;
-            var _didIteratorError7 = false;
-            var _iteratorError7 = undefined;
-
-            try {
-                for (var _iterator7 = table.values[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                    var column = _step7.value;
-                    var _iteratorNormalCompletion8 = true;
-                    var _didIteratorError8 = false;
-                    var _iteratorError8 = undefined;
-
-                    try {
-                        for (var _iterator8 = column.values[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-                            var value = _step8.value;
-
-                            if ((0, _utils.isString)(value.x)) {
-                                return true;
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError8 = true;
-                        _iteratorError8 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion8 && _iterator8.return) {
-                                _iterator8.return();
-                            }
-                        } finally {
-                            if (_didIteratorError8) {
-                                throw _iteratorError8;
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                _didIteratorError7 = true;
-                _iteratorError7 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                        _iterator7.return();
-                    }
-                } finally {
-                    if (_didIteratorError7) {
-                        throw _iteratorError7;
-                    }
-                }
-            }
-
-            return false;
-        }
-    }]);
-
-    return Handler;
-})();
-
-exports.default = Handler;
-
-},{"../renderObject/renderObject":22,"../utils":27}],7:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _basic = require("./basic");
-
-var _basic2 = _interopRequireDefault(_basic);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var CircularHandler = (function (_Handler) {
-    _inherits(CircularHandler, _Handler);
-
-    function CircularHandler() {
-        _classCallCheck(this, CircularHandler);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(CircularHandler).apply(this, arguments));
-    }
-
-    _createClass(CircularHandler, [{
-        key: "init",
-        value: function init() {}
-    }]);
-
-    return CircularHandler;
-})(_basic2.default);
-
-exports.default = CircularHandler;
-
-},{"./basic":6}],8:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _rectangular = require("./rectangular");
-
-var _rectangular2 = _interopRequireDefault(_rectangular);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var ColumnHandler = (function (_RectangularHandler) {
-    _inherits(ColumnHandler, _RectangularHandler);
-
-    function ColumnHandler() {
-        _classCallCheck(this, ColumnHandler);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(ColumnHandler).call(this));
-    }
-
-    _createClass(ColumnHandler, [{
-        key: "computeRenderObject",
-        value: function computeRenderObject(data, option) {
-            var d = this.d();
-
-            this.processColumns(data.columns);
-
-            return d;
-        }
-    }, {
-        key: "init",
-        value: function init() {
-            var d = this.d();
-            d.data.columns = {
-                dirty: true,
-                values: []
-            };
-        }
-    }, {
-        key: "processColumns",
-        value: function processColumns(columns) {
-            var _this2 = this;
-
-            var d = this.d();
-
-            if (!columns.dirty) {
-                return;
-            }
-
-            d.data.columns.values = [];
-
-            var cols = columns.values();
-
-            cols.forEach(function (column) {
-                d.data.columns.values.push(_this2.processColumn(column));
-            });
-
-            d.data.columns.dirty = true;
-
-            this.columnsToRows(columns);
-        }
-    }, {
-        key: "processColumn",
-        value: function processColumn(column) {
-            var processed = {
-                id: column.id(),
-                values: []
-            };
-
-            var i = undefined;
-            var values = column.values();
-            for (i = 0; i < values.length; i++) {
-                var value = values[i];
-                processed.values.push(this.processValue(value, { x: i }));
-            }
-
-            return processed;
-        }
-    }, {
-        key: "processValue",
-        value: function processValue(v, d) {
-            d = (0, _utils.option)(d, {});
-
-            return {
-                x: (0, _utils.option)(v.x, d.x),
-                y: v.y,
-                dirty: v.dirty,
-                label: v.label
-            };
-        }
-    }]);
-
-    return ColumnHandler;
-})(_rectangular2.default);
-
-exports.default = ColumnHandler;
-
-},{"../utils":27,"./rectangular":11}],9:[function(require,module,exports){
-"use strict";
-
-var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _rectangular = require("./rectangular");
-
-var _rectangular2 = _interopRequireDefault(_rectangular);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var LineHandler = (function (_RectangularHandler) {
-    _inherits(LineHandler, _RectangularHandler);
-
-    function LineHandler() {
-        _classCallCheck(this, LineHandler);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(LineHandler).call(this));
-    }
-
-    _createClass(LineHandler, [{
-        key: "init",
-        value: function init() {
-            var d = this.d();
-        }
-    }, {
-        key: "computeRenderObject",
-        value: function computeRenderObject(data, option) {
-            var d = this.d();
-
-            _get(Object.getPrototypeOf(LineHandler.prototype), "computeRenderObject", this).call(this, data, option);
-
-            d.clearRectangularData({
-                lines: false
-            });
-
-            d.data.rectangular.lines = this.processLines(data.columns());
-
-            if (option.mode() === "stacked") {
-                d.data.rectangular.lines = this.stack(d.data.rectangular.lines);
-            } else if (option.mode() === "normalized") {
-                d.data.rectangular.lines = this.normalize(d.data.rectangular.lines);
-            }
-
-            d.data.ranges = this.computeRanges(d.data.rectangular.lines);
-
-            d.option.line = option.line.options();
-
-            return d;
-        }
-    }, {
-        key: "processLines",
-        value: function processLines(lines) {
-            var ret = {
-                dirty: true,
-                values: []
-            };
-
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = lines[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var _step$value = _slicedToArray(_step.value, 2);
-
-                    var id = _step$value[0];
-                    var line = _step$value[1];
-
-                    ret.values.push(this.processLine(line, id));
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-
-            return ret;
-        }
-    }, {
-        key: "processLine",
-        value: function processLine(line, id) {
-            var ret = {
-                dirty: true,
-                values: [],
-                id: id
-            };
-
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
-
-            try {
-                for (var _iterator2 = line[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var _step2$value = _slicedToArray(_step2.value, 2);
-
-                    var x = _step2$value[0];
-                    var value = _step2$value[1];
-
-                    ret.values.push(this.processValue(value, x));
-                }
-            } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
-                    }
-                } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
-                    }
-                }
-            }
-
-            return ret;
-        }
-    }]);
-
-    return LineHandler;
-})(_rectangular2.default);
-
-exports.default = LineHandler;
-
-},{"../utils":27,"./rectangular":11}],10:[function(require,module,exports){
-"use strict";
-
-var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _circular = require("./circular");
-
-var _circular2 = _interopRequireDefault(_circular);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var PieHandler = (function (_CircularHandler) {
-    _inherits(PieHandler, _CircularHandler);
-
-    function PieHandler() {
-        _classCallCheck(this, PieHandler);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(PieHandler).apply(this, arguments));
-    }
-
-    _createClass(PieHandler, [{
-        key: "computeRenderObject",
-        value: function computeRenderObject(data, option) {
-            var d = this.d();
-
-            _get(Object.getPrototypeOf(PieHandler.prototype), "computeRenderObject", this).call(this, data, option);
-
-            d.data.circular.pies = this.processPies(data.columns());
-
-            d.option.pie = option.pie.options();
-
-            return d;
-        }
-    }, {
-        key: "processPies",
-        value: function processPies(pies) {
-            var ret = {
-                dirty: true,
-                values: []
-            };
-
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = pies[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var _step$value = _slicedToArray(_step.value, 2);
-
-                    var name = _step$value[0];
-                    var pie = _step$value[1];
-
-                    ret.values.push(this.processPie(pie, name));
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-
-            return ret;
-        }
-    }, {
-        key: "processPie",
-        value: function processPie(pie, name) {
-            var ret = {
-                dirty: true,
-                values: [],
-                name: name
-            };
-
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
-
-            try {
-                for (var _iterator2 = pie[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var _step2$value = _slicedToArray(_step2.value, 2);
-
-                    var id = _step2$value[0];
-                    var value = _step2$value[1];
-
-                    ret.values.push(this.processValue(value, id));
-                }
-            } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
-                    }
-                } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
-                    }
-                }
-            }
-
-            return ret;
-        }
-    }, {
-        key: "processValue",
-        value: function processValue(value, id) {
-            var v = {};
-
-            if ((0, _utils.isDefined)(id)) {
-                v.id = id;
-            }
-            if ((0, _utils.isDefined)(value.y)) {
-                v.y = value.y;
-            }
-
-            return v;
-        }
-    }]);
-
-    return PieHandler;
-})(_circular2.default);
-
-exports.default = PieHandler;
-
-},{"../utils":27,"./circular":7}],11:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _basic = require("./basic");
-
-var _basic2 = _interopRequireDefault(_basic);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/*
- * Rectangular chart is the father of column, line, area and other charts, that are painted on rectangular canvas.
- * It has right-angled axes and grids.
- */
-
-var RectangularHandler = (function (_Handler) {
-    _inherits(RectangularHandler, _Handler);
-
-    function RectangularHandler() {
-        _classCallCheck(this, RectangularHandler);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(RectangularHandler).apply(this, arguments));
-    }
-
-    _createClass(RectangularHandler, [{
-        key: "computeRenderObject",
-        value: function computeRenderObject(data, option) {
-            _get(Object.getPrototypeOf(RectangularHandler.prototype), "computeRenderObject", this).call(this, data, option);
-
-            var d = this.d();
-
-            d.option.axes = this.processAxis(option.axes);
-        }
-    }, {
-        key: "processAxis",
-        value: function processAxis(axes) {
-            var d = {
-                x: {
-                    dirty: true
-                },
-                y: {
-                    dirty: true
-                },
-                dirty: true
-            };
-
-            d.x.visible = axes.x.visible();
-            d.y.visible = axes.y.visible();
-
-            return d;
-        }
-    }, {
-        key: "processValue",
-        value: function processValue(value, x) {
-            var v = {};
-
-            if ((0, _utils.isDefined)(x)) {
-                v.x = x;
-            }
-            if ((0, _utils.isDefined)(value.y)) {
-                v.y = value.y;
-            }
-            if ((0, _utils.isDefined)(value.color)) {
-                v.color = value.color;
-            }
-            if ((0, _utils.isDefined)(value.label)) {
-                v.label = value.label;
-            }
-
-            return v;
-        }
-    }]);
-
-    return RectangularHandler;
-})(_basic2.default);
-
-exports.default = RectangularHandler;
-
-},{"../utils":27,"./basic":6}],12:[function(require,module,exports){
-"use strict";
-
-var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _object = require("../object");
-
-var _object2 = _interopRequireDefault(_object);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/**
- * DataObject is basicly a table where columns are sequences and rows are xs.
- * Columns are determined by their ids that must be strings.
- * Rows are determined by the value of their xs. X can either be number or string.
- * Columns and rows are not sorted in any way and stored in the order they were added.
- *
- * Note that not every set method calls dirty(true) itself but rather calls other methods that will.
- * This is done for not calling dirty(true) extra times. E.g. calling addColumn([...]) will always call setValuesToColumn([...]),
- * and then it will call dirty(true).
- */
-
-var DataObject = (function (_Obj) {
-    _inherits(DataObject, _Obj);
-
-    function DataObject(d, parent) {
-        _classCallCheck(this, DataObject);
-
-        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(DataObject).call(this, d, parent));
-
-        var __ = _this.__;
-
-        var table = __.table = new Map();
-
-        d = (0, _utils.option)(d, {});
-
-        d.columns = (0, _utils.option)(d.columns, []);
-        d.rows = (0, _utils.option)(d.rows, []);
-
-        _this.columns(d.columns);
-        _this.addRows(d.rows);
-
-        return _this;
-    }
-
-    _createClass(DataObject, [{
-        key: "clear",
-        value: function clear() {
-            this.__.table.clear();
-            this.dirty(true);
-            return this;
-        }
-    }, {
-        key: "columns",
-        value: function columns(_columns) {
-            var __ = this.__;
-
-            if (_columns === undefined) {
-                return __.table;
-            }
-
-            this.clear();
-            this.addColumns(_columns);
-
-            return this;
-        }
-    }, {
-        key: "column",
-        value: function column(id, values) {
-            var __ = this.__;
-
-            if (values === undefined) {
-                return __.table.get(id);
-            } else {
-                this.emptyColumn(id);
-                this.setValuesToColumn(id, values);
-                return this;
-            }
-        }
-    }, {
-        key: "addColumns",
-        value: function addColumns(columns) {
-            var _this2 = this;
-
-            var __ = this.__;
-
-            if (!Array.isArray(columns)) {
-                throw new TypeError("Columns should be array and not " + (typeof columns === "undefined" ? "undefined" : _typeof(columns)));
-            }
-
-            columns.forEach(function (column) {
-                _this2.addColumn(column.id, column.values);
-            });
-
-            return this;
-        }
-    }, {
-        key: "addColumn",
-        value: function addColumn(id, values) {
-            var table = this.__.table;
-
-            (0, _utils.throwIfNotString)(id, "Column id");
-
-            (0, _utils.throwIfNotArray)(values, "Column values");
-
-            if (this.column(id) !== undefined) {
-                throw new Error("Columns can't have equals ids but " + id + " is presented twice");
-            }
-
-            var newColumn = new Map();
-
-            table.set(id, newColumn);
-
-            this.setValuesToColumn(id, values);
-
-            return this.column(id);
-        }
-    }, {
-        key: "columnValue",
-        value: function columnValue(id, x, value) {
-            if (value === undefined) {
-                return this.column(id).get(x);
-            } else {
-                var column = this.column(id);
-
-                if (column === undefined) {
-                    column = this.addEmptyColumn(id);
-                }
-
-                column.set(x, this.__value(value));
-            }
-
-            this.dirty(true);
-
-            return this;
-        }
-    }, {
-        key: "setValuesToColumn",
-        value: function setValuesToColumn(id, values) {
-            (0, _utils.throwIfNotString)(id, "Column id");
-
-            (0, _utils.throwIfNotArray)(values, "Column values");
-
-            var column = this.column(id);
-
-            (0, _utils.throwIfUndefined)(column, "Can't set values to undefined column");
-
-            for (var i = 0; i < values.length; i++) {
-                var value = values[i];
-                if ((0, _utils.isUndefined)(value.x)) {
-                    column.set(i, this.__value(value));
-                } else {
-                    column.set(value.x, this.__value(value));
-                }
-            }
-
-            this.dirty(true);
-
-            return this;
-        }
-    }, {
-        key: "addEmptyColumn",
-        value: function addEmptyColumn(id) {
-            return this.addColumn(id, []);
-        }
-    }, {
-        key: "emptyColumn",
-        value: function emptyColumn(id) {
-            (0, _utils.throwIfNotString)(id, "Column id");
-
-            var column = this.column(id);
-
-            if (column) {
-                column.clear();
-            } else {
-                this.addEmptyColumn(id);
-            }
-
-            this.dirty();
-
-            return this;
-        }
-    }, {
-        key: "removeColumn",
-        value: function removeColumn(id) {
-            this.__.table.delete(id);
-
-            this.dirty(true);
-
-            return this;
-        }
-    }, {
-        key: "rows",
-        value: function rows(_rows) {
-            if (_rows === undefined) {
-                return this.toRows();
-            }
-
-            (0, _utils.throwIfNotArray)(_rows, "Rows");
-
-            this.clear();
-            this.addRows(_rows);
-
-            return this;
-        }
-    }, {
-        key: "addRows",
-        value: function addRows(rows) {
-            var _this3 = this;
-
-            (0, _utils.throwIfNotArray)(rows, "Rows");
-            rows.forEach(function (row) {
-                _this3.row(row.x, row.values);
-            });
-
-            return this;
-        }
-    }, {
-        key: "row",
-        value: function row(x, values) {
-            (0, _utils.throwIfUndefined)(x, "Row x");
-
-            this.emptyRow(x);
-
-            this.addValuesToRow(x, values);
-
-            return this;
-        }
-    }, {
-        key: "addValuesToRow",
-        value: function addValuesToRow(x, values) {
-            var _this4 = this;
-
-            (0, _utils.throwIfUndefined)(x, "Row x");
-            (0, _utils.throwIfNotArray)(values, "Row values");
-
-            values.forEach(function (value) {
-                _this4.columnValue(value.id, x, value);
-            });
-
-            return this;
-        }
-    }, {
-        key: "emptyRow",
-        value: function emptyRow(x) {
-            var table = this.__.table;
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
-
-            try {
-                for (var _iterator = table[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var _step$value = _slicedToArray(_step.value, 2);
-
-                    var i = _step$value[0];
-                    var column = _step$value[1];
-
-                    if (column.has(x)) {
-                        column.delete(x);
-                    }
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
-                    }
-                }
-            }
-
-            this.dirty(true);
-
-            return this;
-        }
-    }, {
-        key: "toRows",
-        value: function toRows() {
-            var table = this.__.table;
-
-            var rows = new Map();
-
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
-
-            try {
-                for (var _iterator2 = table[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var _step2$value = _slicedToArray(_step2.value, 2);
-
-                    var i = _step2$value[0];
-                    var column = _step2$value[1];
-                    var _iteratorNormalCompletion3 = true;
-                    var _didIteratorError3 = false;
-                    var _iteratorError3 = undefined;
-
-                    try {
-                        for (var _iterator3 = column[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                            var _step3$value = _slicedToArray(_step3.value, 2);
-
-                            var x = _step3$value[0];
-                            var value = _step3$value[1];
-
-                            if (rows.has(x)) {
-                                rows.get(x).set(i, value);
-                            } else {
-                                rows.set(x, new Map([[i, value]]));
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError3 = true;
-                        _iteratorError3 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                                _iterator3.return();
-                            }
-                        } finally {
-                            if (_didIteratorError3) {
-                                throw _iteratorError3;
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
-                    }
-                } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
-                    }
-                }
-            }
-
-            return rows;
-        }
-    }, {
-        key: "copy",
-        value: function copy() {}
-
-        /*
-         * Gets next available x in column with given id.
-         * Say column is [{ x: 10 }, { x: 11 }, { x: 22 }].
-         * The result will be 23 as it is the next x in this column.
-         */
-
-    }, {
-        key: "__getNextX",
-        value: function __getNextX(id) {
-            var column = this.column(id);
-            var m = -1;
-
-            var _iteratorNormalCompletion4 = true;
-            var _didIteratorError4 = false;
-            var _iteratorError4 = undefined;
-
-            try {
-                for (var _iterator4 = column[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                    var _step4$value = _slicedToArray(_step4.value, 2);
-
-                    var i = _step4$value[0];
-                    var value = _step4$value[1];
-
-                    var x = (0, _utils.isUndefined)(column.x) ? i : column.x;
-                    if (x > m) {
-                        m = x;
-                    }
-                }
-            } catch (err) {
-                _didIteratorError4 = true;
-                _iteratorError4 = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                        _iterator4.return();
-                    }
-                } finally {
-                    if (_didIteratorError4) {
-                        throw _iteratorError4;
-                    }
-                }
-            }
-
-            return (0, _utils.toInt)(m) + 1;
-        }
-    }, {
-        key: "__value",
-        value: function __value(v) {
-            if ((0, _utils.isObject)(v)) {
-                var obj = {};
-
-                // This is done for memory efficiency so we don't have smth like
-                // {
-                //     y: 10,
-                //     x: undefined,
-                //     label: undefined,
-                //     color: undefined
-                // }
-
-                if (!(0, _utils.isUndefined)(v.y)) {
-                    obj.y = v.y;
-                }
-                if (!(0, _utils.isUndefined)(v.x)) {
-                    obj.x = v.x;
-                }
-                if (!(0, _utils.isUndefined)(v.label)) {
-                    obj.label = v.label;
-                }
-                if (!(0, _utils.isUndefined)(v.color)) {
-                    obj.color = v.color;
-                }
-                return obj;
-            }
-
-            if ((0, _utils.isNumeric)(v)) {
-                return {
-                    y: v
-                };
-            }
-        }
-    }]);
-
-    return DataObject;
-})(_object2.default);
-
-exports.default = DataObject;
-
-},{"../object":14,"../utils":27}],13:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.Buffer = exports.Chart = exports.OptionObject = exports.DataObject = undefined;
-exports.generateBasicChart = generateBasicChart;
-exports.generateInstantChart = generateInstantChart;
-
-var _dataObject = require("./dataObject/dataObject");
-
-var _dataObject2 = _interopRequireDefault(_dataObject);
-
-var _optionObject = require("./optionObject/optionObject");
-
-var _optionObject2 = _interopRequireDefault(_optionObject);
-
-var _chart = require("./chart");
-
-var _chart2 = _interopRequireDefault(_chart);
-
-var _default = require("./buffers/default");
-
-var _default2 = _interopRequireDefault(_default);
-
-var _instant = require("./buffers/instant");
-
-var _instant2 = _interopRequireDefault(_instant);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//import "babel-polyfill";
-
-var Buffer = {
-    Default: _default2.default,
-    Instant: _instant2.default
-};
-
-function generateBasicChart() {
-    var buffer = new Buffer.Default();
-    var data = new _dataObject2.default({}, buffer);
-    var option = new _optionObject2.default({}, buffer);
-    var chart = new _chart2.default(data, option, buffer);
-
-    return chart;
-}
-
-function generateInstantChart() {
-    var buffer = new Buffer.Instant();
-    var data = new _dataObject2.default({}, buffer);
-    var option = new _optionObject2.default({}, buffer);
-    var chart = new _chart2.default(data, option, buffer);
-
-    return chart;
-}
-
-exports.DataObject = _dataObject2.default;
-exports.OptionObject = _optionObject2.default;
-exports.Chart = _chart2.default;
-exports.Buffer = Buffer;
-
-},{"./buffers/default":2,"./buffers/instant":3,"./chart":4,"./dataObject/dataObject":12,"./optionObject/optionObject":18}],14:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _utils = require("./utils");
-
-function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Obj = (function () {
-    function Obj(d, parent) {
-        _classCallCheck(this, Obj);
-
-        if (parent === undefined) {
-            throw new Error("Where are your parents " + (0, _utils.toString)(d) + "?!");
-        }
-
-        this.__init(d, parent);
-    }
-
-    _createClass(Obj, [{
-        key: "__init",
-        value: function __init(d, parent) {
-            var _this = this;
-
-            var __ = this.__ = {
-                dirty: true,
-                parent: parent
-            };
-
-            d = (0, _utils.option)(d, {});
-
-            if (d.fields) {
-                d.fields.forEach(function (field) {
-                    _this.setField(field.query, field.value);
-                });
-            }
-        }
-    }, {
-        key: "dirty",
-        value: function dirty(d) {
-            var __ = this.__;
-            if (d === undefined) {
-                return __.dirty;
-            }
-            __.dirty = d;
-            if (d === true) {
-                __.parent.dirty(true);
-            }
-        }
-
-        /**
-         * Fields are used for storing additional data that can be used by custom data handlers.
-         * Query is string in formart "a.b.c".
-         */
-
-    }, {
-        key: "field",
-        value: function field(query, value) {
-            if (value === undefined) {
-                return this.getField(query);
-            } else {
-                return this.setField(query, value);
-            }
-        }
-    }, {
-        key: "getField",
-        value: function getField(query, obj) {
-            var __ = this.__;
-
-            if (typeof query !== "string") {
-                throw new TypeError("Query should be string and not " + (typeof query === "undefined" ? "undefined" : _typeof(query)));
-            }
-
-            if (__.fields === undefined) {
-                return undefined;
-            }
-
-            if (obj === undefined) {
-                obj = __.fields;
-            }
-
-            var q = query.split(".");
-
-            if (q.length === 1) {
-                return obj[query];
-            }
-
-            return this.getField(q.slice(1).join("."), obj[q[0]]);
-        }
-    }, {
-        key: "setField",
-        value: function setField(query, value, obj) {
-            var __ = this.__;
-
-            if (typeof query !== "string") {
-                throw new TypeError("Query should be string and not " + (typeof query === "undefined" ? "undefined" : _typeof(query)));
-            }
-
-            if (__.fields === undefined) {
-                __.fields = {};
-            }
-
-            if (obj === undefined) {
-                obj = __.fields;
-            }
-
-            if ((typeof obj === "undefined" ? "undefined" : _typeof(obj)) !== "object") {
-                throw new TypeError("Can't set value to non-object field " + obj);
-            }
-
-            var q = query.split(".");
-
-            if (q.length === 1) {
-                return obj[query] = value;
-            }
-
-            if (obj[q[0]] === undefined) {
-                obj[q[0]] = {};
-            }
-
-            this.setField(q.slice(1).join("."), value, obj[q[0]]);
-        }
-
-        /*
-         * Options and getDefault should be implemented in
-         * child classes.
-         */
-
-    }, {
-        key: "setDefault",
-        value: function setDefault() {
-            this.options(this.getDefault());
-        }
-    }]);
-
-    return Obj;
-})();
-
-exports.default = Obj;
-
-},{"./utils":27}],15:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _object = require("../object");
-
-var _object2 = _interopRequireDefault(_object);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var Area = (function (_Obj) {
-    _inherits(Area, _Obj);
-
-    function Area(d, parent) {
-        _classCallCheck(this, Area);
-
-        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Area).call(this, d, parent));
-
-        _this.setDefault();
-        _this.options(d);
-        return _this;
-    }
-
-    _createClass(Area, [{
-        key: "options",
-        value: function options(d) {
-            if ((0, _utils.isUndefined)(d)) {
-                return {
-                    points: this.points(),
-                    interpolate: this.interpolate()
-                };
-            }
-
-            this.points(d.points);
-        }
-    }, {
-        key: "points",
-        value: function points(_points) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(_points)) {
-                return __.points;
-            }
-
-            __.points = _points;
-
-            this.dirty(true);
-            return this;
-        }
-    }, {
-        key: "interpolate",
-        value: function interpolate(_interpolate) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(_interpolate)) {
-                return __.interpolate;
-            }
-
-            __.interpolate = _interpolate;
-
-            this.dirty(true);
-            return this;
-        }
-    }, {
-        key: "getDefault",
-        value: function getDefault() {
-            return {
-                points: false,
-                interpolate: "linear"
-            };
-        }
-    }]);
-
-    return Area;
-})(_object2.default);
-
-exports.default = Area;
-
-},{"../object":14,"../utils":27}],16:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _object = require("../object");
-
-var _object2 = _interopRequireDefault(_object);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var Axes = (function (_Obj) {
-    _inherits(Axes, _Obj);
-
-    function Axes(d, parent) {
-        _classCallCheck(this, Axes);
-
-        d = (0, _utils.option)(d, {});
-
-        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Axes).call(this, d, parent));
-
-        var x = (0, _utils.option)(d.x, {});
-        var y = (0, _utils.option)(d.y, {});
-        var both = (0, _utils.option)(d.both, {});
-
-        _this.x = new XAxis((0, _utils.merge)(both, x), _this);
-        _this.y = new YAxis((0, _utils.merge)(both, y), _this);
-        _this.both = new Both(_this);
-        return _this;
-    }
-
-    return Axes;
-})(_object2.default);
-
-exports.default = Axes;
-
-var Axis = (function (_Obj2) {
-    _inherits(Axis, _Obj2);
-
-    function Axis(d, parent) {
-        _classCallCheck(this, Axis);
-
-        d = (0, _utils.option)(d, {});
-
-        var _this2 = _possibleConstructorReturn(this, Object.getPrototypeOf(Axis).call(this, d, parent));
-
-        _this2.setDefault();
-        _this2.options(d);
-        return _this2;
-    }
-
-    _createClass(Axis, [{
-        key: "options",
-        value: function options(d) {
-            this.visible(d.visible);
-        }
-    }, {
-        key: "visible",
-        value: function visible(_visible) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(_visible)) {
-                return __.visible;
-            }
-
-            __.visible = _visible;
-            this.dirty(true);
-        }
-    }, {
-        key: "show",
-        value: function show() {
-            this.visible(true);
-        }
-    }, {
-        key: "hide",
-        value: function hide() {
-            this.visible(false);
-        }
-    }, {
-        key: "setDefault",
-        value: function setDefault() {
-            this.options(this.getDefault());
-        }
-    }, {
-        key: "getDefault",
-        value: function getDefault() {
-            return {
-                visible: false
-            };
-        }
-    }]);
-
-    return Axis;
-})(_object2.default);
-
-/*
- * This is kinda weird object that just calls both X and Y axis APIs (but first checks, if it is possible, so you can't
- * call both.position("right") and hope it will work, since horizontal axis can't be right or left.
- */
-
-var Both = (function () {
-    function Both(proxy) {
-        _classCallCheck(this, Both);
-
-        this.__ = {
-            proxy: proxy
-        };
-    }
-
-    _createClass(Both, [{
-        key: "show",
-        value: function show() {
-            var proxy = this.__.proxy;
-            proxy.x.show();
-            proxy.y.show();
-        }
-    }, {
-        key: "hide",
-        value: function hide() {
-            var proxy = this.__.proxy;
-            proxy.x.hide();
-            proxy.y.hide();
-        }
-    }]);
-
-    return Both;
-})();
-
-var XAxis = (function (_Axis) {
-    _inherits(XAxis, _Axis);
-
-    function XAxis() {
-        _classCallCheck(this, XAxis);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(XAxis).apply(this, arguments));
-    }
-
-    return XAxis;
-})(Axis);
-
-var YAxis = (function (_Axis2) {
-    _inherits(YAxis, _Axis2);
-
-    function YAxis() {
-        _classCallCheck(this, YAxis);
-
-        return _possibleConstructorReturn(this, Object.getPrototypeOf(YAxis).apply(this, arguments));
-    }
-
-    return YAxis;
-})(Axis);
-
-},{"../object":14,"../utils":27}],17:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _object = require("../object");
-
-var _object2 = _interopRequireDefault(_object);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var Line = (function (_Obj) {
-    _inherits(Line, _Obj);
-
-    function Line(d, parent) {
-        _classCallCheck(this, Line);
-
-        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Line).call(this, d, parent));
-
-        _this.setDefault();
-        _this.options(d);
-        return _this;
-    }
-
-    _createClass(Line, [{
-        key: "options",
-        value: function options(d) {
-            if ((0, _utils.isUndefined)(d)) {
-                return {
-                    points: this.points(),
-                    interpolate: this.interpolate()
-                };
-            }
-
-            this.points(d.points);
-        }
-    }, {
-        key: "points",
-        value: function points(_points) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(_points)) {
-                return __.points;
-            }
-
-            __.points = _points;
-
-            this.dirty(true);
-            return this;
-        }
-    }, {
-        key: "interpolate",
-        value: function interpolate(_interpolate) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(_interpolate)) {
-                return __.interpolate;
-            }
-
-            __.interpolate = _interpolate;
-
-            this.dirty(true);
-            return this;
-        }
-    }, {
-        key: "getDefault",
-        value: function getDefault() {
-            return {
-                points: false,
-                interpolate: "linear"
-            };
-        }
-    }]);
-
-    return Line;
-})(_object2.default);
-
-exports.default = Line;
-
-},{"../object":14,"../utils":27}],18:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _object = require("../object");
-
-var _object2 = _interopRequireDefault(_object);
-
-var _size = require("./size");
-
-var _size2 = _interopRequireDefault(_size);
-
-var _axes = require("./axes");
-
-var _axes2 = _interopRequireDefault(_axes);
-
-var _area = require("./area");
-
-var _area2 = _interopRequireDefault(_area);
-
-var _line = require("./line");
-
-var _line2 = _interopRequireDefault(_line);
-
-var _pie = require("./pie");
-
-var _pie2 = _interopRequireDefault(_pie);
-
-var _utils = require("../utils");
-
-var _presets = require("./presets");
-
-var _presets2 = _interopRequireDefault(_presets);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var OptionObject = (function (_Obj) {
-    _inherits(OptionObject, _Obj);
-
-    function OptionObject(d, parent) {
-        _classCallCheck(this, OptionObject);
-
-        d = (0, _utils.option)(d, {});
-
-        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(OptionObject).call(this, d, parent));
-
-        _this.size = new _size2.default(d.size, _this);
-
-        _this.handler = d.handler;
-
-        _this.axes = new _axes2.default(d.axes, _this);
-
-        _this.legend = (0, _utils.option)(d.legend, {});
-
-        _this.area = new _area2.default(d.area, _this);
-        _this.line = new _line2.default(d.line, _this);
-        _this.pie = new _pie2.default(d.pie, _this);
-
-        _this.mode(d.mode);
-
-        var presets = (0, _utils.option)(d.presets, []);
-        _this.setPresets(presets);
-        _this.applyPresets();
-        return _this;
-    }
-
-    _createClass(OptionObject, [{
-        key: "__init",
-        value: function __init(d, parent) {
-            this.__ = {
-                parent: parent,
-                dirty: true,
-                mode: "normal"
-            };
-        }
-    }, {
-        key: "mode",
-        value: function mode(_mode) {
-            var __ = this.__;
-            if ((0, _utils.isUndefined)(_mode)) {
-                return __.mode;
-            }
-
-            __.mode = _mode;
-
-            this.dirty(true);
-
-            return this;
-        }
-    }, {
-        key: "copy",
-        value: function copy() {
-            return new OptionObject(this);
-        }
-    }, {
-        key: "setPresets",
-        value: function setPresets(prs) {
-            var _this2 = this;
-
-            (0, _utils.throwIfNotArray)(prs, "Presets");
-
-            this.presets = [];
-
-            prs.forEach(function (preset) {
-                if ((0, _utils.isFunction)(preset)) {
-                    _this2.presets.push(preset);
-                } else {
-                    _this2.presets.push(_presets2.default[preset]);
-                }
-            });
-
-            return this;
-        }
-    }, {
-        key: "applyPresets",
-        value: function applyPresets() {
-            var _this3 = this;
-
-            this.presets.forEach(function (preset) {
-                preset(_this3);
-            });
-        }
-    }]);
-
-    return OptionObject;
-})(_object2.default);
-
-exports.default = OptionObject;
-
-},{"../object":14,"../utils":27,"./area":15,"./axes":16,"./line":17,"./pie":19,"./presets":20,"./size":21}],19:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _object = require("../object");
-
-var _object2 = _interopRequireDefault(_object);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var Pie = (function (_Obj) {
-    _inherits(Pie, _Obj);
-
-    function Pie(d, parent) {
-        _classCallCheck(this, Pie);
-
-        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Pie).call(this, d, parent));
-
-        _this.setDefault();
-        _this.options(d);
-        return _this;
-    }
-
-    _createClass(Pie, [{
-        key: "options",
-        value: function options(d) {
-            if ((0, _utils.isUndefined)(d)) {
-                return {
-                    innerRadius: this.innerRadius(),
-                    outerRadius: this.outerRadius(),
-                    explodeRadius: this.explodeRadius(),
-                    padAngle: this.padAngle(),
-                    turnAngle: this.turnAngle()
-                };
-            }
-            this.innerRadius(d.innerRadius);
-            this.outerRadius(d.outerRadius);
-            this.explodeRadius(d.explodeRadius);
-            this.padAngle(d.padAngle);
-            this.turnAngle(d.turnAngle);
-        }
-    }, {
-        key: "innerRadius",
-        value: function innerRadius(radius) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(radius)) {
-                return __.innerRadius;
-            }
-
-            __.innerRadius = radius;
-            this.dirty(true);
-        }
-    }, {
-        key: "outerRadius",
-        value: function outerRadius(radius) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(radius)) {
-                return __.outerRadius;
-            }
-
-            __.outerRadius = radius;
-            this.dirty(true);
-        }
-    }, {
-        key: "explodeRadius",
-        value: function explodeRadius(radius) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(radius)) {
-                return __.explodeRadius;
-            }
-
-            __.explodeRadius = radius;
-            this.dirty(true);
-        }
-    }, {
-        key: "padAngle",
-        value: function padAngle(angle) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(angle)) {
-                return __.padAngle;
-            }
-
-            __.padAngle = angle;
-            this.dirty(true);
-        }
-    }, {
-        key: "turnAngle",
-        value: function turnAngle(angle) {
-            var __ = this.__;
-
-            if ((0, _utils.isUndefined)(angle)) {
-                return __.turnAngle;
-            }
-
-            __.turnAngle = angle;
-            this.dirty(true);
-        }
-    }, {
-        key: "setDefault",
-        value: function setDefault() {
-            return this.options(this.getDefault());
-        }
-    }, {
-        key: "getDefault",
-        value: function getDefault() {
-            return {
-                innerRadius: 0,
-                outerRadius: 150,
-                explodeRadius: 0,
-                padAngle: 0,
-                turnAngle: 0
-            };
-        }
-    }]);
-
-    return Pie;
-})(_object2.default);
-
-exports.default = Pie;
-
-},{"../object":14,"../utils":27}],20:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var presets = {
-    "donut": function donut(option) {
-        var pie = option.pie;
-
-        pie.innerRadius(60);
-        pie.padAngle(0.03);
-    }
-};
-
-exports.default = presets;
-
-},{}],21:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _object = require("../object");
-
-var _object2 = _interopRequireDefault(_object);
-
-var _utils = require("../utils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var Size = (function (_Obj) {
-    _inherits(Size, _Obj);
-
-    function Size(d, parent) {
-        _classCallCheck(this, Size);
-
-        d = (0, _utils.option)(d, {});
-
-        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Size).call(this, d, parent));
-
-        _this.setDefault();
-        _this.sizes(d);
-        return _this;
-    }
-
-    _createClass(Size, [{
-        key: "__init",
-        value: function __init(d, parent) {
-            this.__ = {
-                parent: parent
-            };
-        }
-    }, {
-        key: "sizes",
-        value: function sizes(d) {
-            var __ = this.__;
-
-            if (d === undefined) {
-                return {
-                    width: this.width(),
-                    height: this.height()
-                };
-            }
-
-            this.width(d.width);
-            this.height(d.height);
-        }
-    }, {
-        key: "width",
-        value: function width(_width) {
-            var __ = this.__;
-            if (_width === undefined) {
-                return __.width;
-            }
-
-            __.width = _width;
-            this.dirty(true);
-        }
-    }, {
-        key: "height",
-        value: function height(_height) {
-            var __ = this.__;
-            if (_height === undefined) {
-                return __.height;
-            }
-
-            __.height = _height;
-            this.dirty(true);
-        }
-    }, {
-        key: "setDefault",
-        value: function setDefault() {
-            this.sizes(this.getDefault());
-        }
-    }, {
-        key: "getDefault",
-        value: function getDefault() {
-            return {
-                width: 800,
-                height: 600
-            };
-        }
-    }]);
-
-    return Size;
-})(_object2.default);
-
-exports.default = Size;
-
-},{"../object":14,"../utils":27}],22:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _utils = require("../utils");
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/*
- * The render object is passed to renderers whenever chart.redraw is called.
- * Is has no "private" fields because it is basicly just the representation of the rendered chart in code and no private info is needed.
- */
-
-var RenderObject = (function () {
-    /*
-     * Init main fields that are required.
-     */
-
-    function RenderObject() {
-        _classCallCheck(this, RenderObject);
-
-        this.data = {
-            rectangular: {},
-            circular: {}
-        };
-
-        this.option = {};
-
-        this.clear();
-    }
-
-    _createClass(RenderObject, [{
-        key: "clear",
-        value: function clear() {
-            this.clearData();
-            this.clearOption();
-
-            return this;
-        }
-    }, {
-        key: "clearData",
-        value: function clearData() {
-            this.clearRectangularData();
-            this.clearCircularData();
-
-            return this;
-        }
-    }, {
-        key: "clearOption",
-        value: function clearOption() {
-            this.option = this.getDefaultOption();
-
-            return this;
-        }
-    }, {
-        key: "clearRectangularData",
-        value: function clearRectangularData(except) {
-            var _this = this;
-
-            except = (0, _utils.option)(except, {});
-
-            var types = ["areas", "columns", "lines"];
-
-            types.forEach(function (type) {
-                if ((0, _utils.isUndefined)(except[type])) {
-                    _this.data.rectangular[type] = _this.getDefaultStore();
-                }
-            });
-
-            return this;
-        }
-    }, {
-        key: "clearCircularData",
-        value: function clearCircularData(except) {
-            var _this2 = this;
-
-            except = (0, _utils.option)(except, {});
-
-            var types = ["pies", "disks"];
-
-            types.forEach(function (type) {
-                if ((0, _utils.isUndefined)(except[type])) {
-                    _this2.data.circular[type] = _this2.getDefaultStore();
-                }
-            });
-
-            return this;
-        }
-    }, {
-        key: "getDefaultOption",
-        value: function getDefaultOption() {
-            return {
-                bindTo: "",
-                size: {},
-                axes: {
-                    x: {},
-                    y: {}
-                }
-            };
-        }
-    }, {
-        key: "getDefaultStore",
-        value: function getDefaultStore() {
-            return {
-                dirty: true,
-                values: []
-            };
-        }
-    }]);
-
-    return RenderObject;
-})();
-
-exports.default = RenderObject;
-
-},{"../utils":27}],23:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _renderObject = require("../renderObject/renderObject");
-
-var _renderObject2 = _interopRequireDefault(_renderObject);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Renderer = function Renderer() {
-    _classCallCheck(this, Renderer);
-
-    this.render = new _renderObject2.default();
-};
-
-exports.default = Renderer;
-
-},{"../renderObject/renderObject":22}],24:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-var PADDING = exports.PADDING = {
-    LEFT: 10,
-    RIGHT: 10,
-    TOP: 10,
-    BOTTOM: 10
-};
-
-var AXIS = exports.AXIS = {
-    WIDTH: 30
-};
-
-},{}],25:[function(require,module,exports){
-"use strict";
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _d = require("d3");
-
-var _d2 = _interopRequireDefault(_d);
-
-var _renderer = require("../renderer");
-
-var _renderer2 = _interopRequireDefault(_renderer);
-
-var _constants = require("./constants");
-
-var _utils = require("../../utils");
-
-var _svgUtils = require("./svgUtils");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var SvgRenderer = (function (_Renderer) {
-    _inherits(SvgRenderer, _Renderer);
-
-    function SvgRenderer(chart) {
-        _classCallCheck(this, SvgRenderer);
-
-        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(SvgRenderer).call(this));
-
-        _this.option = chart.option;
-        var bindTo = _this.option.bindTo;
-
-        _this.easel = _d2.default.selectAll("#chart").attr("class", "iva-chart");;
-        _this.easel.append("g").attr("transform", "translate(0, 0)");
-
-        _this.initLines();
-        _this.initAreas();
-
-        _this.initPies();
-
-        _this.initAxes();
-        _this.initPoints();
-
-        _this.color = _d2.default.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
-        return _this;
-    }
-
-    _createClass(SvgRenderer, [{
-        key: "redraw",
-        value: function redraw(renderObject) {
-            this.render = renderObject;
-            this.data = this.render.data;
-            this.option = this.render.option;
-
-            this.setSizes();
-            this.setDomainsToScales();
-
-            //this.redrawColumns();
-            this.redrawLines();
-            this.redrawAreas();
-            this.redrawPies();
-
-            this.redrawAxes();
-        }
-    }, {
-        key: "initLines",
-        value: function initLines() {
-            this.easel.append("g").attr("class", "lines");
-        }
-    }, {
-        key: "initAreas",
-        value: function initAreas() {
-            this.easel.append("g").attr("class", "areas");
-        }
-    }, {
-        key: "initPies",
-        value: function initPies() {
-            this.easel.append("g").attr("class", "pies");
-        }
-    }, {
-        key: "initAxes",
-        value: function initAxes() {
-            var easel = this.easel;
-
-            var xAxis = this.xAxis = _d2.default.svg.axis().orient("bottom");
-            var yAxis = this.yAxis = _d2.default.svg.axis().orient("left");
-
-            easel.append("g").attr("class", "axis xAxis");
-
-            easel.append("g").attr("class", "axis yAxis");
-        }
-    }, {
-        key: "initPoints",
-        value: function initPoints() {
-            this.easel.append("g").attr("class", "points");
-        }
-    }, {
-        key: "setSizes",
-        value: function setSizes() {
-            var easel = this.easel,
-                size = this.option.size;
-
-            var innerSize = this.innerSize = {
-                width: size.width - _constants.PADDING.LEFT - _constants.PADDING.RIGHT,
-                height: size.height - _constants.PADDING.TOP - _constants.PADDING.BOTTOM
-            };
-
-            this.easel.attr("width", size.width).attr("height", size.height);
-
-            var xScale = this.xScale = _d2.default.scale.ordinal().rangePoints([0, innerSize.width - _constants.AXIS.WIDTH]);
-
-            var yScale = this.yScale = _d2.default.scale.linear().range([innerSize.height - _constants.AXIS.WIDTH, 0]);
-        }
-    }, {
-        key: "setDomainsToScales",
-        value: function setDomainsToScales() {
-            var _data$ranges = this.data.ranges;
-            var xMin = _data$ranges.xMin;
-            var xMax = _data$ranges.xMax;
-            var yMin = _data$ranges.yMin;
-            var yMax = _data$ranges.yMax;
-            var xStrings = _data$ranges.xStrings;
-
-            var xScale = this.xScale,
-                yScale = this.yScale;
-
-            if (!(0, _utils.isEmpty)(xStrings)) {
-                xScale.domain(xStrings);
-            } else {
-                xScale.domain(_d2.default.range(xMin, xMax + 1));
-            }
-            yScale.domain([yMin, yMax]);
-        }
-    }, {
-        key: "redrawAxes",
-        value: function redrawAxes() {
-            var easel = this.easel,
-                size = this.option.size,
-                axes = this.option.axes,
-                xAxis = this.xAxis,
-                yAxis = this.yAxis;
-
-            xAxis.scale(this.xScale);
-            yAxis.scale(this.yScale);
-
-            easel.select(".xAxis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").style("opacity", function (d) {
-                return axes.x.visible ? 100 : 0;
-            }).call(xAxis);
-
-            easel.select(".yAxis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").style("opacity", function (d) {
-                return axes.y.visible ? 100 : 0;
-            }).call(yAxis);
-        }
-    }, {
-        key: "redrawColumns",
-        value: function redrawColumns() {
-            var _this2 = this;
-
-            var easel = this.easel,
-                x0 = this.x0,
-                x1 = this.x1,
-                y = this.y,
-                color = this.color;
-
-            if (!this.data.columns && !this.data.rows) {
-                return;
-            }
-
-            var columns = this.data.columns.values;
-            var rows = this.data.rows.values;
-
-            x0.domain(rows.map(function (row) {
-                return row.x;
-            }));
-            x1.domain(_d2.default.range(_d2.default.max(columns, function (column) {
-                return column.values.length;
-            })));
-            y.domain([0, _d2.default.max(columns, function (column) {
-                return _d2.default.max(column.values, function (value) {
-                    return value.y;
-                });
-            })]);
-
-            var rowsSvg = easel.selectAll(".row").data(rows).enter().append("g").attr("class", "row").attr("transform", function (d) {
-                return "translate(" + x0(d.x) + ",0)";
-            });
-
-            rowsSvg.selectAll("rect").data(function (d) {
-                return d.values;
-            }).enter().append("rect").attr("width", x1.rangeBand()).attr("x", function (d) {
-                return x1(d.x);
-            }).attr("y", function (d) {
-                return y(d.y);
-            }).attr("height", function (d) {
-                return _this2.option.size.height - y(d.y);
-            }).style("fill", function (d) {
-                return color(d.x);
-            });
-        }
-    }, {
-        key: "redrawLines",
-        value: function redrawLines() {
-            var easel = this.easel,
-                color = this.color,
-                xScale = this.xScale,
-                yScale = this.yScale;
-
-            if ((0, _utils.isEmpty)(this.data.rectangular.lines.values)) {
-                this.clear(".lines");
-                return;
-            }
-
-            var lines = this.data.rectangular.lines.values;
-
-            color.domain(lines.map(function (line) {
-                return line.id;
-            }));
-
-            var line = _d2.default.svg.line().x(function (d) {
-                return xScale(d.x);
-            }).y(function (d) {
-                return yScale(d.y);
-            }).interpolate(this.option.line.interpolate);
-
-            var linesSvg = easel.select(".lines");
-
-            var lineSvg = linesSvg.selectAll("path").data(lines);
-
-            lineSvg.enter().append("path").attr("class", "line").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("stroke", function (d) {
-                return color(d.id);
-            }).attr("stroke-width", 2).attr("fill", "none");
-
-            lineSvg.attr("d", function (d) {
-                return line(d.values);
-            });
-
-            lineSvg.exit().remove();
-
-            if (this.option.line.points) {
-                this.redrawPoints(lines);
-            }
-        }
-    }, {
-        key: "redrawAreas",
-        value: function redrawAreas() {
-            var easel = this.easel,
-                color = this.color,
-                xScale = this.xScale,
-                yScale = this.yScale;
-
-            if ((0, _utils.isEmpty)(this.data.rectangular.areas.values)) {
-                this.clear(".areas");
-                return;
-            }
-
-            var areas = this.data.rectangular.areas.values;
-
-            color.domain(areas.map(function (area) {
-                return area.id;
-            }));
-
-            var area = _d2.default.svg.area().x(function (d) {
-                return xScale(d.x);
-            }).y0(function (d) {
-                return yScale(d.y0) + _constants.PADDING.TOP - 10;
-            }).y1(function (d) {
-                return yScale(d.y);
-            }).interpolate(this.option.area.interpolate);
-
-            var areasSvg = easel.select(".areas");
-
-            var areaSvg = areasSvg.selectAll("path").data(areas);
-
-            areaSvg.enter().append("path").attr("class", "area").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("class", "area").attr("stroke", function (d) {
-                return color(d.id);
-            }).attr("fill", function (d) {
-                return color(d.id);
-            });
-
-            areaSvg.attr("d", function (d) {
-                return area(d.values);
-            });
-
-            areaSvg.exit().remove();
-
-            if (this.option.area.points) {
-                this.redrawPoints(areas);
-            }
-        }
-    }, {
-        key: "redrawPies",
-        value: function redrawPies() {
-            var easel = this.easel,
-                color = this.color,
-                option = this.option;
-
-            if ((0, _utils.isEmpty)(this.data.circular.pies.values)) {
-                return;
-            }
-
-            var pies = this.data.circular.pies.values;
-
-            var pie = pies[0].values;
-            color.domain(pie.map(function (value) {
-                return value.x;
-            }));
-
-            var arcSvg = _d2.default.svg.arc().outerRadius(option.pie.outerRadius).innerRadius(option.pie.innerRadius).startAngle(function (d) {
-                return d.startAngle + option.pie.turnAngle;
-            }).endAngle(function (d) {
-                return d.endAngle + option.pie.turnAngle;
-            }).padAngle(option.pie.padAngle);
-
-            var pieLayout = _d2.default.layout.pie().sort(null).value(function (d) {
-                return d.y;
-            });
-
-            easel.selectAll(".pies").attr("transform", "translate(" + this.option.size.width / 2 + ", " + this.option.size.height / 2 + ")");
-            var p = easel.selectAll(".pies").selectAll(".arc").data(pieLayout(pie));
-
-            p.enter().append("path").attr("class", "arc").style("fill", function (d) {
-                return color(d.data.id);
-            });
-
-            p.attr("d", arcSvg);
-            p.attr("transform", (0, _svgUtils.generateExplode)(option.pie.explodeRadius));
-
-            p.exit().remove();
-        }
-    }, {
-        key: "redrawPoints",
-        value: function redrawPoints(sequences) {
-            var _this3 = this;
-
-            if ((0, _utils.isEmpty)(sequences)) {
-                return;
-            }
-
-            var easel = this.easel,
-                option = this.option,
-                xScale = this.xScale,
-                yScale = this.yScale;
-
-            var points = [];
-
-            sequences.forEach(function (sequence) {
-                sequence.values.forEach(function (value) {
-                    points.push({
-                        x: value.x,
-                        y: value.y,
-                        id: sequence.id
-                    });
-                });
-            });
-
-            var pointsSvg = easel.selectAll(".points").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")");
-
-            var pointSvg = pointsSvg.selectAll(".point").data(points);
-
-            pointSvg.enter().append("circle").attr("class", "point").attr("fill", function (d) {
-                return _this3.color(d.id);
-            }).attr("r", 3);
-
-            pointSvg.attr("cx", function (d) {
-                return xScale(d.x);
-            });
-            pointSvg.attr("cy", function (d) {
-                return yScale(d.y);
-            });
-
-            pointSvg.exit().remove();
-        }
-    }, {
-        key: "clear",
-        value: function clear(select) {
-            this.easel.selectAll(select).selectAll("*").transition().duration(500).style("opacity", 0).remove();
-        }
-    }]);
-
-    return SvgRenderer;
-})(_renderer2.default);
-
-exports.default = SvgRenderer;
-
-},{"../../utils":27,"../renderer":23,"./constants":24,"./svgUtils":26,"d3":28}],26:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.visibility = visibility;
-exports.generateExplode = generateExplode;
-function visibility(b) {
-    if (b) {
-        return "visible";
-    } else {
-        return "hidden";
-    }
-}
-
-function generateExplode(explodeRadius) {
-    return function explode(d, index) {
-        var angle = (d.startAngle + d.endAngle) / 2;
-        var xOff = Math.sin(angle) * explodeRadius;
-        var yOff = -Math.cos(angle) * explodeRadius;
-        return 'translate(' + xOff + ',' + yOff + ')';
-    };
-}
-
-},{}],27:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.option = option;
-exports.copy = copy;
-exports.copyObject = copyObject;
-exports.copyArray = copyArray;
-exports.copyString = copyString;
-exports.isNumeric = isNumeric;
-exports.isObject = isObject;
-exports.isArray = isArray;
-exports.isString = isString;
-exports.isFunction = isFunction;
-exports.isUndefined = isUndefined;
-exports.isDefined = isDefined;
-exports.toString = toString;
-exports.toInt = toInt;
-exports.objToString = objToString;
-exports.throwIfUndefined = throwIfUndefined;
-exports.throwIfNotNumeric = throwIfNotNumeric;
-exports.throwIfNotArray = throwIfNotArray;
-exports.throwIfNotObject = throwIfNotObject;
-exports.throwIfNotString = throwIfNotString;
-exports.throwIfNotFunction = throwIfNotFunction;
-exports.merge = merge;
-exports.isEmpty = isEmpty;
-exports.debug = debug;
-
-var _underscore = require("underscore");
-
-var _underscore2 = _interopRequireDefault(_underscore);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
-
-function option(value, _default) {
-    if (value === undefined) {
-        return _default;
-    }
-    return value;
-}
-
-/*
- * Function for copying
- */
-
-function copy(el) {
-    if (Array.isArray(el)) {
-        return copyArray(el);
-    } else if ((typeof el === "undefined" ? "undefined" : _typeof(el)) === "object") {
-        return copyObject(el);
-    } else if (typeof el === "string") {
-        return copyString(el);
-    } else {
-        return el;
-    }
-}
-
-function copyObject(obj) {
-    var copyObj = {};
-
-    for (var key in obj) {
-        var el = obj[key];
-
-        copyObj[key] = copy(el);
-    }
-
-    return copyObj;
-}
-
-function copyArray(arr) {
-    var copyArr = [];
-
-    for (var i = 0; i < arr.length; i++) {
-        var el = arr[i];
-
-        copyArr.push(copy(el));
-    }
-
-    return copyArr;
-}
-
-function copyString(string) {
-    return string.slice(0);
-}
-
-/*
- * Functions for checking if value is some type
- */
-
-// Taken from jQuery code
-function isNumeric(obj) {
-    return !Array.isArray(obj) && obj - parseFloat(obj) + 1 >= 0;
-}
-
-function isObject(obj) {
-    return (typeof obj === "undefined" ? "undefined" : _typeof(obj)) === "object";
-}
-
-function isArray(obj) {
-    return Array.isArray(obj);
-}
-
-function isString(obj) {
-    return typeof obj === "string";
-}
-
-function isFunction(obj) {
-    return typeof obj === "function";
-}
-
-function isUndefined(obj) {
-    return obj === undefined;
-}
-
-function isDefined(obj) {
-    return obj !== undefined;
-}
-
-/*
- * Transformers
- */
-
-function toString(obj) {
-    if ((typeof obj === "undefined" ? "undefined" : _typeof(obj)) === "object") {
-        return objToString(obj);
-    } else {
-        return obj;
-    }
-}
-
-function toInt(obj) {
-    return parseInt(obj);
-}
-
-function objToString(obj) {
-    return JSON.stringify(obj, null, 8);
-}
-
-/*
- * Throw if x is not y type
- */
-
-function throwIfUndefined(v, msg) {
-    msg = option(msg, v);
-    if (isUndefined(v)) {
-        throw new TypeError(msg + " shouldn't be undefined");
-    }
-}
-
-function throwIfNotNumeric(v, msg) {
-    msg = option(msg, v);
-    if (!isNumeric(v)) {
-        throw new TypeError(msg + " should be number and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
-    }
-}
-
-function throwIfNotArray(v, msg) {
-    msg = option(msg, v);
-    if (!isArray(v)) {
-        throw new TypeError(msg + " should be array and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
-    }
-}
-
-function throwIfNotObject(v, msg) {
-    msg = option(msg, v);
-    if (!isObject(v)) {
-        throw new TypeError(msg + " should be object and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
-    }
-}
-
-function throwIfNotString(v, msg) {
-    msg = option(msg, v);
-    if (!isString(v)) {
-        throw new TypeError(msg + " shoud be string and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
-    }
-}
-
-function throwIfNotFunction(v, msg) {
-    msg = option(msg, v);
-    if (!isFunction(v)) {
-        throw new TypeError(msg + " should be function and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
-    }
-}
-
-/*
- * Object manipulation 
- */
-
-/*
- * Returns new object that has values of second object merged into values of first.
- * {                       {                {
- *     a: 10,        <---      a: 15,   =       a: 15,
- *     b: undefined, <---      b: 5     =       b: 5,
- *     c: 20         <---               =       c: 20
- * }                       }                }
- */
-function merge(o1, o2) {
-    var o = {};
-
-    for (var key in o1) {
-        o[key] = o1[key];
-    }
-
-    for (var key in o2) {
-        o[key] = o2[key];
-    }
-    return o;
-}
-
-function isEmpty(obj) {
-    return isUndefined(obj) || obj.length === 0;
-}
-
-/*
- * Debug
- */
-
-function debug(msg) {
-    console.debug(toString(msg));
-}
-
-},{"underscore":1}],28:[function(require,module,exports){
 !function() {
   var d3 = {
-    version: "3.5.6"
+    version: "3.5.12"
   };
   var d3_arraySlice = [].slice, d3_array = function(list) {
     return d3_arraySlice.call(list);
@@ -5840,10 +632,7 @@ function debug(msg) {
     prefix: d3_nsPrefix,
     qualify: function(name) {
       var i = name.indexOf(":"), prefix = name;
-      if (i >= 0) {
-        prefix = name.slice(0, i);
-        name = name.slice(i + 1);
-      }
+      if (i >= 0 && (prefix = name.slice(0, i)) !== "xmlns") name = name.slice(i + 1);
       return d3_nsPrefix.hasOwnProperty(prefix) ? {
         space: d3_nsPrefix[prefix],
         local: name
@@ -6054,12 +843,14 @@ function debug(msg) {
       if (key) {
         var nodeByKeyValue = new d3_Map(), keyValues = new Array(n), keyValue;
         for (i = -1; ++i < n; ) {
-          if (nodeByKeyValue.has(keyValue = key.call(node = group[i], node.__data__, i))) {
-            exitNodes[i] = node;
-          } else {
-            nodeByKeyValue.set(keyValue, node);
+          if (node = group[i]) {
+            if (nodeByKeyValue.has(keyValue = key.call(node, node.__data__, i))) {
+              exitNodes[i] = node;
+            } else {
+              nodeByKeyValue.set(keyValue, node);
+            }
+            keyValues[i] = keyValue;
           }
-          keyValues[i] = keyValue;
         }
         for (i = -1; ++i < m; ) {
           if (!(node = nodeByKeyValue.get(keyValue = key.call(groupData, nodeData = groupData[i], i)))) {
@@ -6071,7 +862,7 @@ function debug(msg) {
           nodeByKeyValue.set(keyValue, true);
         }
         for (i = -1; ++i < n; ) {
-          if (nodeByKeyValue.get(keyValues[i]) !== true) {
+          if (i in keyValues && nodeByKeyValue.get(keyValues[i]) !== true) {
             exitNodes[i] = group[i];
           }
         }
@@ -6263,7 +1054,7 @@ function debug(msg) {
       group = d3_array(d3_selectAll(nodes, d3_document));
       group.parentNode = d3_document.documentElement;
     } else {
-      group = nodes;
+      group = d3_array(nodes);
       group.parentNode = null;
     }
     return d3_selection([ group ]);
@@ -6442,7 +1233,7 @@ function debug(msg) {
         function ended() {
           if (!position(parent, dragId)) return;
           dragSubject.on(move + dragName, null).on(end + dragName, null);
-          dragRestore(dragged && d3.event.target === target);
+          dragRestore(dragged);
           dispatch({
             type: "dragend"
           });
@@ -6494,18 +1285,22 @@ function debug(msg) {
   }
   var ρ = Math.SQRT2, ρ2 = 2, ρ4 = 4;
   d3.interpolateZoom = function(p0, p1) {
-    var ux0 = p0[0], uy0 = p0[1], w0 = p0[2], ux1 = p1[0], uy1 = p1[1], w1 = p1[2];
-    var dx = ux1 - ux0, dy = uy1 - uy0, d2 = dx * dx + dy * dy, d1 = Math.sqrt(d2), b0 = (w1 * w1 - w0 * w0 + ρ4 * d2) / (2 * w0 * ρ2 * d1), b1 = (w1 * w1 - w0 * w0 - ρ4 * d2) / (2 * w1 * ρ2 * d1), r0 = Math.log(Math.sqrt(b0 * b0 + 1) - b0), r1 = Math.log(Math.sqrt(b1 * b1 + 1) - b1), dr = r1 - r0, S = (dr || Math.log(w1 / w0)) / ρ;
-    function interpolate(t) {
-      var s = t * S;
-      if (dr) {
-        var coshr0 = d3_cosh(r0), u = w0 / (ρ2 * d1) * (coshr0 * d3_tanh(ρ * s + r0) - d3_sinh(r0));
+    var ux0 = p0[0], uy0 = p0[1], w0 = p0[2], ux1 = p1[0], uy1 = p1[1], w1 = p1[2], dx = ux1 - ux0, dy = uy1 - uy0, d2 = dx * dx + dy * dy, i, S;
+    if (d2 < ε2) {
+      S = Math.log(w1 / w0) / ρ;
+      i = function(t) {
+        return [ ux0 + t * dx, uy0 + t * dy, w0 * Math.exp(ρ * t * S) ];
+      };
+    } else {
+      var d1 = Math.sqrt(d2), b0 = (w1 * w1 - w0 * w0 + ρ4 * d2) / (2 * w0 * ρ2 * d1), b1 = (w1 * w1 - w0 * w0 - ρ4 * d2) / (2 * w1 * ρ2 * d1), r0 = Math.log(Math.sqrt(b0 * b0 + 1) - b0), r1 = Math.log(Math.sqrt(b1 * b1 + 1) - b1);
+      S = (r1 - r0) / ρ;
+      i = function(t) {
+        var s = t * S, coshr0 = d3_cosh(r0), u = w0 / (ρ2 * d1) * (coshr0 * d3_tanh(ρ * s + r0) - d3_sinh(r0));
         return [ ux0 + u * dx, uy0 + u * dy, w0 * coshr0 / d3_cosh(ρ * s + r0) ];
-      }
-      return [ ux0 + t * dx, uy0 + t * dy, w0 * Math.exp(ρ * s) ];
+      };
     }
-    interpolate.duration = S * 1e3;
-    return interpolate;
+    i.duration = S * 1e3;
+    return i;
   };
   d3.behavior.zoom = function() {
     var view = {
@@ -6575,8 +1370,9 @@ function debug(msg) {
       view = {
         x: view.x,
         y: view.y,
-        k: +_
+        k: null
       };
+      scaleTo(+_);
       rescale();
       return zoom;
     };
@@ -6675,7 +1471,7 @@ function debug(msg) {
       }), center0 = null;
     }
     function mousedowned() {
-      var that = this, target = d3.event.target, dispatch = event.of(that, arguments), dragged = 0, subject = d3.select(d3_window(that)).on(mousemove, moved).on(mouseup, ended), location0 = location(d3.mouse(that)), dragRestore = d3_event_dragSuppress(that);
+      var that = this, dispatch = event.of(that, arguments), dragged = 0, subject = d3.select(d3_window(that)).on(mousemove, moved).on(mouseup, ended), location0 = location(d3.mouse(that)), dragRestore = d3_event_dragSuppress(that);
       d3_selection_interrupt.call(that);
       zoomstarted(dispatch);
       function moved() {
@@ -6685,7 +1481,7 @@ function debug(msg) {
       }
       function ended() {
         subject.on(mousemove, null).on(mouseup, null);
-        dragRestore(dragged && d3.event.target === target);
+        dragRestore(dragged);
         zoomended(dispatch);
       }
     }
@@ -6907,9 +1703,8 @@ function debug(msg) {
     return v < 16 ? "0" + Math.max(0, v).toString(16) : Math.min(255, v).toString(16);
   }
   function d3_rgb_parse(format, rgb, hsl) {
-    format = format.toLowerCase();
     var r = 0, g = 0, b = 0, m1, m2, color;
-    m1 = /([a-z]+)\((.*)\)/.exec(format);
+    m1 = /([a-z]+)\((.*)\)/.exec(format = format.toLowerCase());
     if (m1) {
       m2 = m1[2].split(",");
       switch (m1[1]) {
@@ -7324,17 +2119,19 @@ function debug(msg) {
   };
   d3.csv = d3.dsv(",", "text/csv");
   d3.tsv = d3.dsv("	", "text/tab-separated-values");
-  var d3_timer_queueHead, d3_timer_queueTail, d3_timer_interval, d3_timer_timeout, d3_timer_active, d3_timer_frame = this[d3_vendorSymbol(this, "requestAnimationFrame")] || function(callback) {
+  var d3_timer_queueHead, d3_timer_queueTail, d3_timer_interval, d3_timer_timeout, d3_timer_frame = this[d3_vendorSymbol(this, "requestAnimationFrame")] || function(callback) {
     setTimeout(callback, 17);
   };
-  d3.timer = function(callback, delay, then) {
+  d3.timer = function() {
+    d3_timer.apply(this, arguments);
+  };
+  function d3_timer(callback, delay, then) {
     var n = arguments.length;
     if (n < 2) delay = 0;
     if (n < 3) then = Date.now();
     var time = then + delay, timer = {
       c: callback,
       t: time,
-      f: false,
       n: null
     };
     if (d3_timer_queueTail) d3_timer_queueTail.n = timer; else d3_timer_queueHead = timer;
@@ -7344,7 +2141,8 @@ function debug(msg) {
       d3_timer_interval = 1;
       d3_timer_frame(d3_timer_step);
     }
-  };
+    return timer;
+  }
   function d3_timer_step() {
     var now = d3_timer_mark(), delay = d3_timer_sweep() - now;
     if (delay > 24) {
@@ -7363,22 +2161,21 @@ function debug(msg) {
     d3_timer_sweep();
   };
   function d3_timer_mark() {
-    var now = Date.now();
-    d3_timer_active = d3_timer_queueHead;
-    while (d3_timer_active) {
-      if (now >= d3_timer_active.t) d3_timer_active.f = d3_timer_active.c(now - d3_timer_active.t);
-      d3_timer_active = d3_timer_active.n;
+    var now = Date.now(), timer = d3_timer_queueHead;
+    while (timer) {
+      if (now >= timer.t && timer.c(now - timer.t)) timer.c = null;
+      timer = timer.n;
     }
     return now;
   }
   function d3_timer_sweep() {
     var t0, t1 = d3_timer_queueHead, time = Infinity;
     while (t1) {
-      if (t1.f) {
-        t1 = t0 ? t0.n = t1.n : d3_timer_queueHead = t1.n;
-      } else {
+      if (t1.c) {
         if (t1.t < time) time = t1.t;
         t1 = (t0 = t1).n;
+      } else {
+        t1 = t0 ? t0.n = t1.n : d3_timer_queueHead = t1.n;
       }
     }
     d3_timer_queueTail = t0;
@@ -7393,7 +2190,7 @@ function debug(msg) {
   var d3_formatPrefixes = [ "y", "z", "a", "f", "p", "n", "µ", "m", "", "k", "M", "G", "T", "P", "E", "Z", "Y" ].map(d3_formatPrefix);
   d3.formatPrefix = function(value, precision) {
     var i = 0;
-    if (value) {
+    if (value = +value) {
       if (value < 0) value *= -1;
       if (precision) value = d3.round(value, d3_format_precision(value, precision));
       i = 1 + Math.floor(1e-12 + Math.log(value) / Math.LN10);
@@ -7743,7 +2540,8 @@ function debug(msg) {
         if (i != string.length) return null;
         if ("p" in d) d.H = d.H % 12 + d.p * 12;
         var localZ = d.Z != null && d3_date !== d3_date_utc, date = new (localZ ? d3_date_utc : d3_date)();
-        if ("j" in d) date.setFullYear(d.y, 0, d.j); else if ("w" in d && ("W" in d || "U" in d)) {
+        if ("j" in d) date.setFullYear(d.y, 0, d.j); else if ("W" in d || "U" in d) {
+          if (!("w" in d)) d.w = "W" in d ? 1 : 0;
           date.setFullYear(d.y, 0, 1);
           date.setFullYear(d.y, 0, "W" in d ? (d.w + 6) % 7 + d.W * 7 - (date.getDay() + 5) % 7 : d.w + d.U * 7 - (date.getDay() + 6) % 7);
         } else date.setFullYear(d.y, d.m, d.d);
@@ -11195,54 +5993,68 @@ function debug(msg) {
     f: 0
   };
   d3.interpolateTransform = d3_interpolateTransform;
-  function d3_interpolateTransform(a, b) {
-    var s = [], q = [], n, A = d3.transform(a), B = d3.transform(b), ta = A.translate, tb = B.translate, ra = A.rotate, rb = B.rotate, wa = A.skew, wb = B.skew, ka = A.scale, kb = B.scale;
-    if (ta[0] != tb[0] || ta[1] != tb[1]) {
-      s.push("translate(", null, ",", null, ")");
+  function d3_interpolateTransformPop(s) {
+    return s.length ? s.pop() + "," : "";
+  }
+  function d3_interpolateTranslate(ta, tb, s, q) {
+    if (ta[0] !== tb[0] || ta[1] !== tb[1]) {
+      var i = s.push("translate(", null, ",", null, ")");
       q.push({
-        i: 1,
+        i: i - 4,
         x: d3_interpolateNumber(ta[0], tb[0])
       }, {
-        i: 3,
+        i: i - 2,
         x: d3_interpolateNumber(ta[1], tb[1])
       });
     } else if (tb[0] || tb[1]) {
       s.push("translate(" + tb + ")");
-    } else {
-      s.push("");
     }
-    if (ra != rb) {
+  }
+  function d3_interpolateRotate(ra, rb, s, q) {
+    if (ra !== rb) {
       if (ra - rb > 180) rb += 360; else if (rb - ra > 180) ra += 360;
       q.push({
-        i: s.push(s.pop() + "rotate(", null, ")") - 2,
+        i: s.push(d3_interpolateTransformPop(s) + "rotate(", null, ")") - 2,
         x: d3_interpolateNumber(ra, rb)
       });
     } else if (rb) {
-      s.push(s.pop() + "rotate(" + rb + ")");
+      s.push(d3_interpolateTransformPop(s) + "rotate(" + rb + ")");
     }
-    if (wa != wb) {
+  }
+  function d3_interpolateSkew(wa, wb, s, q) {
+    if (wa !== wb) {
       q.push({
-        i: s.push(s.pop() + "skewX(", null, ")") - 2,
+        i: s.push(d3_interpolateTransformPop(s) + "skewX(", null, ")") - 2,
         x: d3_interpolateNumber(wa, wb)
       });
     } else if (wb) {
-      s.push(s.pop() + "skewX(" + wb + ")");
+      s.push(d3_interpolateTransformPop(s) + "skewX(" + wb + ")");
     }
-    if (ka[0] != kb[0] || ka[1] != kb[1]) {
-      n = s.push(s.pop() + "scale(", null, ",", null, ")");
+  }
+  function d3_interpolateScale(ka, kb, s, q) {
+    if (ka[0] !== kb[0] || ka[1] !== kb[1]) {
+      var i = s.push(d3_interpolateTransformPop(s) + "scale(", null, ",", null, ")");
       q.push({
-        i: n - 4,
+        i: i - 4,
         x: d3_interpolateNumber(ka[0], kb[0])
       }, {
-        i: n - 2,
+        i: i - 2,
         x: d3_interpolateNumber(ka[1], kb[1])
       });
-    } else if (kb[0] != 1 || kb[1] != 1) {
-      s.push(s.pop() + "scale(" + kb + ")");
+    } else if (kb[0] !== 1 || kb[1] !== 1) {
+      s.push(d3_interpolateTransformPop(s) + "scale(" + kb + ")");
     }
-    n = q.length;
+  }
+  function d3_interpolateTransform(a, b) {
+    var s = [], q = [];
+    a = d3.transform(a), b = d3.transform(b);
+    d3_interpolateTranslate(a.translate, b.translate, s, q);
+    d3_interpolateRotate(a.rotate, b.rotate, s, q);
+    d3_interpolateSkew(a.skew, b.skew, s, q);
+    d3_interpolateScale(a.scale, b.scale, s, q);
+    a = b = null;
     return function(t) {
-      var i = -1, o;
+      var i = -1, n = q.length, o;
       while (++i < n) s[(o = q[i]).i] = o.x(t);
       return s.join("");
     };
@@ -11346,7 +6158,7 @@ function debug(msg) {
           index: di,
           startAngle: x0,
           endAngle: x,
-          value: (x - x0) / k
+          value: groupSums[di]
         };
         x += padding;
       }
@@ -11414,7 +6226,7 @@ function debug(msg) {
     return chord;
   };
   d3.layout.force = function() {
-    var force = {}, event = d3.dispatch("start", "tick", "end"), size = [ 1, 1 ], drag, alpha, friction = .9, linkDistance = d3_layout_forceLinkDistance, linkStrength = d3_layout_forceLinkStrength, charge = -30, chargeDistance2 = d3_layout_forceChargeDistance2, gravity = .1, theta2 = .64, nodes = [], links = [], distances, strengths, charges;
+    var force = {}, event = d3.dispatch("start", "tick", "end"), timer, size = [ 1, 1 ], drag, alpha, friction = .9, linkDistance = d3_layout_forceLinkDistance, linkStrength = d3_layout_forceLinkStrength, charge = -30, chargeDistance2 = d3_layout_forceChargeDistance2, gravity = .1, theta2 = .64, nodes = [], links = [], distances, strengths, charges;
     function repulse(node) {
       return function(quad, x1, _, x2) {
         if (quad.point !== node) {
@@ -11438,6 +6250,7 @@ function debug(msg) {
     }
     force.tick = function() {
       if ((alpha *= .99) < .005) {
+        timer = null;
         event.end({
           type: "end",
           alpha: alpha = 0
@@ -11455,7 +6268,7 @@ function debug(msg) {
           l = alpha * strengths[i] * ((l = Math.sqrt(l)) - distances[i]) / l;
           x *= l;
           y *= l;
-          t.x -= x * (k = s.weight / (t.weight + s.weight));
+          t.x -= x * (k = s.weight + t.weight ? s.weight / (s.weight + t.weight) : .5);
           t.y -= y * k;
           s.x += x * (k = 1 - k);
           s.y += y * k;
@@ -11551,13 +6364,21 @@ function debug(msg) {
       if (!arguments.length) return alpha;
       x = +x;
       if (alpha) {
-        if (x > 0) alpha = x; else alpha = 0;
+        if (x > 0) {
+          alpha = x;
+        } else {
+          timer.c = null, timer.t = NaN, timer = null;
+          event.end({
+            type: "end",
+            alpha: alpha = 0
+          });
+        }
       } else if (x > 0) {
         event.start({
           type: "start",
           alpha: alpha = x
         });
-        d3.timer(force.tick);
+        timer = d3_timer(force.tick);
       }
       return force;
     };
@@ -11811,7 +6632,7 @@ function debug(msg) {
     function pie(data) {
       var n = data.length, values = data.map(function(d, i) {
         return +value.call(pie, d, i);
-      }), a = +(typeof startAngle === "function" ? startAngle.apply(this, arguments) : startAngle), da = (typeof endAngle === "function" ? endAngle.apply(this, arguments) : endAngle) - a, p = Math.min(Math.abs(da) / n, +(typeof padAngle === "function" ? padAngle.apply(this, arguments) : padAngle)), pa = p * (da < 0 ? -1 : 1), k = (da - n * pa) / d3.sum(values), index = d3.range(n), arcs = [], v;
+      }), a = +(typeof startAngle === "function" ? startAngle.apply(this, arguments) : startAngle), da = (typeof endAngle === "function" ? endAngle.apply(this, arguments) : endAngle) - a, p = Math.min(Math.abs(da) / n, +(typeof padAngle === "function" ? padAngle.apply(this, arguments) : padAngle)), pa = p * (da < 0 ? -1 : 1), sum = d3.sum(values), k = sum ? (da - n * pa) / sum : 0, index = d3.range(n), arcs = [], v;
       if (sort != null) index.sort(sort === d3_layout_pieSortByValue ? function(i, j) {
         return values[j] - values[i];
       } : function(i, j) {
@@ -12524,10 +7345,8 @@ function debug(msg) {
     }
     function treemap(d) {
       var nodes = stickies || hierarchy(d), root = nodes[0];
-      root.x = 0;
-      root.y = 0;
-      root.dx = size[0];
-      root.dy = size[1];
+      root.x = root.y = 0;
+      if (root.value) root.dx = size[0], root.dy = size[1]; else root.dx = root.dy = 0;
       if (stickies) hierarchy.revalue(root);
       scale([ root ], root.dx * root.dy / root.value);
       (stickies ? stickify : squarify)(root);
@@ -12747,7 +7566,9 @@ function debug(msg) {
     return d3.rebind(scale, linear, "range", "rangeRound", "interpolate", "clamp");
   }
   function d3_scale_linearNice(domain, m) {
-    return d3_scale_nice(domain, d3_scale_niceStep(d3_scale_linearTickRange(domain, m)[2]));
+    d3_scale_nice(domain, d3_scale_niceStep(d3_scale_linearTickRange(domain, m)[2]));
+    d3_scale_nice(domain, d3_scale_niceStep(d3_scale_linearTickRange(domain, m)[2]));
+    return domain;
   }
   function d3_scale_linearTickRange(domain, m) {
     if (m == null) m = 10;
@@ -12849,10 +7670,11 @@ function debug(msg) {
     scale.tickFormat = function(n, format) {
       if (!arguments.length) return d3_scale_logFormat;
       if (arguments.length < 2) format = d3_scale_logFormat; else if (typeof format !== "function") format = d3.format(format);
-      var k = Math.max(.1, n / scale.ticks().length), f = positive ? (e = 1e-12, Math.ceil) : (e = -1e-12, 
-      Math.floor), e;
+      var k = Math.max(1, base * n / scale.ticks().length);
       return function(d) {
-        return d / pow(f(log(d) + e)) <= k ? format(d) : "";
+        var i = d / pow(Math.round(log(d)));
+        if (i * base < base - .5) i *= base;
+        return i <= k ? format(d) : "";
       };
     };
     scale.copy = function() {
@@ -13191,11 +8013,16 @@ function debug(msg) {
       } else {
         x2 = y2 = 0;
       }
-      if ((rc = Math.min(Math.abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments))) > .001) {
+      if (da > ε && (rc = Math.min(Math.abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments))) > .001) {
         cr = r0 < r1 ^ cw ? 0 : 1;
-        var oc = x3 == null ? [ x2, y2 ] : x1 == null ? [ x0, y0 ] : d3_geom_polygonIntersect([ x0, y0 ], [ x3, y3 ], [ x1, y1 ], [ x2, y2 ]), ax = x0 - oc[0], ay = y0 - oc[1], bx = x1 - oc[0], by = y1 - oc[1], kc = 1 / Math.sin(Math.acos((ax * bx + ay * by) / (Math.sqrt(ax * ax + ay * ay) * Math.sqrt(bx * bx + by * by))) / 2), lc = Math.sqrt(oc[0] * oc[0] + oc[1] * oc[1]);
+        var rc1 = rc, rc0 = rc;
+        if (da < π) {
+          var oc = x3 == null ? [ x2, y2 ] : x1 == null ? [ x0, y0 ] : d3_geom_polygonIntersect([ x0, y0 ], [ x3, y3 ], [ x1, y1 ], [ x2, y2 ]), ax = x0 - oc[0], ay = y0 - oc[1], bx = x1 - oc[0], by = y1 - oc[1], kc = 1 / Math.sin(Math.acos((ax * bx + ay * by) / (Math.sqrt(ax * ax + ay * ay) * Math.sqrt(bx * bx + by * by))) / 2), lc = Math.sqrt(oc[0] * oc[0] + oc[1] * oc[1]);
+          rc0 = Math.min(rc, (r0 - lc) / (kc - 1));
+          rc1 = Math.min(rc, (r1 - lc) / (kc + 1));
+        }
         if (x1 != null) {
-          var rc1 = Math.min(rc, (r1 - lc) / (kc + 1)), t30 = d3_svg_arcCornerTangents(x3 == null ? [ x2, y2 ] : [ x3, y3 ], [ x0, y0 ], r1, rc1, cw), t12 = d3_svg_arcCornerTangents([ x1, y1 ], [ x2, y2 ], r1, rc1, cw);
+          var t30 = d3_svg_arcCornerTangents(x3 == null ? [ x2, y2 ] : [ x3, y3 ], [ x0, y0 ], r1, rc1, cw), t12 = d3_svg_arcCornerTangents([ x1, y1 ], [ x2, y2 ], r1, rc1, cw);
           if (rc === rc1) {
             path.push("M", t30[0], "A", rc1, ",", rc1, " 0 0,", cr, " ", t30[1], "A", r1, ",", r1, " 0 ", 1 - cw ^ d3_svg_arcSweep(t30[1][0], t30[1][1], t12[1][0], t12[1][1]), ",", cw, " ", t12[1], "A", rc1, ",", rc1, " 0 0,", cr, " ", t12[0]);
           } else {
@@ -13205,7 +8032,7 @@ function debug(msg) {
           path.push("M", x0, ",", y0);
         }
         if (x3 != null) {
-          var rc0 = Math.min(rc, (r0 - lc) / (kc - 1)), t03 = d3_svg_arcCornerTangents([ x0, y0 ], [ x3, y3 ], r0, -rc0, cw), t21 = d3_svg_arcCornerTangents([ x2, y2 ], x1 == null ? [ x0, y0 ] : [ x1, y1 ], r0, -rc0, cw);
+          var t03 = d3_svg_arcCornerTangents([ x0, y0 ], [ x3, y3 ], r0, -rc0, cw), t21 = d3_svg_arcCornerTangents([ x2, y2 ], x1 == null ? [ x0, y0 ] : [ x1, y1 ], r0, -rc0, cw);
           if (rc === rc0) {
             path.push("L", t21[0], "A", rc0, ",", rc0, " 0 0,", cr, " ", t21[1], "A", r0, ",", r0, " 0 ", cw ^ d3_svg_arcSweep(t21[1][0], t21[1][1], t03[1][0], t03[1][1]), ",", 1 - cw, " ", t03[1], "A", rc0, ",", rc0, " 0 0,", cr, " ", t03[0]);
           } else {
@@ -13287,7 +8114,7 @@ function debug(msg) {
     return (x0 - x1) * y0 - (y0 - y1) * x0 > 0 ? 0 : 1;
   }
   function d3_svg_arcCornerTangents(p0, p1, r1, rc, cw) {
-    var x01 = p0[0] - p1[0], y01 = p0[1] - p1[1], lo = (cw ? rc : -rc) / Math.sqrt(x01 * x01 + y01 * y01), ox = lo * y01, oy = -lo * x01, x1 = p0[0] + ox, y1 = p0[1] + oy, x2 = p1[0] + ox, y2 = p1[1] + oy, x3 = (x1 + x2) / 2, y3 = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1, d2 = dx * dx + dy * dy, r = r1 - rc, D = x1 * y2 - x2 * y1, d = (dy < 0 ? -1 : 1) * Math.sqrt(r * r * d2 - D * D), cx0 = (D * dy - dx * d) / d2, cy0 = (-D * dx - dy * d) / d2, cx1 = (D * dy + dx * d) / d2, cy1 = (-D * dx + dy * d) / d2, dx0 = cx0 - x3, dy0 = cy0 - y3, dx1 = cx1 - x3, dy1 = cy1 - y3;
+    var x01 = p0[0] - p1[0], y01 = p0[1] - p1[1], lo = (cw ? rc : -rc) / Math.sqrt(x01 * x01 + y01 * y01), ox = lo * y01, oy = -lo * x01, x1 = p0[0] + ox, y1 = p0[1] + oy, x2 = p1[0] + ox, y2 = p1[1] + oy, x3 = (x1 + x2) / 2, y3 = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1, d2 = dx * dx + dy * dy, r = r1 - rc, D = x1 * y2 - x2 * y1, d = (dy < 0 ? -1 : 1) * Math.sqrt(Math.max(0, r * r * d2 - D * D)), cx0 = (D * dy - dx * d) / d2, cy0 = (-D * dx - dy * d) / d2, cx1 = (D * dy + dx * d) / d2, cy1 = (-D * dx + dy * d) / d2, dx0 = cx0 - x3, dy0 = cy0 - y3, dx1 = cx1 - x3, dy1 = cy1 - y3;
     if (dx0 * dx0 + dy0 * dy0 > dx1 * dx1 + dy1 * dy1) cx0 = cx1, cy0 = cy1;
     return [ [ cx0 - ox, cy0 - oy ], [ cx0 * r1 / r, cy0 * r1 / r ] ];
   }
@@ -13359,10 +8186,10 @@ function debug(msg) {
     value.closed = /-closed$/.test(key);
   });
   function d3_svg_lineLinear(points) {
-    return points.join("L");
+    return points.length > 1 ? points.join("L") : points + "Z";
   }
   function d3_svg_lineLinearClosed(points) {
-    return d3_svg_lineLinear(points) + "Z";
+    return points.join("L") + "Z";
   }
   function d3_svg_lineStep(points) {
     var i = 0, n = points.length, p = points[0], path = [ p[0], ",", p[1] ];
@@ -13384,7 +8211,7 @@ function debug(msg) {
     return points.length < 4 ? d3_svg_lineLinear(points) : points[1] + d3_svg_lineHermite(points.slice(1, -1), d3_svg_lineCardinalTangents(points, tension));
   }
   function d3_svg_lineCardinalClosed(points, tension) {
-    return points.length < 3 ? d3_svg_lineLinear(points) : points[0] + d3_svg_lineHermite((points.push(points[0]), 
+    return points.length < 3 ? d3_svg_lineLinearClosed(points) : points[0] + d3_svg_lineHermite((points.push(points[0]), 
     points), d3_svg_lineCardinalTangents([ points[points.length - 2] ].concat(points, [ points[1] ]), tension));
   }
   function d3_svg_lineCardinal(points, tension) {
@@ -13820,9 +8647,11 @@ function debug(msg) {
   var d3_selection_interrupt = d3_selection_interruptNS(d3_transitionNamespace());
   function d3_selection_interruptNS(ns) {
     return function() {
-      var lock, active;
-      if ((lock = this[ns]) && (active = lock[lock.active])) {
-        if (--lock.count) delete lock[lock.active]; else delete this[ns];
+      var lock, activeId, active;
+      if ((lock = this[ns]) && (active = lock[activeId = lock.active])) {
+        active.timer.c = null;
+        active.timer.t = NaN;
+        if (--lock.count) delete lock[activeId]; else delete this[ns];
         lock.active += .5;
         active.event && active.event.interrupt.call(this, this.__data__, active.index);
       }
@@ -14077,12 +8906,68 @@ function debug(msg) {
     var lock = node[ns] || (node[ns] = {
       active: 0,
       count: 0
-    }), transition = lock[id];
+    }), transition = lock[id], time, timer, duration, ease, tweens;
+    function schedule(elapsed) {
+      var delay = transition.delay;
+      timer.t = delay + time;
+      if (delay <= elapsed) return start(elapsed - delay);
+      timer.c = start;
+    }
+    function start(elapsed) {
+      var activeId = lock.active, active = lock[activeId];
+      if (active) {
+        active.timer.c = null;
+        active.timer.t = NaN;
+        --lock.count;
+        delete lock[activeId];
+        active.event && active.event.interrupt.call(node, node.__data__, active.index);
+      }
+      for (var cancelId in lock) {
+        if (+cancelId < id) {
+          var cancel = lock[cancelId];
+          cancel.timer.c = null;
+          cancel.timer.t = NaN;
+          --lock.count;
+          delete lock[cancelId];
+        }
+      }
+      timer.c = tick;
+      d3_timer(function() {
+        if (timer.c && tick(elapsed || 1)) {
+          timer.c = null;
+          timer.t = NaN;
+        }
+        return 1;
+      }, 0, time);
+      lock.active = id;
+      transition.event && transition.event.start.call(node, node.__data__, i);
+      tweens = [];
+      transition.tween.forEach(function(key, value) {
+        if (value = value.call(node, node.__data__, i)) {
+          tweens.push(value);
+        }
+      });
+      ease = transition.ease;
+      duration = transition.duration;
+    }
+    function tick(elapsed) {
+      var t = elapsed / duration, e = ease(t), n = tweens.length;
+      while (n > 0) {
+        tweens[--n].call(node, e);
+      }
+      if (t >= 1) {
+        transition.event && transition.event.end.call(node, node.__data__, i);
+        if (--lock.count) delete lock[id]; else delete node[ns];
+        return 1;
+      }
+    }
     if (!transition) {
-      var time = inherit.time;
+      time = inherit.time;
+      timer = d3_timer(schedule, 0, time);
       transition = lock[id] = {
         tween: new d3_Map(),
         time: time,
+        timer: timer,
         delay: inherit.delay,
         duration: inherit.duration,
         ease: inherit.ease,
@@ -14090,49 +8975,6 @@ function debug(msg) {
       };
       inherit = null;
       ++lock.count;
-      d3.timer(function(elapsed) {
-        var delay = transition.delay, duration, ease, timer = d3_timer_active, tweened = [];
-        timer.t = delay + time;
-        if (delay <= elapsed) return start(elapsed - delay);
-        timer.c = start;
-        function start(elapsed) {
-          if (lock.active > id) return stop();
-          var active = lock[lock.active];
-          if (active) {
-            --lock.count;
-            delete lock[lock.active];
-            active.event && active.event.interrupt.call(node, node.__data__, active.index);
-          }
-          lock.active = id;
-          transition.event && transition.event.start.call(node, node.__data__, i);
-          transition.tween.forEach(function(key, value) {
-            if (value = value.call(node, node.__data__, i)) {
-              tweened.push(value);
-            }
-          });
-          ease = transition.ease;
-          duration = transition.duration;
-          d3.timer(function() {
-            timer.c = tick(elapsed || 1) ? d3_true : tick;
-            return 1;
-          }, 0, time);
-        }
-        function tick(elapsed) {
-          if (lock.active !== id) return 1;
-          var t = elapsed / duration, e = ease(t), n = tweened.length;
-          while (n > 0) {
-            tweened[--n].call(node, e);
-          }
-          if (t >= 1) {
-            transition.event && transition.event.end.call(node, node.__data__, i);
-            return stop();
-          }
-        }
-        function stop() {
-          if (--lock.count) delete lock[id]; else delete node[ns];
-          return 1;
-        }
-      }, 0, time);
     }
   }
   d3.svg.axis = function() {
@@ -14186,7 +9028,7 @@ function debug(msg) {
     };
     axis.ticks = function() {
       if (!arguments.length) return tickArguments_;
-      tickArguments_ = arguments;
+      tickArguments_ = d3_array(arguments);
       return axis;
     };
     axis.tickValues = function(x) {
@@ -14708,10 +9550,5217 @@ function debug(msg) {
   d3.xml = d3_xhrType(function(request) {
     return request.responseXML;
   });
-  if (typeof define === "function" && define.amd) define(d3); else if (typeof module === "object" && module.exports) module.exports = d3;
-  this.d3 = d3;
+  if (typeof define === "function" && define.amd) this.d3 = d3, define(d3); else if (typeof module === "object" && module.exports) module.exports = d3; else this.d3 = d3;
 }();
-},{}]},{},[13])(13)
+},{}],2:[function(require,module,exports){
+//     Underscore.js 1.8.3
+//     http://underscorejs.org
+//     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+//     Underscore may be freely distributed under the MIT license.
+
+(function() {
+
+  // Baseline setup
+  // --------------
+
+  // Establish the root object, `window` in the browser, or `exports` on the server.
+  var root = this;
+
+  // Save the previous value of the `_` variable.
+  var previousUnderscore = root._;
+
+  // Save bytes in the minified (but not gzipped) version:
+  var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
+
+  // Create quick reference variables for speed access to core prototypes.
+  var
+    push             = ArrayProto.push,
+    slice            = ArrayProto.slice,
+    toString         = ObjProto.toString,
+    hasOwnProperty   = ObjProto.hasOwnProperty;
+
+  // All **ECMAScript 5** native function implementations that we hope to use
+  // are declared here.
+  var
+    nativeIsArray      = Array.isArray,
+    nativeKeys         = Object.keys,
+    nativeBind         = FuncProto.bind,
+    nativeCreate       = Object.create;
+
+  // Naked function reference for surrogate-prototype-swapping.
+  var Ctor = function(){};
+
+  // Create a safe reference to the Underscore object for use below.
+  var _ = function(obj) {
+    if (obj instanceof _) return obj;
+    if (!(this instanceof _)) return new _(obj);
+    this._wrapped = obj;
+  };
+
+  // Export the Underscore object for **Node.js**, with
+  // backwards-compatibility for the old `require()` API. If we're in
+  // the browser, add `_` as a global object.
+  if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+      exports = module.exports = _;
+    }
+    exports._ = _;
+  } else {
+    root._ = _;
+  }
+
+  // Current version.
+  _.VERSION = '1.8.3';
+
+  // Internal function that returns an efficient (for current engines) version
+  // of the passed-in callback, to be repeatedly applied in other Underscore
+  // functions.
+  var optimizeCb = function(func, context, argCount) {
+    if (context === void 0) return func;
+    switch (argCount == null ? 3 : argCount) {
+      case 1: return function(value) {
+        return func.call(context, value);
+      };
+      case 2: return function(value, other) {
+        return func.call(context, value, other);
+      };
+      case 3: return function(value, index, collection) {
+        return func.call(context, value, index, collection);
+      };
+      case 4: return function(accumulator, value, index, collection) {
+        return func.call(context, accumulator, value, index, collection);
+      };
+    }
+    return function() {
+      return func.apply(context, arguments);
+    };
+  };
+
+  // A mostly-internal function to generate callbacks that can be applied
+  // to each element in a collection, returning the desired result — either
+  // identity, an arbitrary callback, a property matcher, or a property accessor.
+  var cb = function(value, context, argCount) {
+    if (value == null) return _.identity;
+    if (_.isFunction(value)) return optimizeCb(value, context, argCount);
+    if (_.isObject(value)) return _.matcher(value);
+    return _.property(value);
+  };
+  _.iteratee = function(value, context) {
+    return cb(value, context, Infinity);
+  };
+
+  // An internal function for creating assigner functions.
+  var createAssigner = function(keysFunc, undefinedOnly) {
+    return function(obj) {
+      var length = arguments.length;
+      if (length < 2 || obj == null) return obj;
+      for (var index = 1; index < length; index++) {
+        var source = arguments[index],
+            keys = keysFunc(source),
+            l = keys.length;
+        for (var i = 0; i < l; i++) {
+          var key = keys[i];
+          if (!undefinedOnly || obj[key] === void 0) obj[key] = source[key];
+        }
+      }
+      return obj;
+    };
+  };
+
+  // An internal function for creating a new object that inherits from another.
+  var baseCreate = function(prototype) {
+    if (!_.isObject(prototype)) return {};
+    if (nativeCreate) return nativeCreate(prototype);
+    Ctor.prototype = prototype;
+    var result = new Ctor;
+    Ctor.prototype = null;
+    return result;
+  };
+
+  var property = function(key) {
+    return function(obj) {
+      return obj == null ? void 0 : obj[key];
+    };
+  };
+
+  // Helper for collection methods to determine whether a collection
+  // should be iterated as an array or as an object
+  // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
+  // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
+  var MAX_ARRAY_INDEX = Math.pow(2, 53) - 1;
+  var getLength = property('length');
+  var isArrayLike = function(collection) {
+    var length = getLength(collection);
+    return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
+  };
+
+  // Collection Functions
+  // --------------------
+
+  // The cornerstone, an `each` implementation, aka `forEach`.
+  // Handles raw objects in addition to array-likes. Treats all
+  // sparse array-likes as if they were dense.
+  _.each = _.forEach = function(obj, iteratee, context) {
+    iteratee = optimizeCb(iteratee, context);
+    var i, length;
+    if (isArrayLike(obj)) {
+      for (i = 0, length = obj.length; i < length; i++) {
+        iteratee(obj[i], i, obj);
+      }
+    } else {
+      var keys = _.keys(obj);
+      for (i = 0, length = keys.length; i < length; i++) {
+        iteratee(obj[keys[i]], keys[i], obj);
+      }
+    }
+    return obj;
+  };
+
+  // Return the results of applying the iteratee to each element.
+  _.map = _.collect = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length,
+        results = Array(length);
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      results[index] = iteratee(obj[currentKey], currentKey, obj);
+    }
+    return results;
+  };
+
+  // Create a reducing function iterating left or right.
+  function createReduce(dir) {
+    // Optimized iterator function as using arguments.length
+    // in the main function will deoptimize the, see #1991.
+    function iterator(obj, iteratee, memo, keys, index, length) {
+      for (; index >= 0 && index < length; index += dir) {
+        var currentKey = keys ? keys[index] : index;
+        memo = iteratee(memo, obj[currentKey], currentKey, obj);
+      }
+      return memo;
+    }
+
+    return function(obj, iteratee, memo, context) {
+      iteratee = optimizeCb(iteratee, context, 4);
+      var keys = !isArrayLike(obj) && _.keys(obj),
+          length = (keys || obj).length,
+          index = dir > 0 ? 0 : length - 1;
+      // Determine the initial value if none is provided.
+      if (arguments.length < 3) {
+        memo = obj[keys ? keys[index] : index];
+        index += dir;
+      }
+      return iterator(obj, iteratee, memo, keys, index, length);
+    };
+  }
+
+  // **Reduce** builds up a single result from a list of values, aka `inject`,
+  // or `foldl`.
+  _.reduce = _.foldl = _.inject = createReduce(1);
+
+  // The right-associative version of reduce, also known as `foldr`.
+  _.reduceRight = _.foldr = createReduce(-1);
+
+  // Return the first value which passes a truth test. Aliased as `detect`.
+  _.find = _.detect = function(obj, predicate, context) {
+    var key;
+    if (isArrayLike(obj)) {
+      key = _.findIndex(obj, predicate, context);
+    } else {
+      key = _.findKey(obj, predicate, context);
+    }
+    if (key !== void 0 && key !== -1) return obj[key];
+  };
+
+  // Return all the elements that pass a truth test.
+  // Aliased as `select`.
+  _.filter = _.select = function(obj, predicate, context) {
+    var results = [];
+    predicate = cb(predicate, context);
+    _.each(obj, function(value, index, list) {
+      if (predicate(value, index, list)) results.push(value);
+    });
+    return results;
+  };
+
+  // Return all the elements for which a truth test fails.
+  _.reject = function(obj, predicate, context) {
+    return _.filter(obj, _.negate(cb(predicate)), context);
+  };
+
+  // Determine whether all of the elements match a truth test.
+  // Aliased as `all`.
+  _.every = _.all = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (!predicate(obj[currentKey], currentKey, obj)) return false;
+    }
+    return true;
+  };
+
+  // Determine if at least one element in the object matches a truth test.
+  // Aliased as `any`.
+  _.some = _.any = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length;
+    for (var index = 0; index < length; index++) {
+      var currentKey = keys ? keys[index] : index;
+      if (predicate(obj[currentKey], currentKey, obj)) return true;
+    }
+    return false;
+  };
+
+  // Determine if the array or object contains a given item (using `===`).
+  // Aliased as `includes` and `include`.
+  _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
+    if (!isArrayLike(obj)) obj = _.values(obj);
+    if (typeof fromIndex != 'number' || guard) fromIndex = 0;
+    return _.indexOf(obj, item, fromIndex) >= 0;
+  };
+
+  // Invoke a method (with arguments) on every item in a collection.
+  _.invoke = function(obj, method) {
+    var args = slice.call(arguments, 2);
+    var isFunc = _.isFunction(method);
+    return _.map(obj, function(value) {
+      var func = isFunc ? method : value[method];
+      return func == null ? func : func.apply(value, args);
+    });
+  };
+
+  // Convenience version of a common use case of `map`: fetching a property.
+  _.pluck = function(obj, key) {
+    return _.map(obj, _.property(key));
+  };
+
+  // Convenience version of a common use case of `filter`: selecting only objects
+  // containing specific `key:value` pairs.
+  _.where = function(obj, attrs) {
+    return _.filter(obj, _.matcher(attrs));
+  };
+
+  // Convenience version of a common use case of `find`: getting the first object
+  // containing specific `key:value` pairs.
+  _.findWhere = function(obj, attrs) {
+    return _.find(obj, _.matcher(attrs));
+  };
+
+  // Return the maximum element (or element-based computation).
+  _.max = function(obj, iteratee, context) {
+    var result = -Infinity, lastComputed = -Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value > result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed > lastComputed || computed === -Infinity && result === -Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Return the minimum element (or element-based computation).
+  _.min = function(obj, iteratee, context) {
+    var result = Infinity, lastComputed = Infinity,
+        value, computed;
+    if (iteratee == null && obj != null) {
+      obj = isArrayLike(obj) ? obj : _.values(obj);
+      for (var i = 0, length = obj.length; i < length; i++) {
+        value = obj[i];
+        if (value < result) {
+          result = value;
+        }
+      }
+    } else {
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index, list) {
+        computed = iteratee(value, index, list);
+        if (computed < lastComputed || computed === Infinity && result === Infinity) {
+          result = value;
+          lastComputed = computed;
+        }
+      });
+    }
+    return result;
+  };
+
+  // Shuffle a collection, using the modern version of the
+  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
+  _.shuffle = function(obj) {
+    var set = isArrayLike(obj) ? obj : _.values(obj);
+    var length = set.length;
+    var shuffled = Array(length);
+    for (var index = 0, rand; index < length; index++) {
+      rand = _.random(0, index);
+      if (rand !== index) shuffled[index] = shuffled[rand];
+      shuffled[rand] = set[index];
+    }
+    return shuffled;
+  };
+
+  // Sample **n** random values from a collection.
+  // If **n** is not specified, returns a single random element.
+  // The internal `guard` argument allows it to work with `map`.
+  _.sample = function(obj, n, guard) {
+    if (n == null || guard) {
+      if (!isArrayLike(obj)) obj = _.values(obj);
+      return obj[_.random(obj.length - 1)];
+    }
+    return _.shuffle(obj).slice(0, Math.max(0, n));
+  };
+
+  // Sort the object's values by a criterion produced by an iteratee.
+  _.sortBy = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    return _.pluck(_.map(obj, function(value, index, list) {
+      return {
+        value: value,
+        index: index,
+        criteria: iteratee(value, index, list)
+      };
+    }).sort(function(left, right) {
+      var a = left.criteria;
+      var b = right.criteria;
+      if (a !== b) {
+        if (a > b || a === void 0) return 1;
+        if (a < b || b === void 0) return -1;
+      }
+      return left.index - right.index;
+    }), 'value');
+  };
+
+  // An internal function used for aggregate "group by" operations.
+  var group = function(behavior) {
+    return function(obj, iteratee, context) {
+      var result = {};
+      iteratee = cb(iteratee, context);
+      _.each(obj, function(value, index) {
+        var key = iteratee(value, index, obj);
+        behavior(result, value, key);
+      });
+      return result;
+    };
+  };
+
+  // Groups the object's values by a criterion. Pass either a string attribute
+  // to group by, or a function that returns the criterion.
+  _.groupBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key].push(value); else result[key] = [value];
+  });
+
+  // Indexes the object's values by a criterion, similar to `groupBy`, but for
+  // when you know that your index values will be unique.
+  _.indexBy = group(function(result, value, key) {
+    result[key] = value;
+  });
+
+  // Counts instances of an object that group by a certain criterion. Pass
+  // either a string attribute to count by, or a function that returns the
+  // criterion.
+  _.countBy = group(function(result, value, key) {
+    if (_.has(result, key)) result[key]++; else result[key] = 1;
+  });
+
+  // Safely create a real, live array from anything iterable.
+  _.toArray = function(obj) {
+    if (!obj) return [];
+    if (_.isArray(obj)) return slice.call(obj);
+    if (isArrayLike(obj)) return _.map(obj, _.identity);
+    return _.values(obj);
+  };
+
+  // Return the number of elements in an object.
+  _.size = function(obj) {
+    if (obj == null) return 0;
+    return isArrayLike(obj) ? obj.length : _.keys(obj).length;
+  };
+
+  // Split a collection into two arrays: one whose elements all satisfy the given
+  // predicate, and one whose elements all do not satisfy the predicate.
+  _.partition = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var pass = [], fail = [];
+    _.each(obj, function(value, key, obj) {
+      (predicate(value, key, obj) ? pass : fail).push(value);
+    });
+    return [pass, fail];
+  };
+
+  // Array Functions
+  // ---------------
+
+  // Get the first element of an array. Passing **n** will return the first N
+  // values in the array. Aliased as `head` and `take`. The **guard** check
+  // allows it to work with `_.map`.
+  _.first = _.head = _.take = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[0];
+    return _.initial(array, array.length - n);
+  };
+
+  // Returns everything but the last entry of the array. Especially useful on
+  // the arguments object. Passing **n** will return all the values in
+  // the array, excluding the last N.
+  _.initial = function(array, n, guard) {
+    return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
+  };
+
+  // Get the last element of an array. Passing **n** will return the last N
+  // values in the array.
+  _.last = function(array, n, guard) {
+    if (array == null) return void 0;
+    if (n == null || guard) return array[array.length - 1];
+    return _.rest(array, Math.max(0, array.length - n));
+  };
+
+  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
+  // Especially useful on the arguments object. Passing an **n** will return
+  // the rest N values in the array.
+  _.rest = _.tail = _.drop = function(array, n, guard) {
+    return slice.call(array, n == null || guard ? 1 : n);
+  };
+
+  // Trim out all falsy values from an array.
+  _.compact = function(array) {
+    return _.filter(array, _.identity);
+  };
+
+  // Internal implementation of a recursive `flatten` function.
+  var flatten = function(input, shallow, strict, startIndex) {
+    var output = [], idx = 0;
+    for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
+      var value = input[i];
+      if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
+        //flatten current level of array or arguments object
+        if (!shallow) value = flatten(value, shallow, strict);
+        var j = 0, len = value.length;
+        output.length += len;
+        while (j < len) {
+          output[idx++] = value[j++];
+        }
+      } else if (!strict) {
+        output[idx++] = value;
+      }
+    }
+    return output;
+  };
+
+  // Flatten out an array, either recursively (by default), or just one level.
+  _.flatten = function(array, shallow) {
+    return flatten(array, shallow, false);
+  };
+
+  // Return a version of the array that does not contain the specified value(s).
+  _.without = function(array) {
+    return _.difference(array, slice.call(arguments, 1));
+  };
+
+  // Produce a duplicate-free version of the array. If the array has already
+  // been sorted, you have the option of using a faster algorithm.
+  // Aliased as `unique`.
+  _.uniq = _.unique = function(array, isSorted, iteratee, context) {
+    if (!_.isBoolean(isSorted)) {
+      context = iteratee;
+      iteratee = isSorted;
+      isSorted = false;
+    }
+    if (iteratee != null) iteratee = cb(iteratee, context);
+    var result = [];
+    var seen = [];
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var value = array[i],
+          computed = iteratee ? iteratee(value, i, array) : value;
+      if (isSorted) {
+        if (!i || seen !== computed) result.push(value);
+        seen = computed;
+      } else if (iteratee) {
+        if (!_.contains(seen, computed)) {
+          seen.push(computed);
+          result.push(value);
+        }
+      } else if (!_.contains(result, value)) {
+        result.push(value);
+      }
+    }
+    return result;
+  };
+
+  // Produce an array that contains the union: each distinct element from all of
+  // the passed-in arrays.
+  _.union = function() {
+    return _.uniq(flatten(arguments, true, true));
+  };
+
+  // Produce an array that contains every item shared between all the
+  // passed-in arrays.
+  _.intersection = function(array) {
+    var result = [];
+    var argsLength = arguments.length;
+    for (var i = 0, length = getLength(array); i < length; i++) {
+      var item = array[i];
+      if (_.contains(result, item)) continue;
+      for (var j = 1; j < argsLength; j++) {
+        if (!_.contains(arguments[j], item)) break;
+      }
+      if (j === argsLength) result.push(item);
+    }
+    return result;
+  };
+
+  // Take the difference between one array and a number of other arrays.
+  // Only the elements present in just the first array will remain.
+  _.difference = function(array) {
+    var rest = flatten(arguments, true, true, 1);
+    return _.filter(array, function(value){
+      return !_.contains(rest, value);
+    });
+  };
+
+  // Zip together multiple lists into a single array -- elements that share
+  // an index go together.
+  _.zip = function() {
+    return _.unzip(arguments);
+  };
+
+  // Complement of _.zip. Unzip accepts an array of arrays and groups
+  // each array's elements on shared indices
+  _.unzip = function(array) {
+    var length = array && _.max(array, getLength).length || 0;
+    var result = Array(length);
+
+    for (var index = 0; index < length; index++) {
+      result[index] = _.pluck(array, index);
+    }
+    return result;
+  };
+
+  // Converts lists into objects. Pass either a single array of `[key, value]`
+  // pairs, or two parallel arrays of the same length -- one of keys, and one of
+  // the corresponding values.
+  _.object = function(list, values) {
+    var result = {};
+    for (var i = 0, length = getLength(list); i < length; i++) {
+      if (values) {
+        result[list[i]] = values[i];
+      } else {
+        result[list[i][0]] = list[i][1];
+      }
+    }
+    return result;
+  };
+
+  // Generator function to create the findIndex and findLastIndex functions
+  function createPredicateIndexFinder(dir) {
+    return function(array, predicate, context) {
+      predicate = cb(predicate, context);
+      var length = getLength(array);
+      var index = dir > 0 ? 0 : length - 1;
+      for (; index >= 0 && index < length; index += dir) {
+        if (predicate(array[index], index, array)) return index;
+      }
+      return -1;
+    };
+  }
+
+  // Returns the first index on an array-like that passes a predicate test
+  _.findIndex = createPredicateIndexFinder(1);
+  _.findLastIndex = createPredicateIndexFinder(-1);
+
+  // Use a comparator function to figure out the smallest index at which
+  // an object should be inserted so as to maintain order. Uses binary search.
+  _.sortedIndex = function(array, obj, iteratee, context) {
+    iteratee = cb(iteratee, context, 1);
+    var value = iteratee(obj);
+    var low = 0, high = getLength(array);
+    while (low < high) {
+      var mid = Math.floor((low + high) / 2);
+      if (iteratee(array[mid]) < value) low = mid + 1; else high = mid;
+    }
+    return low;
+  };
+
+  // Generator function to create the indexOf and lastIndexOf functions
+  function createIndexFinder(dir, predicateFind, sortedIndex) {
+    return function(array, item, idx) {
+      var i = 0, length = getLength(array);
+      if (typeof idx == 'number') {
+        if (dir > 0) {
+            i = idx >= 0 ? idx : Math.max(idx + length, i);
+        } else {
+            length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1;
+        }
+      } else if (sortedIndex && idx && length) {
+        idx = sortedIndex(array, item);
+        return array[idx] === item ? idx : -1;
+      }
+      if (item !== item) {
+        idx = predicateFind(slice.call(array, i, length), _.isNaN);
+        return idx >= 0 ? idx + i : -1;
+      }
+      for (idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir) {
+        if (array[idx] === item) return idx;
+      }
+      return -1;
+    };
+  }
+
+  // Return the position of the first occurrence of an item in an array,
+  // or -1 if the item is not included in the array.
+  // If the array is large and already in sort order, pass `true`
+  // for **isSorted** to use binary search.
+  _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+  _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
+
+  // Generate an integer Array containing an arithmetic progression. A port of
+  // the native Python `range()` function. See
+  // [the Python documentation](http://docs.python.org/library/functions.html#range).
+  _.range = function(start, stop, step) {
+    if (stop == null) {
+      stop = start || 0;
+      start = 0;
+    }
+    step = step || 1;
+
+    var length = Math.max(Math.ceil((stop - start) / step), 0);
+    var range = Array(length);
+
+    for (var idx = 0; idx < length; idx++, start += step) {
+      range[idx] = start;
+    }
+
+    return range;
+  };
+
+  // Function (ahem) Functions
+  // ------------------
+
+  // Determines whether to execute a function as a constructor
+  // or a normal function with the provided arguments
+  var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
+    if (!(callingContext instanceof boundFunc)) return sourceFunc.apply(context, args);
+    var self = baseCreate(sourceFunc.prototype);
+    var result = sourceFunc.apply(self, args);
+    if (_.isObject(result)) return result;
+    return self;
+  };
+
+  // Create a function bound to a given object (assigning `this`, and arguments,
+  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
+  // available.
+  _.bind = function(func, context) {
+    if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
+    if (!_.isFunction(func)) throw new TypeError('Bind must be called on a function');
+    var args = slice.call(arguments, 2);
+    var bound = function() {
+      return executeBound(func, bound, context, this, args.concat(slice.call(arguments)));
+    };
+    return bound;
+  };
+
+  // Partially apply a function by creating a version that has had some of its
+  // arguments pre-filled, without changing its dynamic `this` context. _ acts
+  // as a placeholder, allowing any combination of arguments to be pre-filled.
+  _.partial = function(func) {
+    var boundArgs = slice.call(arguments, 1);
+    var bound = function() {
+      var position = 0, length = boundArgs.length;
+      var args = Array(length);
+      for (var i = 0; i < length; i++) {
+        args[i] = boundArgs[i] === _ ? arguments[position++] : boundArgs[i];
+      }
+      while (position < arguments.length) args.push(arguments[position++]);
+      return executeBound(func, bound, this, this, args);
+    };
+    return bound;
+  };
+
+  // Bind a number of an object's methods to that object. Remaining arguments
+  // are the method names to be bound. Useful for ensuring that all callbacks
+  // defined on an object belong to it.
+  _.bindAll = function(obj) {
+    var i, length = arguments.length, key;
+    if (length <= 1) throw new Error('bindAll must be passed function names');
+    for (i = 1; i < length; i++) {
+      key = arguments[i];
+      obj[key] = _.bind(obj[key], obj);
+    }
+    return obj;
+  };
+
+  // Memoize an expensive function by storing its results.
+  _.memoize = function(func, hasher) {
+    var memoize = function(key) {
+      var cache = memoize.cache;
+      var address = '' + (hasher ? hasher.apply(this, arguments) : key);
+      if (!_.has(cache, address)) cache[address] = func.apply(this, arguments);
+      return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+  };
+
+  // Delays a function for the given number of milliseconds, and then calls
+  // it with the arguments supplied.
+  _.delay = function(func, wait) {
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){
+      return func.apply(null, args);
+    }, wait);
+  };
+
+  // Defers a function, scheduling it to run after the current call stack has
+  // cleared.
+  _.defer = _.partial(_.delay, _, 1);
+
+  // Returns a function, that, when invoked, will only be triggered at most once
+  // during a given window of time. Normally, the throttled function will run
+  // as much as it can, without ever going more than once per `wait` duration;
+  // but if you'd like to disable the execution on the leading edge, pass
+  // `{leading: false}`. To disable execution on the trailing edge, ditto.
+  _.throttle = function(func, wait, options) {
+    var context, args, result;
+    var timeout = null;
+    var previous = 0;
+    if (!options) options = {};
+    var later = function() {
+      previous = options.leading === false ? 0 : _.now();
+      timeout = null;
+      result = func.apply(context, args);
+      if (!timeout) context = args = null;
+    };
+    return function() {
+      var now = _.now();
+      if (!previous && options.leading === false) previous = now;
+      var remaining = wait - (now - previous);
+      context = this;
+      args = arguments;
+      if (remaining <= 0 || remaining > wait) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+        previous = now;
+        result = func.apply(context, args);
+        if (!timeout) context = args = null;
+      } else if (!timeout && options.trailing !== false) {
+        timeout = setTimeout(later, remaining);
+      }
+      return result;
+    };
+  };
+
+  // Returns a function, that, as long as it continues to be invoked, will not
+  // be triggered. The function will be called after it stops being called for
+  // N milliseconds. If `immediate` is passed, trigger the function on the
+  // leading edge, instead of the trailing.
+  _.debounce = function(func, wait, immediate) {
+    var timeout, args, context, timestamp, result;
+
+    var later = function() {
+      var last = _.now() - timestamp;
+
+      if (last < wait && last >= 0) {
+        timeout = setTimeout(later, wait - last);
+      } else {
+        timeout = null;
+        if (!immediate) {
+          result = func.apply(context, args);
+          if (!timeout) context = args = null;
+        }
+      }
+    };
+
+    return function() {
+      context = this;
+      args = arguments;
+      timestamp = _.now();
+      var callNow = immediate && !timeout;
+      if (!timeout) timeout = setTimeout(later, wait);
+      if (callNow) {
+        result = func.apply(context, args);
+        context = args = null;
+      }
+
+      return result;
+    };
+  };
+
+  // Returns the first function passed as an argument to the second,
+  // allowing you to adjust arguments, run code before and after, and
+  // conditionally execute the original function.
+  _.wrap = function(func, wrapper) {
+    return _.partial(wrapper, func);
+  };
+
+  // Returns a negated version of the passed-in predicate.
+  _.negate = function(predicate) {
+    return function() {
+      return !predicate.apply(this, arguments);
+    };
+  };
+
+  // Returns a function that is the composition of a list of functions, each
+  // consuming the return value of the function that follows.
+  _.compose = function() {
+    var args = arguments;
+    var start = args.length - 1;
+    return function() {
+      var i = start;
+      var result = args[start].apply(this, arguments);
+      while (i--) result = args[i].call(this, result);
+      return result;
+    };
+  };
+
+  // Returns a function that will only be executed on and after the Nth call.
+  _.after = function(times, func) {
+    return function() {
+      if (--times < 1) {
+        return func.apply(this, arguments);
+      }
+    };
+  };
+
+  // Returns a function that will only be executed up to (but not including) the Nth call.
+  _.before = function(times, func) {
+    var memo;
+    return function() {
+      if (--times > 0) {
+        memo = func.apply(this, arguments);
+      }
+      if (times <= 1) func = null;
+      return memo;
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.once = _.partial(_.before, 2);
+
+  // Object Functions
+  // ----------------
+
+  // Keys in IE < 9 that won't be iterated by `for key in ...` and thus missed.
+  var hasEnumBug = !{toString: null}.propertyIsEnumerable('toString');
+  var nonEnumerableProps = ['valueOf', 'isPrototypeOf', 'toString',
+                      'propertyIsEnumerable', 'hasOwnProperty', 'toLocaleString'];
+
+  function collectNonEnumProps(obj, keys) {
+    var nonEnumIdx = nonEnumerableProps.length;
+    var constructor = obj.constructor;
+    var proto = (_.isFunction(constructor) && constructor.prototype) || ObjProto;
+
+    // Constructor is a special case.
+    var prop = 'constructor';
+    if (_.has(obj, prop) && !_.contains(keys, prop)) keys.push(prop);
+
+    while (nonEnumIdx--) {
+      prop = nonEnumerableProps[nonEnumIdx];
+      if (prop in obj && obj[prop] !== proto[prop] && !_.contains(keys, prop)) {
+        keys.push(prop);
+      }
+    }
+  }
+
+  // Retrieve the names of an object's own properties.
+  // Delegates to **ECMAScript 5**'s native `Object.keys`
+  _.keys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    if (nativeKeys) return nativeKeys(obj);
+    var keys = [];
+    for (var key in obj) if (_.has(obj, key)) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve all the property names of an object.
+  _.allKeys = function(obj) {
+    if (!_.isObject(obj)) return [];
+    var keys = [];
+    for (var key in obj) keys.push(key);
+    // Ahem, IE < 9.
+    if (hasEnumBug) collectNonEnumProps(obj, keys);
+    return keys;
+  };
+
+  // Retrieve the values of an object's properties.
+  _.values = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var values = Array(length);
+    for (var i = 0; i < length; i++) {
+      values[i] = obj[keys[i]];
+    }
+    return values;
+  };
+
+  // Returns the results of applying the iteratee to each element of the object
+  // In contrast to _.map it returns an object
+  _.mapObject = function(obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys =  _.keys(obj),
+          length = keys.length,
+          results = {},
+          currentKey;
+      for (var index = 0; index < length; index++) {
+        currentKey = keys[index];
+        results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
+      }
+      return results;
+  };
+
+  // Convert an object into a list of `[key, value]` pairs.
+  _.pairs = function(obj) {
+    var keys = _.keys(obj);
+    var length = keys.length;
+    var pairs = Array(length);
+    for (var i = 0; i < length; i++) {
+      pairs[i] = [keys[i], obj[keys[i]]];
+    }
+    return pairs;
+  };
+
+  // Invert the keys and values of an object. The values must be serializable.
+  _.invert = function(obj) {
+    var result = {};
+    var keys = _.keys(obj);
+    for (var i = 0, length = keys.length; i < length; i++) {
+      result[obj[keys[i]]] = keys[i];
+    }
+    return result;
+  };
+
+  // Return a sorted list of the function names available on the object.
+  // Aliased as `methods`
+  _.functions = _.methods = function(obj) {
+    var names = [];
+    for (var key in obj) {
+      if (_.isFunction(obj[key])) names.push(key);
+    }
+    return names.sort();
+  };
+
+  // Extend a given object with all the properties in passed-in object(s).
+  _.extend = createAssigner(_.allKeys);
+
+  // Assigns a given object with all the own properties in the passed-in object(s)
+  // (https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)
+  _.extendOwn = _.assign = createAssigner(_.keys);
+
+  // Returns the first key on an object that passes a predicate test
+  _.findKey = function(obj, predicate, context) {
+    predicate = cb(predicate, context);
+    var keys = _.keys(obj), key;
+    for (var i = 0, length = keys.length; i < length; i++) {
+      key = keys[i];
+      if (predicate(obj[key], key, obj)) return key;
+    }
+  };
+
+  // Return a copy of the object only containing the whitelisted properties.
+  _.pick = function(object, oiteratee, context) {
+    var result = {}, obj = object, iteratee, keys;
+    if (obj == null) return result;
+    if (_.isFunction(oiteratee)) {
+      keys = _.allKeys(obj);
+      iteratee = optimizeCb(oiteratee, context);
+    } else {
+      keys = flatten(arguments, false, false, 1);
+      iteratee = function(value, key, obj) { return key in obj; };
+      obj = Object(obj);
+    }
+    for (var i = 0, length = keys.length; i < length; i++) {
+      var key = keys[i];
+      var value = obj[key];
+      if (iteratee(value, key, obj)) result[key] = value;
+    }
+    return result;
+  };
+
+   // Return a copy of the object without the blacklisted properties.
+  _.omit = function(obj, iteratee, context) {
+    if (_.isFunction(iteratee)) {
+      iteratee = _.negate(iteratee);
+    } else {
+      var keys = _.map(flatten(arguments, false, false, 1), String);
+      iteratee = function(value, key) {
+        return !_.contains(keys, key);
+      };
+    }
+    return _.pick(obj, iteratee, context);
+  };
+
+  // Fill in a given object with default properties.
+  _.defaults = createAssigner(_.allKeys, true);
+
+  // Creates an object that inherits from the given prototype object.
+  // If additional properties are provided then they will be added to the
+  // created object.
+  _.create = function(prototype, props) {
+    var result = baseCreate(prototype);
+    if (props) _.extendOwn(result, props);
+    return result;
+  };
+
+  // Create a (shallow-cloned) duplicate of an object.
+  _.clone = function(obj) {
+    if (!_.isObject(obj)) return obj;
+    return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+  };
+
+  // Invokes interceptor with the obj, and then returns obj.
+  // The primary purpose of this method is to "tap into" a method chain, in
+  // order to perform operations on intermediate results within the chain.
+  _.tap = function(obj, interceptor) {
+    interceptor(obj);
+    return obj;
+  };
+
+  // Returns whether an object has a given set of `key:value` pairs.
+  _.isMatch = function(object, attrs) {
+    var keys = _.keys(attrs), length = keys.length;
+    if (object == null) return !length;
+    var obj = Object(object);
+    for (var i = 0; i < length; i++) {
+      var key = keys[i];
+      if (attrs[key] !== obj[key] || !(key in obj)) return false;
+    }
+    return true;
+  };
+
+
+  // Internal recursive comparison function for `isEqual`.
+  var eq = function(a, b, aStack, bStack) {
+    // Identical objects are equal. `0 === -0`, but they aren't identical.
+    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
+    if (a === b) return a !== 0 || 1 / a === 1 / b;
+    // A strict comparison is necessary because `null == undefined`.
+    if (a == null || b == null) return a === b;
+    // Unwrap any wrapped objects.
+    if (a instanceof _) a = a._wrapped;
+    if (b instanceof _) b = b._wrapped;
+    // Compare `[[Class]]` names.
+    var className = toString.call(a);
+    if (className !== toString.call(b)) return false;
+    switch (className) {
+      // Strings, numbers, regular expressions, dates, and booleans are compared by value.
+      case '[object RegExp]':
+      // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
+      case '[object String]':
+        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+        // equivalent to `new String("5")`.
+        return '' + a === '' + b;
+      case '[object Number]':
+        // `NaN`s are equivalent, but non-reflexive.
+        // Object(NaN) is equivalent to NaN
+        if (+a !== +a) return +b !== +b;
+        // An `egal` comparison is performed for other numeric values.
+        return +a === 0 ? 1 / +a === 1 / b : +a === +b;
+      case '[object Date]':
+      case '[object Boolean]':
+        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
+        // millisecond representations. Note that invalid dates with millisecond representations
+        // of `NaN` are not equivalent.
+        return +a === +b;
+    }
+
+    var areArrays = className === '[object Array]';
+    if (!areArrays) {
+      if (typeof a != 'object' || typeof b != 'object') return false;
+
+      // Objects with different constructors are not equivalent, but `Object`s or `Array`s
+      // from different frames are.
+      var aCtor = a.constructor, bCtor = b.constructor;
+      if (aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
+                               _.isFunction(bCtor) && bCtor instanceof bCtor)
+                          && ('constructor' in a && 'constructor' in b)) {
+        return false;
+      }
+    }
+    // Assume equality for cyclic structures. The algorithm for detecting cyclic
+    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+
+    // Initializing stack of traversed objects.
+    // It's done here since we only need them for objects and arrays comparison.
+    aStack = aStack || [];
+    bStack = bStack || [];
+    var length = aStack.length;
+    while (length--) {
+      // Linear search. Performance is inversely proportional to the number of
+      // unique nested structures.
+      if (aStack[length] === a) return bStack[length] === b;
+    }
+
+    // Add the first object to the stack of traversed objects.
+    aStack.push(a);
+    bStack.push(b);
+
+    // Recursively compare objects and arrays.
+    if (areArrays) {
+      // Compare array lengths to determine if a deep comparison is necessary.
+      length = a.length;
+      if (length !== b.length) return false;
+      // Deep compare the contents, ignoring non-numeric properties.
+      while (length--) {
+        if (!eq(a[length], b[length], aStack, bStack)) return false;
+      }
+    } else {
+      // Deep compare objects.
+      var keys = _.keys(a), key;
+      length = keys.length;
+      // Ensure that both objects contain the same number of properties before comparing deep equality.
+      if (_.keys(b).length !== length) return false;
+      while (length--) {
+        // Deep compare each member
+        key = keys[length];
+        if (!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
+      }
+    }
+    // Remove the first object from the stack of traversed objects.
+    aStack.pop();
+    bStack.pop();
+    return true;
+  };
+
+  // Perform a deep comparison to check if two objects are equal.
+  _.isEqual = function(a, b) {
+    return eq(a, b);
+  };
+
+  // Is a given array, string, or object empty?
+  // An "empty" object has no enumerable own-properties.
+  _.isEmpty = function(obj) {
+    if (obj == null) return true;
+    if (isArrayLike(obj) && (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))) return obj.length === 0;
+    return _.keys(obj).length === 0;
+  };
+
+  // Is a given value a DOM element?
+  _.isElement = function(obj) {
+    return !!(obj && obj.nodeType === 1);
+  };
+
+  // Is a given value an array?
+  // Delegates to ECMA5's native Array.isArray
+  _.isArray = nativeIsArray || function(obj) {
+    return toString.call(obj) === '[object Array]';
+  };
+
+  // Is a given variable an object?
+  _.isObject = function(obj) {
+    var type = typeof obj;
+    return type === 'function' || type === 'object' && !!obj;
+  };
+
+  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp, isError.
+  _.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error'], function(name) {
+    _['is' + name] = function(obj) {
+      return toString.call(obj) === '[object ' + name + ']';
+    };
+  });
+
+  // Define a fallback version of the method in browsers (ahem, IE < 9), where
+  // there isn't any inspectable "Arguments" type.
+  if (!_.isArguments(arguments)) {
+    _.isArguments = function(obj) {
+      return _.has(obj, 'callee');
+    };
+  }
+
+  // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
+  // IE 11 (#1621), and in Safari 8 (#1929).
+  if (typeof /./ != 'function' && typeof Int8Array != 'object') {
+    _.isFunction = function(obj) {
+      return typeof obj == 'function' || false;
+    };
+  }
+
+  // Is a given object a finite number?
+  _.isFinite = function(obj) {
+    return isFinite(obj) && !isNaN(parseFloat(obj));
+  };
+
+  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
+  _.isNaN = function(obj) {
+    return _.isNumber(obj) && obj !== +obj;
+  };
+
+  // Is a given value a boolean?
+  _.isBoolean = function(obj) {
+    return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
+  };
+
+  // Is a given value equal to null?
+  _.isNull = function(obj) {
+    return obj === null;
+  };
+
+  // Is a given variable undefined?
+  _.isUndefined = function(obj) {
+    return obj === void 0;
+  };
+
+  // Shortcut function for checking if an object has a given property directly
+  // on itself (in other words, not on a prototype).
+  _.has = function(obj, key) {
+    return obj != null && hasOwnProperty.call(obj, key);
+  };
+
+  // Utility Functions
+  // -----------------
+
+  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
+  // previous owner. Returns a reference to the Underscore object.
+  _.noConflict = function() {
+    root._ = previousUnderscore;
+    return this;
+  };
+
+  // Keep the identity function around for default iteratees.
+  _.identity = function(value) {
+    return value;
+  };
+
+  // Predicate-generating functions. Often useful outside of Underscore.
+  _.constant = function(value) {
+    return function() {
+      return value;
+    };
+  };
+
+  _.noop = function(){};
+
+  _.property = property;
+
+  // Generates a function for a given object that returns a given property.
+  _.propertyOf = function(obj) {
+    return obj == null ? function(){} : function(key) {
+      return obj[key];
+    };
+  };
+
+  // Returns a predicate for checking whether an object has a given set of
+  // `key:value` pairs.
+  _.matcher = _.matches = function(attrs) {
+    attrs = _.extendOwn({}, attrs);
+    return function(obj) {
+      return _.isMatch(obj, attrs);
+    };
+  };
+
+  // Run a function **n** times.
+  _.times = function(n, iteratee, context) {
+    var accum = Array(Math.max(0, n));
+    iteratee = optimizeCb(iteratee, context, 1);
+    for (var i = 0; i < n; i++) accum[i] = iteratee(i);
+    return accum;
+  };
+
+  // Return a random integer between min and max (inclusive).
+  _.random = function(min, max) {
+    if (max == null) {
+      max = min;
+      min = 0;
+    }
+    return min + Math.floor(Math.random() * (max - min + 1));
+  };
+
+  // A (possibly faster) way to get the current timestamp as an integer.
+  _.now = Date.now || function() {
+    return new Date().getTime();
+  };
+
+   // List of HTML entities for escaping.
+  var escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '`': '&#x60;'
+  };
+  var unescapeMap = _.invert(escapeMap);
+
+  // Functions for escaping and unescaping strings to/from HTML interpolation.
+  var createEscaper = function(map) {
+    var escaper = function(match) {
+      return map[match];
+    };
+    // Regexes for identifying a key that needs to be escaped
+    var source = '(?:' + _.keys(map).join('|') + ')';
+    var testRegexp = RegExp(source);
+    var replaceRegexp = RegExp(source, 'g');
+    return function(string) {
+      string = string == null ? '' : '' + string;
+      return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+    };
+  };
+  _.escape = createEscaper(escapeMap);
+  _.unescape = createEscaper(unescapeMap);
+
+  // If the value of the named `property` is a function then invoke it with the
+  // `object` as context; otherwise, return it.
+  _.result = function(object, property, fallback) {
+    var value = object == null ? void 0 : object[property];
+    if (value === void 0) {
+      value = fallback;
+    }
+    return _.isFunction(value) ? value.call(object) : value;
+  };
+
+  // Generate a unique integer id (unique within the entire client session).
+  // Useful for temporary DOM ids.
+  var idCounter = 0;
+  _.uniqueId = function(prefix) {
+    var id = ++idCounter + '';
+    return prefix ? prefix + id : id;
+  };
+
+  // By default, Underscore uses ERB-style template delimiters, change the
+  // following template settings to use alternative delimiters.
+  _.templateSettings = {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g
+  };
+
+  // When customizing `templateSettings`, if you don't want to define an
+  // interpolation, evaluation or escaping regex, we need one that is
+  // guaranteed not to match.
+  var noMatch = /(.)^/;
+
+  // Certain characters need to be escaped so that they can be put into a
+  // string literal.
+  var escapes = {
+    "'":      "'",
+    '\\':     '\\',
+    '\r':     'r',
+    '\n':     'n',
+    '\u2028': 'u2028',
+    '\u2029': 'u2029'
+  };
+
+  var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
+
+  var escapeChar = function(match) {
+    return '\\' + escapes[match];
+  };
+
+  // JavaScript micro-templating, similar to John Resig's implementation.
+  // Underscore templating handles arbitrary delimiters, preserves whitespace,
+  // and correctly escapes quotes within interpolated code.
+  // NB: `oldSettings` only exists for backwards compatibility.
+  _.template = function(text, settings, oldSettings) {
+    if (!settings && oldSettings) settings = oldSettings;
+    settings = _.defaults({}, settings, _.templateSettings);
+
+    // Combine delimiters into one regular expression via alternation.
+    var matcher = RegExp([
+      (settings.escape || noMatch).source,
+      (settings.interpolate || noMatch).source,
+      (settings.evaluate || noMatch).source
+    ].join('|') + '|$', 'g');
+
+    // Compile the template source, escaping string literals appropriately.
+    var index = 0;
+    var source = "__p+='";
+    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+      source += text.slice(index, offset).replace(escaper, escapeChar);
+      index = offset + match.length;
+
+      if (escape) {
+        source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+      } else if (interpolate) {
+        source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+      } else if (evaluate) {
+        source += "';\n" + evaluate + "\n__p+='";
+      }
+
+      // Adobe VMs need the match returned to produce the correct offest.
+      return match;
+    });
+    source += "';\n";
+
+    // If a variable is not specified, place data values in local scope.
+    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+    source = "var __t,__p='',__j=Array.prototype.join," +
+      "print=function(){__p+=__j.call(arguments,'');};\n" +
+      source + 'return __p;\n';
+
+    try {
+      var render = new Function(settings.variable || 'obj', '_', source);
+    } catch (e) {
+      e.source = source;
+      throw e;
+    }
+
+    var template = function(data) {
+      return render.call(this, data, _);
+    };
+
+    // Provide the compiled source as a convenience for precompilation.
+    var argument = settings.variable || 'obj';
+    template.source = 'function(' + argument + '){\n' + source + '}';
+
+    return template;
+  };
+
+  // Add a "chain" function. Start chaining a wrapped Underscore object.
+  _.chain = function(obj) {
+    var instance = _(obj);
+    instance._chain = true;
+    return instance;
+  };
+
+  // OOP
+  // ---------------
+  // If Underscore is called as a function, it returns a wrapped object that
+  // can be used OO-style. This wrapper holds altered versions of all the
+  // underscore functions. Wrapped objects may be chained.
+
+  // Helper function to continue chaining intermediate results.
+  var result = function(instance, obj) {
+    return instance._chain ? _(obj).chain() : obj;
+  };
+
+  // Add your own custom functions to the Underscore object.
+  _.mixin = function(obj) {
+    _.each(_.functions(obj), function(name) {
+      var func = _[name] = obj[name];
+      _.prototype[name] = function() {
+        var args = [this._wrapped];
+        push.apply(args, arguments);
+        return result(this, func.apply(_, args));
+      };
+    });
+  };
+
+  // Add all of the Underscore functions to the wrapper object.
+  _.mixin(_);
+
+  // Add all mutator Array functions to the wrapper.
+  _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      var obj = this._wrapped;
+      method.apply(obj, arguments);
+      if ((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
+      return result(this, obj);
+    };
+  });
+
+  // Add all accessor Array functions to the wrapper.
+  _.each(['concat', 'join', 'slice'], function(name) {
+    var method = ArrayProto[name];
+    _.prototype[name] = function() {
+      return result(this, method.apply(this._wrapped, arguments));
+    };
+  });
+
+  // Extracts the result from a wrapped and chained object.
+  _.prototype.value = function() {
+    return this._wrapped;
+  };
+
+  // Provide unwrapping proxy for some methods used in engine operations
+  // such as arithmetic and JSON stringification.
+  _.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
+
+  _.prototype.toString = function() {
+    return '' + this._wrapped;
+  };
+
+  // AMD registration happens at the end for compatibility with AMD loaders
+  // that may not enforce next-turn semantics on modules. Even though general
+  // practice for AMD registration is to be anonymous, underscore registers
+  // as a named module because, like jQuery, it is a base library that is
+  // popular enough to be bundled in a third party lib, but not be part of
+  // an AMD load request. Those cases could generate an error when an
+  // anonymous define() is called outside of a loader request.
+  if (typeof define === 'function' && define.amd) {
+    define('underscore', [], function() {
+      return _;
+    });
+  }
+}.call(this));
+
+},{}],3:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _utils = require("../utils");
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * Class used for managing redraws.
+ * Basic buffer doesn't do anything except marking itself as dirty
+ */
+
+var DefaultBuffer = (function () {
+    function DefaultBuffer(chart) {
+        _classCallCheck(this, DefaultBuffer);
+
+        this.__init();
+        this.registerChart(chart);
+    }
+
+    _createClass(DefaultBuffer, [{
+        key: "__init",
+        value: function __init() {
+            this.__ = {
+                dirty: false,
+                frozen: false,
+                charts: []
+            };
+        }
+    }, {
+        key: "dirty",
+        value: function dirty(_dirty) {
+            var __ = this.__;
+            if (_dirty === undefined) {
+                return __.dirty;
+            }
+            __.dirty = _dirty;
+
+            if (!this.frozen()) {
+                this.actOnDirty(_dirty);
+            }
+        }
+    }, {
+        key: "registerChart",
+        value: function registerChart(chart) {
+            if ((0, _utils.isDefined)(chart)) {
+                var charts = this.__.charts;
+
+                if (charts.indexOf(chart) === -1) {
+                    charts.push(chart);
+                }
+            }
+        }
+    }, {
+        key: "unregisterChart",
+        value: function unregisterChart(chart) {
+            var charts = this.__.charts;
+            for (var i = 0; i < charts.length; i++) {
+                if (chart === charts[i]) {
+                    charts.splice(i, 1);
+                }
+            }
+        }
+    }, {
+        key: "sendRedraw",
+        value: function sendRedraw() {
+            this.__.charts.forEach(function (chart) {
+                chart.redraw();
+            });
+        }
+
+        /**
+         * If frozen, buffer won't activate actOnDirty.
+         * This is needed for chart initialization when 'dirty' happens all the time
+         * but we don't need to redraw when initializing.
+         */
+
+    }, {
+        key: "frozen",
+        value: function frozen(_frozen) {
+            var __ = this.__;
+
+            if (_frozen === undefined) {
+                return __.frozen;
+            }
+
+            __.frozen = _frozen;
+        }
+
+        // Don't do anything
+
+    }, {
+        key: "actOnDirty",
+        value: function actOnDirty(dirty) {}
+    }]);
+
+    return DefaultBuffer;
+})();
+
+exports.default = DefaultBuffer;
+
+},{"../utils":28}],4:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _default = require("./default");
+
+var _default2 = _interopRequireDefault(_default);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var InstantBuffer = (function (_DefaultBuffer) {
+    _inherits(InstantBuffer, _DefaultBuffer);
+
+    function InstantBuffer(chart) {
+        _classCallCheck(this, InstantBuffer);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(InstantBuffer).call(this, chart));
+    }
+
+    _createClass(InstantBuffer, [{
+        key: "actOnDirty",
+        value: function actOnDirty(dirty) {
+            var __ = this.__;
+
+            if (dirty) {
+                this.sendRedraw();
+            }
+        }
+    }]);
+
+    return InstantBuffer;
+})(_default2.default);
+
+exports.default = InstantBuffer;
+
+},{"./default":3}],5:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _utils = require("./utils");
+
+var _column = require("./dataHandlers/column");
+
+var _column2 = _interopRequireDefault(_column);
+
+var _line = require("./dataHandlers/line");
+
+var _line2 = _interopRequireDefault(_line);
+
+var _area = require("./dataHandlers/area");
+
+var _area2 = _interopRequireDefault(_area);
+
+var _pie = require("./dataHandlers/pie");
+
+var _pie2 = _interopRequireDefault(_pie);
+
+var _default = require("./buffers/default");
+
+var _default2 = _interopRequireDefault(_default);
+
+var _instant = require("./buffers/instant");
+
+var _instant2 = _interopRequireDefault(_instant);
+
+var _index = require("./renderers/svg/index");
+
+var _index2 = _interopRequireDefault(_index);
+
+var _optionObject = require("./optionObject/optionObject");
+
+var _optionObject2 = _interopRequireDefault(_optionObject);
+
+var _dataObject = require("./dataObject/dataObject");
+
+var _dataObject2 = _interopRequireDefault(_dataObject);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Chart = (function () {
+    function Chart(dataObject, optionObject, buffer) {
+        _classCallCheck(this, Chart);
+
+        this.setBuffer(buffer);
+
+        this.initDataObject(dataObject);
+        this.initOptionObject(optionObject);
+
+        this.setHandler(this.option.handler);
+        this.setRenderer(this.option.renderer);
+
+        this.endInit();
+    }
+
+    _createClass(Chart, [{
+        key: "redraw",
+        value: function redraw() {
+            var renderObject = this.handler.computeRenderObject(this.data, this.option);
+            this.renderer.redraw(renderObject);
+        }
+    }, {
+        key: "initDataObject",
+        value: function initDataObject(dataObject) {
+            this.data = (0, _utils.option)(dataObject, new _dataObject2.default({}, this.buffer));
+        }
+    }, {
+        key: "initOptionObject",
+        value: function initOptionObject(optionObject) {
+            this.option = (0, _utils.option)(optionObject, new _optionObject2.default({}, this.buffer));
+        }
+    }, {
+        key: "setHandler",
+        value: function setHandler(handler) {
+            handler = (0, _utils.option)(handler, "line");
+
+            if (typeof handler === "function") {
+                this.handler = new handler(this);
+            } else if ((typeof handler === "undefined" ? "undefined" : _typeof(handler)) === "object") {
+                this.handler = handler;
+            } else {
+                this.setHandlerByName(handler);
+            }
+
+            if (this.renderer) {
+                this.redraw();
+            }
+        }
+    }, {
+        key: "setHandlerByName",
+        value: function setHandlerByName(handler) {
+            if (handler === "column") {
+                this.handler = new _column2.default(this);
+            } else if (handler === "line") {
+                this.handler = new _line2.default(this);
+            } else if (handler === "area") {
+                this.handler = new _area2.default(this);
+            } else if (handler === "pie") {
+                this.handler = new _pie2.default(this);
+            } else {
+                throw new Error("Uknown type of handler: " + hanlder);
+            }
+        }
+    }, {
+        key: "setRenderer",
+        value: function setRenderer(renderer) {
+            renderer = (0, _utils.option)(renderer, "default");
+
+            if (typeof renderer === "function") {
+                this.renderer = new renderer(this);
+            } else if ((typeof renderer === "undefined" ? "undefined" : _typeof(renderer)) === "object") {
+                this.renderer = renderer;
+            } else {
+                this.setRendererByName(renderer);
+            }
+        }
+    }, {
+        key: "setRendererByName",
+        value: function setRendererByName(renderer) {
+            if (renderer === "default") {
+                this.renderer = new _index2.default(this);
+            } else {
+                throw new Error("Uknown type of renderer: " + renderer);
+            }
+        }
+    }, {
+        key: "setBuffer",
+        value: function setBuffer(buffer) {
+
+            if ((0, _utils.isDefined)(this.buffer)) {
+                this.buffer.unregisterChart(this);
+            }
+
+            buffer = (0, _utils.option)(buffer, "default");
+
+            if (typeof buffer === "function") {
+                this.buffer = new buffer(this);
+            } else if ((typeof buffer === "undefined" ? "undefined" : _typeof(buffer)) === "object") {
+                this.buffer = buffer;
+            } else {
+                this.setBufferByName(buffer);
+            }
+
+            this.buffer.registerChart(this);
+            this.buffer.frozen(true);
+        }
+    }, {
+        key: "setBufferByName",
+        value: function setBufferByName(buffer) {
+            if (buffer === "default") {
+                this.buffer = new _default2.default(this);
+            } else if (buffer === "instant") {
+                this.buffer = new _instant2.default(this);
+            } else {
+                throw new Error("Uknown type of buffer: " + buffer);
+            }
+        }
+    }, {
+        key: "endInit",
+        value: function endInit() {
+
+            this.buffer.frozen(false);
+            this.buffer.dirty(true);
+        }
+    }]);
+
+    return Chart;
+})();
+
+exports.default = Chart;
+
+},{"./buffers/default":3,"./buffers/instant":4,"./dataHandlers/area":6,"./dataHandlers/column":9,"./dataHandlers/line":10,"./dataHandlers/pie":11,"./dataObject/dataObject":13,"./optionObject/optionObject":19,"./renderers/svg/index":26,"./utils":28}],6:[function(require,module,exports){
+"use strict";
+
+var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _utils = require("../utils");
+
+var _rectangular = require("./rectangular");
+
+var _rectangular2 = _interopRequireDefault(_rectangular);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var AreaHandler = (function (_RectangularHandler) {
+    _inherits(AreaHandler, _RectangularHandler);
+
+    function AreaHandler() {
+        _classCallCheck(this, AreaHandler);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(AreaHandler).apply(this, arguments));
+    }
+
+    _createClass(AreaHandler, [{
+        key: "init",
+        value: function init() {
+            var d = this.d();
+        }
+    }, {
+        key: "computeRenderObject",
+        value: function computeRenderObject(data, option) {
+            var d = this.d();
+
+            _get(Object.getPrototypeOf(AreaHandler.prototype), "computeRenderObject", this).call(this, data, option);
+
+            d.clearRectangularData({
+                areas: false
+            });
+
+            d.data.rectangular.areas = this.processAreas(data.columns());
+
+            if (option.mode() === "stacked") {
+                d.data.rectangular.areas = this.stack(d.data.rectangular.areas);
+            } else if (option.mode() === "normalized") {
+                d.data.rectangular.areas = this.normalize(d.data.rectangular.areas);
+            }
+
+            d.data.ranges = this.computeRanges(d.data.rectangular.areas);
+
+            d.data.rectangular.areas = this.setY0(d.data.rectangular.areas, d.data.ranges.yMin);
+
+            d.option.area = option.area.options();
+
+            return d;
+        }
+    }, {
+        key: "processAreas",
+        value: function processAreas(areas) {
+            var ret = {
+                dirty: true,
+                values: []
+            };
+
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = areas[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var _step$value = _slicedToArray(_step.value, 2);
+
+                    var id = _step$value[0];
+                    var area = _step$value[1];
+
+                    ret.values.push(this.processArea(area, id));
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            return ret;
+        }
+    }, {
+        key: "processArea",
+        value: function processArea(area, id) {
+            var ret = {
+                dirty: true,
+                values: [],
+                id: id
+            };
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = area[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var _step2$value = _slicedToArray(_step2.value, 2);
+
+                    var x = _step2$value[0];
+                    var value = _step2$value[1];
+
+                    ret.values.push(this.processValue(value, x));
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+
+            return ret;
+        }
+    }, {
+        key: "processValue",
+        value: function processValue(value, x) {
+            var v = _get(Object.getPrototypeOf(AreaHandler.prototype), "processValue", this).call(this, value, x);
+
+            if ((0, _utils.isDefined)(value.y0)) {
+                v.y0 = value.y0;
+            }
+
+            return v;
+        }
+    }, {
+        key: "setY0",
+        value: function setY0(areas, yMin) {
+            var _iteratorNormalCompletion3 = true;
+            var _didIteratorError3 = false;
+            var _iteratorError3 = undefined;
+
+            try {
+                for (var _iterator3 = areas.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                    var area = _step3.value;
+                    var _iteratorNormalCompletion4 = true;
+                    var _didIteratorError4 = false;
+                    var _iteratorError4 = undefined;
+
+                    try {
+                        for (var _iterator4 = area.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                            var value = _step4.value;
+
+                            if ((0, _utils.isUndefined)(value.y0)) {
+                                value.y0 = yMin;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError4 = true;
+                        _iteratorError4 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                                _iterator4.return();
+                            }
+                        } finally {
+                            if (_didIteratorError4) {
+                                throw _iteratorError4;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError3 = true;
+                _iteratorError3 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                        _iterator3.return();
+                    }
+                } finally {
+                    if (_didIteratorError3) {
+                        throw _iteratorError3;
+                    }
+                }
+            }
+
+            return areas;
+        }
+    }]);
+
+    return AreaHandler;
+})(_rectangular2.default);
+
+exports.default = AreaHandler;
+
+},{"../utils":28,"./rectangular":12}],7:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _renderObject = require("../renderObject/renderObject");
+
+var _renderObject2 = _interopRequireDefault(_renderObject);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Handler = (function () {
+    function Handler() {
+        _classCallCheck(this, Handler);
+
+        this.__ = {
+            d: new _renderObject2.default()
+        };
+
+        this.init();
+    }
+
+    _createClass(Handler, [{
+        key: "init",
+        value: function init() {}
+    }, {
+        key: "d",
+        value: function d() {
+            return this.__.d;
+        }
+    }, {
+        key: "computeRenderObject",
+        value: function computeRenderObject(data, option) {
+            var d = this.d();
+
+            d.option.size = this.processSize(option.size);
+        }
+    }, {
+        key: "processSize",
+        value: function processSize(size) {
+
+            return {
+                dirty: true,
+                width: size.width(),
+                height: size.height()
+            };
+        }
+    }, {
+        key: "computeRanges",
+        value: function computeRanges(table) {
+            var xMin = undefined,
+                xMax = undefined,
+                yMin = undefined,
+                yMax = undefined;
+            var xStrings = [];
+
+            table.values.forEach(function (column) {
+                column.values.forEach(function (value) {
+                    if ((0, _utils.isUndefined)(xMin) || value.x < xMin) {
+                        xMin = value.x;
+                    }
+                    if ((0, _utils.isUndefined)(xMax) || value.x > xMax) {
+                        xMax = value.x;
+                    }
+                    if ((0, _utils.isUndefined)(yMin) || value.y < yMin) {
+                        yMin = value.y;
+                    }
+                    if ((0, _utils.isUndefined)(yMax) || value.y > yMax) {
+                        yMax = value.y;
+                    }
+                });
+            });
+
+            if (this.hasStringXIn(table)) {
+                var _iteratorNormalCompletion = true;
+                var _didIteratorError = false;
+                var _iteratorError = undefined;
+
+                try {
+                    for (var _iterator = table.values[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                        var column = _step.value;
+                        var _iteratorNormalCompletion2 = true;
+                        var _didIteratorError2 = false;
+                        var _iteratorError2 = undefined;
+
+                        try {
+                            for (var _iterator2 = column.values[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                                var value = _step2.value;
+
+                                // Convert all x to strings
+                                xStrings.push("" + value.x);
+                            }
+                        } catch (err) {
+                            _didIteratorError2 = true;
+                            _iteratorError2 = err;
+                        } finally {
+                            try {
+                                if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                    _iterator2.return();
+                                }
+                            } finally {
+                                if (_didIteratorError2) {
+                                    throw _iteratorError2;
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    _didIteratorError = true;
+                    _iteratorError = err;
+                } finally {
+                    try {
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+                    } finally {
+                        if (_didIteratorError) {
+                            throw _iteratorError;
+                        }
+                    }
+                }
+            }
+
+            return {
+                xMin: xMin,
+                xMax: xMax,
+                yMin: yMin,
+                yMax: yMax,
+                xStrings: xStrings
+            };
+        }
+
+        /*
+         * Stacks all data, so every sequence is stacked above the previous one.
+         * Changes input instead of copying for time saving.
+         */
+
+    }, {
+        key: "stack",
+        value: function stack(data) {
+
+            var stacked = new Map();
+
+            for (var i = 0; i < data.values.length; i++) {
+                for (var j = 0; j < data.values[i].values.length; j++) {
+                    var value = data.values[i].values[j];
+
+                    if (!stacked.has(value.x)) {
+                        stacked.set(value.x, 0);
+                    }
+
+                    var padding = stacked.get(value.x);
+
+                    value.y0 = padding;
+                    value.y += padding;
+
+                    stacked.set(value.x, value.y);
+                }
+            }
+
+            return data;
+        }
+
+        /*
+         * Normalizes all data, so every row sums up to 1.
+         * Handles all zeros in one row by equally splitting row between all sequences.
+         * Changes input instead of copying for time saving.
+         */
+
+    }, {
+        key: "normalize",
+        value: function normalize(data) {
+            var sums = new Map();
+            var numberOf = new Map();
+
+            var _iteratorNormalCompletion3 = true;
+            var _didIteratorError3 = false;
+            var _iteratorError3 = undefined;
+
+            try {
+                for (var _iterator3 = data.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                    var column = _step3.value;
+                    var _iteratorNormalCompletion5 = true;
+                    var _didIteratorError5 = false;
+                    var _iteratorError5 = undefined;
+
+                    try {
+                        for (var _iterator5 = column.values[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                            var value = _step5.value;
+
+                            if (value.y < 0) {
+                                throw new Error("Y can't be below zero in the normalized chart");
+                            }
+
+                            if (sums.has(value.x)) {
+                                sums.set(value.x, sums.get(value.x) + value.y);
+                                numberOf.set(value.x, numberOf.get(value.x) + 1);
+                            } else {
+                                sums.set(value.x, value.y);
+                                numberOf.set(value.x, 1);
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError5 = true;
+                        _iteratorError5 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                                _iterator5.return();
+                            }
+                        } finally {
+                            if (_didIteratorError5) {
+                                throw _iteratorError5;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError3 = true;
+                _iteratorError3 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                        _iterator3.return();
+                    }
+                } finally {
+                    if (_didIteratorError3) {
+                        throw _iteratorError3;
+                    }
+                }
+            }
+
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
+
+            try {
+                for (var _iterator4 = data.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var column = _step4.value;
+                    var _iteratorNormalCompletion6 = true;
+                    var _didIteratorError6 = false;
+                    var _iteratorError6 = undefined;
+
+                    try {
+                        for (var _iterator6 = column.values[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                            var value = _step6.value;
+
+                            var sum = sums.get(value.x);
+                            if (sum === 0) {
+                                value.y = 1 / numberOf.get(value.x);
+                            } else {
+                                value.y /= sums.get(value.x);
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError6 = true;
+                        _iteratorError6 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                                _iterator6.return();
+                            }
+                        } finally {
+                            if (_didIteratorError6) {
+                                throw _iteratorError6;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
+                    }
+                } finally {
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
+                    }
+                }
+            }
+
+            return this.stack(data);
+        }
+    }, {
+        key: "hasStringXIn",
+        value: function hasStringXIn(table) {
+            var _iteratorNormalCompletion7 = true;
+            var _didIteratorError7 = false;
+            var _iteratorError7 = undefined;
+
+            try {
+                for (var _iterator7 = table.values[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                    var column = _step7.value;
+                    var _iteratorNormalCompletion8 = true;
+                    var _didIteratorError8 = false;
+                    var _iteratorError8 = undefined;
+
+                    try {
+                        for (var _iterator8 = column.values[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                            var value = _step8.value;
+
+                            if ((0, _utils.isString)(value.x)) {
+                                return true;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError8 = true;
+                        _iteratorError8 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion8 && _iterator8.return) {
+                                _iterator8.return();
+                            }
+                        } finally {
+                            if (_didIteratorError8) {
+                                throw _iteratorError8;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError7 = true;
+                _iteratorError7 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                        _iterator7.return();
+                    }
+                } finally {
+                    if (_didIteratorError7) {
+                        throw _iteratorError7;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }]);
+
+    return Handler;
+})();
+
+exports.default = Handler;
+
+},{"../renderObject/renderObject":23,"../utils":28}],8:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _basic = require("./basic");
+
+var _basic2 = _interopRequireDefault(_basic);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var CircularHandler = (function (_Handler) {
+    _inherits(CircularHandler, _Handler);
+
+    function CircularHandler() {
+        _classCallCheck(this, CircularHandler);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(CircularHandler).apply(this, arguments));
+    }
+
+    _createClass(CircularHandler, [{
+        key: "init",
+        value: function init() {}
+    }]);
+
+    return CircularHandler;
+})(_basic2.default);
+
+exports.default = CircularHandler;
+
+},{"./basic":7}],9:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _rectangular = require("./rectangular");
+
+var _rectangular2 = _interopRequireDefault(_rectangular);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var ColumnHandler = (function (_RectangularHandler) {
+    _inherits(ColumnHandler, _RectangularHandler);
+
+    function ColumnHandler() {
+        _classCallCheck(this, ColumnHandler);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(ColumnHandler).call(this));
+    }
+
+    _createClass(ColumnHandler, [{
+        key: "computeRenderObject",
+        value: function computeRenderObject(data, option) {
+            var d = this.d();
+
+            this.processColumns(data.columns);
+
+            return d;
+        }
+    }, {
+        key: "init",
+        value: function init() {
+            var d = this.d();
+            d.data.columns = {
+                dirty: true,
+                values: []
+            };
+        }
+    }, {
+        key: "processColumns",
+        value: function processColumns(columns) {
+            var _this2 = this;
+
+            var d = this.d();
+
+            if (!columns.dirty) {
+                return;
+            }
+
+            d.data.columns.values = [];
+
+            var cols = columns.values();
+
+            cols.forEach(function (column) {
+                d.data.columns.values.push(_this2.processColumn(column));
+            });
+
+            d.data.columns.dirty = true;
+
+            this.columnsToRows(columns);
+        }
+    }, {
+        key: "processColumn",
+        value: function processColumn(column) {
+            var processed = {
+                id: column.id(),
+                values: []
+            };
+
+            var i = undefined;
+            var values = column.values();
+            for (i = 0; i < values.length; i++) {
+                var value = values[i];
+                processed.values.push(this.processValue(value, { x: i }));
+            }
+
+            return processed;
+        }
+    }, {
+        key: "processValue",
+        value: function processValue(v, d) {
+            d = (0, _utils.option)(d, {});
+
+            return {
+                x: (0, _utils.option)(v.x, d.x),
+                y: v.y,
+                dirty: v.dirty,
+                label: v.label
+            };
+        }
+    }]);
+
+    return ColumnHandler;
+})(_rectangular2.default);
+
+exports.default = ColumnHandler;
+
+},{"../utils":28,"./rectangular":12}],10:[function(require,module,exports){
+"use strict";
+
+var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _rectangular = require("./rectangular");
+
+var _rectangular2 = _interopRequireDefault(_rectangular);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var LineHandler = (function (_RectangularHandler) {
+    _inherits(LineHandler, _RectangularHandler);
+
+    function LineHandler() {
+        _classCallCheck(this, LineHandler);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(LineHandler).call(this));
+    }
+
+    _createClass(LineHandler, [{
+        key: "init",
+        value: function init() {
+            var d = this.d();
+        }
+    }, {
+        key: "computeRenderObject",
+        value: function computeRenderObject(data, option) {
+            var d = this.d();
+
+            _get(Object.getPrototypeOf(LineHandler.prototype), "computeRenderObject", this).call(this, data, option);
+
+            d.clearRectangularData({
+                lines: false
+            });
+
+            d.data.rectangular.lines = this.processLines(data.columns());
+
+            if (option.mode() === "stacked") {
+                d.data.rectangular.lines = this.stack(d.data.rectangular.lines);
+            } else if (option.mode() === "normalized") {
+                d.data.rectangular.lines = this.normalize(d.data.rectangular.lines);
+            }
+
+            d.data.ranges = this.computeRanges(d.data.rectangular.lines);
+
+            d.option.line = option.line.options();
+
+            return d;
+        }
+    }, {
+        key: "processLines",
+        value: function processLines(lines) {
+            var ret = {
+                dirty: true,
+                values: []
+            };
+
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = lines[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var _step$value = _slicedToArray(_step.value, 2);
+
+                    var id = _step$value[0];
+                    var line = _step$value[1];
+
+                    ret.values.push(this.processLine(line, id));
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            return ret;
+        }
+    }, {
+        key: "processLine",
+        value: function processLine(line, id) {
+            var ret = {
+                dirty: true,
+                values: [],
+                id: id
+            };
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = line[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var _step2$value = _slicedToArray(_step2.value, 2);
+
+                    var x = _step2$value[0];
+                    var value = _step2$value[1];
+
+                    ret.values.push(this.processValue(value, x));
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+
+            return ret;
+        }
+    }]);
+
+    return LineHandler;
+})(_rectangular2.default);
+
+exports.default = LineHandler;
+
+},{"../utils":28,"./rectangular":12}],11:[function(require,module,exports){
+"use strict";
+
+var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _circular = require("./circular");
+
+var _circular2 = _interopRequireDefault(_circular);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var PieHandler = (function (_CircularHandler) {
+    _inherits(PieHandler, _CircularHandler);
+
+    function PieHandler() {
+        _classCallCheck(this, PieHandler);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(PieHandler).apply(this, arguments));
+    }
+
+    _createClass(PieHandler, [{
+        key: "computeRenderObject",
+        value: function computeRenderObject(data, option) {
+            var d = this.d();
+
+            _get(Object.getPrototypeOf(PieHandler.prototype), "computeRenderObject", this).call(this, data, option);
+
+            d.data.circular.pies = this.processPies(data.columns());
+
+            d.option.pie = option.pie.options();
+
+            return d;
+        }
+    }, {
+        key: "processPies",
+        value: function processPies(pies) {
+            var ret = {
+                dirty: true,
+                values: []
+            };
+
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = pies[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var _step$value = _slicedToArray(_step.value, 2);
+
+                    var name = _step$value[0];
+                    var pie = _step$value[1];
+
+                    ret.values.push(this.processPie(pie, name));
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            return ret;
+        }
+    }, {
+        key: "processPie",
+        value: function processPie(pie, name) {
+            var ret = {
+                dirty: true,
+                values: [],
+                name: name
+            };
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = pie[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var _step2$value = _slicedToArray(_step2.value, 2);
+
+                    var id = _step2$value[0];
+                    var value = _step2$value[1];
+
+                    ret.values.push(this.processValue(value, id));
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+
+            return ret;
+        }
+    }, {
+        key: "processValue",
+        value: function processValue(value, id) {
+            var v = {};
+
+            if ((0, _utils.isDefined)(id)) {
+                v.id = id;
+            }
+            if ((0, _utils.isDefined)(value.y)) {
+                v.y = value.y;
+            }
+
+            return v;
+        }
+    }]);
+
+    return PieHandler;
+})(_circular2.default);
+
+exports.default = PieHandler;
+
+},{"../utils":28,"./circular":8}],12:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _basic = require("./basic");
+
+var _basic2 = _interopRequireDefault(_basic);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/*
+ * Rectangular chart is the father of column, line, area and other charts, that are painted on rectangular canvas.
+ * It has right-angled axes and grids.
+ */
+
+var RectangularHandler = (function (_Handler) {
+    _inherits(RectangularHandler, _Handler);
+
+    function RectangularHandler() {
+        _classCallCheck(this, RectangularHandler);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(RectangularHandler).apply(this, arguments));
+    }
+
+    _createClass(RectangularHandler, [{
+        key: "computeRenderObject",
+        value: function computeRenderObject(data, option) {
+            _get(Object.getPrototypeOf(RectangularHandler.prototype), "computeRenderObject", this).call(this, data, option);
+
+            var d = this.d();
+
+            d.option.axes = this.processAxis(option.axes);
+        }
+    }, {
+        key: "processAxis",
+        value: function processAxis(axes) {
+            var d = {
+                x: {
+                    dirty: true
+                },
+                y: {
+                    dirty: true
+                },
+                dirty: true
+            };
+
+            d.x.visible = axes.x.visible();
+            d.y.visible = axes.y.visible();
+
+            return d;
+        }
+    }, {
+        key: "processValue",
+        value: function processValue(value, x) {
+            var v = {};
+
+            if ((0, _utils.isDefined)(x)) {
+                v.x = x;
+            }
+            if ((0, _utils.isDefined)(value.y)) {
+                v.y = value.y;
+            }
+            if ((0, _utils.isDefined)(value.color)) {
+                v.color = value.color;
+            }
+            if ((0, _utils.isDefined)(value.label)) {
+                v.label = value.label;
+            }
+
+            return v;
+        }
+    }]);
+
+    return RectangularHandler;
+})(_basic2.default);
+
+exports.default = RectangularHandler;
+
+},{"../utils":28,"./basic":7}],13:[function(require,module,exports){
+"use strict";
+
+var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+/**
+ * DataObject is basicly a table where columns are sequences and rows are xs.
+ * Columns are determined by their ids that must be strings.
+ * Rows are determined by the value of their xs. X can either be number or string.
+ * Columns and rows are not sorted in any way and stored in the order they were added.
+ *
+ * Note that not every set method calls dirty(true) itself but rather calls other methods that will.
+ * This is done for not calling dirty(true) extra times. E.g. calling addColumn([...]) will always call setValuesToColumn([...]),
+ * and then it will call dirty(true).
+ */
+
+var DataObject = (function (_Obj) {
+    _inherits(DataObject, _Obj);
+
+    function DataObject(d, parent) {
+        _classCallCheck(this, DataObject);
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(DataObject).call(this, d, parent));
+
+        var __ = _this.__;
+
+        var table = __.table = new Map();
+
+        d = (0, _utils.option)(d, {});
+
+        d.columns = (0, _utils.option)(d.columns, []);
+        d.rows = (0, _utils.option)(d.rows, []);
+
+        _this.columns(d.columns);
+        _this.addRows(d.rows);
+
+        return _this;
+    }
+
+    _createClass(DataObject, [{
+        key: "clear",
+        value: function clear() {
+            this.__.table.clear();
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "columns",
+        value: function columns(_columns) {
+            var __ = this.__;
+
+            if (_columns === undefined) {
+                return __.table;
+            }
+
+            this.clear();
+            this.addColumns(_columns);
+
+            return this;
+        }
+    }, {
+        key: "column",
+        value: function column(id, values) {
+            var __ = this.__;
+
+            if (values === undefined) {
+                return __.table.get(id);
+            } else {
+                this.emptyColumn(id);
+                this.setValuesToColumn(id, values);
+                return this;
+            }
+        }
+    }, {
+        key: "addColumns",
+        value: function addColumns(columns) {
+            var _this2 = this;
+
+            var __ = this.__;
+
+            if (!Array.isArray(columns)) {
+                throw new TypeError("Columns should be array and not " + (typeof columns === "undefined" ? "undefined" : _typeof(columns)));
+            }
+
+            columns.forEach(function (column) {
+                _this2.addColumn(column.id, column.values);
+            });
+
+            return this;
+        }
+    }, {
+        key: "addColumn",
+        value: function addColumn(id, values) {
+            var table = this.__.table;
+
+            (0, _utils.throwIfNotString)(id, "Column id");
+
+            (0, _utils.throwIfNotArray)(values, "Column values");
+
+            if (this.column(id) !== undefined) {
+                throw new Error("Columns can't have equals ids but " + id + " is presented twice");
+            }
+
+            var newColumn = new Map();
+
+            table.set(id, newColumn);
+
+            this.setValuesToColumn(id, values);
+
+            return this.column(id);
+        }
+    }, {
+        key: "columnValue",
+        value: function columnValue(id, x, value) {
+            if (value === undefined) {
+                return this.column(id).get(x);
+            } else {
+                var column = this.column(id);
+
+                if (column === undefined) {
+                    column = this.addEmptyColumn(id);
+                }
+
+                column.set(x, this.__value(value));
+            }
+
+            this.dirty(true);
+
+            return this;
+        }
+    }, {
+        key: "setValuesToColumn",
+        value: function setValuesToColumn(id, values) {
+            (0, _utils.throwIfNotString)(id, "Column id");
+
+            (0, _utils.throwIfNotArray)(values, "Column values");
+
+            var column = this.column(id);
+
+            (0, _utils.throwIfUndefined)(column, "Can't set values to undefined column");
+
+            for (var i = 0; i < values.length; i++) {
+                var value = values[i];
+                if ((0, _utils.isUndefined)(value.x)) {
+                    column.set(i, this.__value(value));
+                } else {
+                    column.set(value.x, this.__value(value));
+                }
+            }
+
+            this.dirty(true);
+
+            return this;
+        }
+    }, {
+        key: "addEmptyColumn",
+        value: function addEmptyColumn(id) {
+            return this.addColumn(id, []);
+        }
+    }, {
+        key: "emptyColumn",
+        value: function emptyColumn(id) {
+            (0, _utils.throwIfNotString)(id, "Column id");
+
+            var column = this.column(id);
+
+            if (column) {
+                column.clear();
+            } else {
+                this.addEmptyColumn(id);
+            }
+
+            this.dirty();
+
+            return this;
+        }
+    }, {
+        key: "removeColumn",
+        value: function removeColumn(id) {
+            this.__.table.delete(id);
+
+            this.dirty(true);
+
+            return this;
+        }
+    }, {
+        key: "rows",
+        value: function rows(_rows) {
+            if (_rows === undefined) {
+                return this.toRows();
+            }
+
+            (0, _utils.throwIfNotArray)(_rows, "Rows");
+
+            this.clear();
+            this.addRows(_rows);
+
+            return this;
+        }
+    }, {
+        key: "addRows",
+        value: function addRows(rows) {
+            var _this3 = this;
+
+            (0, _utils.throwIfNotArray)(rows, "Rows");
+            rows.forEach(function (row) {
+                _this3.row(row.x, row.values);
+            });
+
+            return this;
+        }
+    }, {
+        key: "row",
+        value: function row(x, values) {
+            (0, _utils.throwIfUndefined)(x, "Row x");
+
+            this.emptyRow(x);
+
+            this.addValuesToRow(x, values);
+
+            return this;
+        }
+    }, {
+        key: "addValuesToRow",
+        value: function addValuesToRow(x, values) {
+            var _this4 = this;
+
+            (0, _utils.throwIfUndefined)(x, "Row x");
+            (0, _utils.throwIfNotArray)(values, "Row values");
+
+            values.forEach(function (value) {
+                _this4.columnValue(value.id, x, value);
+            });
+
+            return this;
+        }
+    }, {
+        key: "emptyRow",
+        value: function emptyRow(x) {
+            var table = this.__.table;
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = table[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var _step$value = _slicedToArray(_step.value, 2);
+
+                    var i = _step$value[0];
+                    var column = _step$value[1];
+
+                    if (column.has(x)) {
+                        column.delete(x);
+                    }
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator.return) {
+                        _iterator.return();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            this.dirty(true);
+
+            return this;
+        }
+    }, {
+        key: "toRows",
+        value: function toRows() {
+            var table = this.__.table;
+
+            var rows = new Map();
+
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+                for (var _iterator2 = table[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                    var _step2$value = _slicedToArray(_step2.value, 2);
+
+                    var i = _step2$value[0];
+                    var column = _step2$value[1];
+                    var _iteratorNormalCompletion3 = true;
+                    var _didIteratorError3 = false;
+                    var _iteratorError3 = undefined;
+
+                    try {
+                        for (var _iterator3 = column[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                            var _step3$value = _slicedToArray(_step3.value, 2);
+
+                            var x = _step3$value[0];
+                            var value = _step3$value[1];
+
+                            if (rows.has(x)) {
+                                rows.get(x).set(i, value);
+                            } else {
+                                rows.set(x, new Map([[i, value]]));
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError3 = true;
+                        _iteratorError3 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                _iterator3.return();
+                            }
+                        } finally {
+                            if (_didIteratorError3) {
+                                throw _iteratorError3;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                _didIteratorError2 = true;
+                _iteratorError2 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                        _iterator2.return();
+                    }
+                } finally {
+                    if (_didIteratorError2) {
+                        throw _iteratorError2;
+                    }
+                }
+            }
+
+            return rows;
+        }
+    }, {
+        key: "copy",
+        value: function copy() {}
+
+        /*
+         * Gets next available x in column with given id.
+         * Say column is [{ x: 10 }, { x: 11 }, { x: 22 }].
+         * The result will be 23 as it is the next x in this column.
+         */
+
+    }, {
+        key: "__getNextX",
+        value: function __getNextX(id) {
+            var column = this.column(id);
+            var m = -1;
+
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
+
+            try {
+                for (var _iterator4 = column[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var _step4$value = _slicedToArray(_step4.value, 2);
+
+                    var i = _step4$value[0];
+                    var value = _step4$value[1];
+
+                    var x = (0, _utils.isUndefined)(column.x) ? i : column.x;
+                    if (x > m) {
+                        m = x;
+                    }
+                }
+            } catch (err) {
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
+                    }
+                } finally {
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
+                    }
+                }
+            }
+
+            return (0, _utils.toInt)(m) + 1;
+        }
+    }, {
+        key: "__value",
+        value: function __value(v) {
+            if ((0, _utils.isObject)(v)) {
+                var obj = {};
+
+                // This is done for memory efficiency so we don't have smth like
+                // {
+                //     y: 10,
+                //     x: undefined,
+                //     label: undefined,
+                //     color: undefined
+                // }
+
+                if (!(0, _utils.isUndefined)(v.y)) {
+                    obj.y = v.y;
+                }
+                if (!(0, _utils.isUndefined)(v.x)) {
+                    obj.x = v.x;
+                }
+                if (!(0, _utils.isUndefined)(v.label)) {
+                    obj.label = v.label;
+                }
+                if (!(0, _utils.isUndefined)(v.color)) {
+                    obj.color = v.color;
+                }
+                return obj;
+            }
+
+            if ((0, _utils.isNumeric)(v)) {
+                return {
+                    y: v
+                };
+            }
+        }
+    }]);
+
+    return DataObject;
+})(_object2.default);
+
+exports.default = DataObject;
+
+},{"../object":15,"../utils":28}],14:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.Buffer = exports.Chart = exports.OptionObject = exports.DataObject = undefined;
+exports.generateBasicChart = generateBasicChart;
+exports.generateInstantChart = generateInstantChart;
+
+var _dataObject = require("./dataObject/dataObject");
+
+var _dataObject2 = _interopRequireDefault(_dataObject);
+
+var _optionObject = require("./optionObject/optionObject");
+
+var _optionObject2 = _interopRequireDefault(_optionObject);
+
+var _chart = require("./chart");
+
+var _chart2 = _interopRequireDefault(_chart);
+
+var _default = require("./buffers/default");
+
+var _default2 = _interopRequireDefault(_default);
+
+var _instant = require("./buffers/instant");
+
+var _instant2 = _interopRequireDefault(_instant);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//import "babel-polyfill";
+
+var Buffer = {
+    Default: _default2.default,
+    Instant: _instant2.default
+};
+
+function generateBasicChart() {
+    var buffer = new Buffer.Default();
+    var data = new _dataObject2.default({}, buffer);
+    var option = new _optionObject2.default({}, buffer);
+    var chart = new _chart2.default(data, option, buffer);
+
+    return chart;
+}
+
+function generateInstantChart() {
+    var buffer = new Buffer.Instant();
+    var data = new _dataObject2.default({}, buffer);
+    var option = new _optionObject2.default({}, buffer);
+    var chart = new _chart2.default(data, option, buffer);
+
+    return chart;
+}
+
+exports.DataObject = _dataObject2.default;
+exports.OptionObject = _optionObject2.default;
+exports.Chart = _chart2.default;
+exports.Buffer = Buffer;
+
+},{"./buffers/default":3,"./buffers/instant":4,"./chart":5,"./dataObject/dataObject":13,"./optionObject/optionObject":19}],15:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _utils = require("./utils");
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Obj = (function () {
+    function Obj(d, parent) {
+        _classCallCheck(this, Obj);
+
+        if (parent === undefined) {
+            throw new Error("Where are your parents " + (0, _utils.toString)(d) + "?!");
+        }
+
+        this.__init(d, parent);
+    }
+
+    _createClass(Obj, [{
+        key: "__init",
+        value: function __init(d, parent) {
+            var _this = this;
+
+            var __ = this.__ = {
+                dirty: true,
+                parent: parent
+            };
+
+            d = (0, _utils.option)(d, {});
+
+            if (d.fields) {
+                d.fields.forEach(function (field) {
+                    _this.setField(field.query, field.value);
+                });
+            }
+        }
+    }, {
+        key: "dirty",
+        value: function dirty(d) {
+            var __ = this.__;
+            if (d === undefined) {
+                return __.dirty;
+            }
+            __.dirty = d;
+            if (d === true) {
+                __.parent.dirty(true);
+            }
+        }
+
+        /**
+         * Fields are used for storing additional data that can be used by custom data handlers.
+         * Query is string in formart "a.b.c".
+         */
+
+    }, {
+        key: "field",
+        value: function field(query, value) {
+            if (value === undefined) {
+                return this.getField(query);
+            } else {
+                return this.setField(query, value);
+            }
+        }
+    }, {
+        key: "getField",
+        value: function getField(query, obj) {
+            var __ = this.__;
+
+            if (typeof query !== "string") {
+                throw new TypeError("Query should be string and not " + (typeof query === "undefined" ? "undefined" : _typeof(query)));
+            }
+
+            if (__.fields === undefined) {
+                return undefined;
+            }
+
+            if (obj === undefined) {
+                obj = __.fields;
+            }
+
+            var q = query.split(".");
+
+            if (q.length === 1) {
+                return obj[query];
+            }
+
+            return this.getField(q.slice(1).join("."), obj[q[0]]);
+        }
+    }, {
+        key: "setField",
+        value: function setField(query, value, obj) {
+            var __ = this.__;
+
+            if (typeof query !== "string") {
+                throw new TypeError("Query should be string and not " + (typeof query === "undefined" ? "undefined" : _typeof(query)));
+            }
+
+            if (__.fields === undefined) {
+                __.fields = {};
+            }
+
+            if (obj === undefined) {
+                obj = __.fields;
+            }
+
+            if ((typeof obj === "undefined" ? "undefined" : _typeof(obj)) !== "object") {
+                throw new TypeError("Can't set value to non-object field " + obj);
+            }
+
+            var q = query.split(".");
+
+            if (q.length === 1) {
+                return obj[query] = value;
+            }
+
+            if (obj[q[0]] === undefined) {
+                obj[q[0]] = {};
+            }
+
+            this.setField(q.slice(1).join("."), value, obj[q[0]]);
+        }
+
+        /*
+         * Options and getDefault should be implemented in
+         * child classes.
+         */
+
+    }, {
+        key: "setDefault",
+        value: function setDefault() {
+            this.options(this.getDefault());
+        }
+    }]);
+
+    return Obj;
+})();
+
+exports.default = Obj;
+
+},{"./utils":28}],16:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Area = (function (_Obj) {
+    _inherits(Area, _Obj);
+
+    function Area(d, parent) {
+        _classCallCheck(this, Area);
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Area).call(this, d, parent));
+
+        _this.setDefault();
+        _this.options(d);
+        return _this;
+    }
+
+    _createClass(Area, [{
+        key: "options",
+        value: function options(d) {
+            if ((0, _utils.isUndefined)(d)) {
+                return {
+                    points: this.points(),
+                    interpolate: this.interpolate()
+                };
+            }
+
+            this.points(d.points);
+        }
+    }, {
+        key: "points",
+        value: function points(_points) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_points)) {
+                return __.points;
+            }
+
+            __.points = _points;
+
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "interpolate",
+        value: function interpolate(_interpolate) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_interpolate)) {
+                return __.interpolate;
+            }
+
+            __.interpolate = _interpolate;
+
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "getDefault",
+        value: function getDefault() {
+            return {
+                points: false,
+                interpolate: "linear"
+            };
+        }
+    }]);
+
+    return Area;
+})(_object2.default);
+
+exports.default = Area;
+
+},{"../object":15,"../utils":28}],17:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Axes = (function (_Obj) {
+    _inherits(Axes, _Obj);
+
+    function Axes(d, parent) {
+        _classCallCheck(this, Axes);
+
+        d = (0, _utils.option)(d, {});
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Axes).call(this, d, parent));
+
+        var x = (0, _utils.option)(d.x, {});
+        var y = (0, _utils.option)(d.y, {});
+        var both = (0, _utils.option)(d.both, {});
+
+        _this.x = new XAxis((0, _utils.merge)(both, x), _this);
+        _this.y = new YAxis((0, _utils.merge)(both, y), _this);
+        _this.both = new Both(_this);
+        return _this;
+    }
+
+    return Axes;
+})(_object2.default);
+
+exports.default = Axes;
+
+var Axis = (function (_Obj2) {
+    _inherits(Axis, _Obj2);
+
+    function Axis(d, parent) {
+        _classCallCheck(this, Axis);
+
+        d = (0, _utils.option)(d, {});
+
+        var _this2 = _possibleConstructorReturn(this, Object.getPrototypeOf(Axis).call(this, d, parent));
+
+        _this2.setDefault();
+        _this2.options(d);
+        return _this2;
+    }
+
+    _createClass(Axis, [{
+        key: "options",
+        value: function options(d) {
+            this.visible(d.visible);
+        }
+    }, {
+        key: "visible",
+        value: function visible(_visible) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_visible)) {
+                return __.visible;
+            }
+
+            __.visible = _visible;
+            this.dirty(true);
+        }
+    }, {
+        key: "show",
+        value: function show() {
+            this.visible(true);
+        }
+    }, {
+        key: "hide",
+        value: function hide() {
+            this.visible(false);
+        }
+    }, {
+        key: "setDefault",
+        value: function setDefault() {
+            this.options(this.getDefault());
+        }
+    }, {
+        key: "getDefault",
+        value: function getDefault() {
+            return {
+                visible: false
+            };
+        }
+    }]);
+
+    return Axis;
+})(_object2.default);
+
+/*
+ * This is kinda weird object that just calls both X and Y axis APIs (but first checks, if it is possible, so you can't
+ * call both.position("right") and hope it will work, since horizontal axis can't be right or left.
+ */
+
+var Both = (function () {
+    function Both(proxy) {
+        _classCallCheck(this, Both);
+
+        this.__ = {
+            proxy: proxy
+        };
+    }
+
+    _createClass(Both, [{
+        key: "show",
+        value: function show() {
+            var proxy = this.__.proxy;
+            proxy.x.show();
+            proxy.y.show();
+        }
+    }, {
+        key: "hide",
+        value: function hide() {
+            var proxy = this.__.proxy;
+            proxy.x.hide();
+            proxy.y.hide();
+        }
+    }]);
+
+    return Both;
+})();
+
+var XAxis = (function (_Axis) {
+    _inherits(XAxis, _Axis);
+
+    function XAxis() {
+        _classCallCheck(this, XAxis);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(XAxis).apply(this, arguments));
+    }
+
+    return XAxis;
+})(Axis);
+
+var YAxis = (function (_Axis2) {
+    _inherits(YAxis, _Axis2);
+
+    function YAxis() {
+        _classCallCheck(this, YAxis);
+
+        return _possibleConstructorReturn(this, Object.getPrototypeOf(YAxis).apply(this, arguments));
+    }
+
+    return YAxis;
+})(Axis);
+
+},{"../object":15,"../utils":28}],18:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Line = (function (_Obj) {
+    _inherits(Line, _Obj);
+
+    function Line(d, parent) {
+        _classCallCheck(this, Line);
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Line).call(this, d, parent));
+
+        _this.setDefault();
+        _this.options(d);
+        return _this;
+    }
+
+    _createClass(Line, [{
+        key: "options",
+        value: function options(d) {
+            if ((0, _utils.isUndefined)(d)) {
+                return {
+                    points: this.points(),
+                    interpolate: this.interpolate()
+                };
+            }
+
+            this.points(d.points);
+        }
+    }, {
+        key: "points",
+        value: function points(_points) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_points)) {
+                return __.points;
+            }
+
+            __.points = _points;
+
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "interpolate",
+        value: function interpolate(_interpolate) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(_interpolate)) {
+                return __.interpolate;
+            }
+
+            __.interpolate = _interpolate;
+
+            this.dirty(true);
+            return this;
+        }
+    }, {
+        key: "getDefault",
+        value: function getDefault() {
+            return {
+                points: false,
+                interpolate: "linear"
+            };
+        }
+    }]);
+
+    return Line;
+})(_object2.default);
+
+exports.default = Line;
+
+},{"../object":15,"../utils":28}],19:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _size = require("./size");
+
+var _size2 = _interopRequireDefault(_size);
+
+var _axes = require("./axes");
+
+var _axes2 = _interopRequireDefault(_axes);
+
+var _area = require("./area");
+
+var _area2 = _interopRequireDefault(_area);
+
+var _line = require("./line");
+
+var _line2 = _interopRequireDefault(_line);
+
+var _pie = require("./pie");
+
+var _pie2 = _interopRequireDefault(_pie);
+
+var _utils = require("../utils");
+
+var _presets = require("./presets");
+
+var _presets2 = _interopRequireDefault(_presets);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var OptionObject = (function (_Obj) {
+    _inherits(OptionObject, _Obj);
+
+    function OptionObject(d, parent) {
+        _classCallCheck(this, OptionObject);
+
+        d = (0, _utils.option)(d, {});
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(OptionObject).call(this, d, parent));
+
+        _this.size = new _size2.default(d.size, _this);
+
+        _this.handler = d.handler;
+
+        _this.axes = new _axes2.default(d.axes, _this);
+
+        _this.legend = (0, _utils.option)(d.legend, {});
+
+        _this.area = new _area2.default(d.area, _this);
+        _this.line = new _line2.default(d.line, _this);
+        _this.pie = new _pie2.default(d.pie, _this);
+
+        _this.mode(d.mode);
+
+        var presets = (0, _utils.option)(d.presets, []);
+        _this.setPresets(presets);
+        _this.applyPresets();
+        return _this;
+    }
+
+    _createClass(OptionObject, [{
+        key: "__init",
+        value: function __init(d, parent) {
+            this.__ = {
+                parent: parent,
+                dirty: true,
+                mode: "normal"
+            };
+        }
+    }, {
+        key: "mode",
+        value: function mode(_mode) {
+            var __ = this.__;
+            if ((0, _utils.isUndefined)(_mode)) {
+                return __.mode;
+            }
+
+            __.mode = _mode;
+
+            this.dirty(true);
+
+            return this;
+        }
+    }, {
+        key: "copy",
+        value: function copy() {
+            return new OptionObject(this);
+        }
+    }, {
+        key: "setPresets",
+        value: function setPresets(prs) {
+            var _this2 = this;
+
+            (0, _utils.throwIfNotArray)(prs, "Presets");
+
+            this.presets = [];
+
+            prs.forEach(function (preset) {
+                if ((0, _utils.isFunction)(preset)) {
+                    _this2.presets.push(preset);
+                } else {
+                    _this2.presets.push(_presets2.default[preset]);
+                }
+            });
+
+            return this;
+        }
+    }, {
+        key: "applyPresets",
+        value: function applyPresets() {
+            var _this3 = this;
+
+            this.presets.forEach(function (preset) {
+                preset(_this3);
+            });
+        }
+    }]);
+
+    return OptionObject;
+})(_object2.default);
+
+exports.default = OptionObject;
+
+},{"../object":15,"../utils":28,"./area":16,"./axes":17,"./line":18,"./pie":20,"./presets":21,"./size":22}],20:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Pie = (function (_Obj) {
+    _inherits(Pie, _Obj);
+
+    function Pie(d, parent) {
+        _classCallCheck(this, Pie);
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Pie).call(this, d, parent));
+
+        _this.setDefault();
+        _this.options(d);
+        return _this;
+    }
+
+    _createClass(Pie, [{
+        key: "options",
+        value: function options(d) {
+            if ((0, _utils.isUndefined)(d)) {
+                return {
+                    innerRadius: this.innerRadius(),
+                    outerRadius: this.outerRadius(),
+                    explodeRadius: this.explodeRadius(),
+                    padAngle: this.padAngle(),
+                    turnAngle: this.turnAngle()
+                };
+            }
+            this.innerRadius(d.innerRadius);
+            this.outerRadius(d.outerRadius);
+            this.explodeRadius(d.explodeRadius);
+            this.padAngle(d.padAngle);
+            this.turnAngle(d.turnAngle);
+        }
+    }, {
+        key: "innerRadius",
+        value: function innerRadius(radius) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(radius)) {
+                return __.innerRadius;
+            }
+
+            __.innerRadius = radius;
+            this.dirty(true);
+        }
+    }, {
+        key: "outerRadius",
+        value: function outerRadius(radius) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(radius)) {
+                return __.outerRadius;
+            }
+
+            __.outerRadius = radius;
+            this.dirty(true);
+        }
+    }, {
+        key: "explodeRadius",
+        value: function explodeRadius(radius) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(radius)) {
+                return __.explodeRadius;
+            }
+
+            __.explodeRadius = radius;
+            this.dirty(true);
+        }
+    }, {
+        key: "padAngle",
+        value: function padAngle(angle) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(angle)) {
+                return __.padAngle;
+            }
+
+            __.padAngle = angle;
+            this.dirty(true);
+        }
+    }, {
+        key: "turnAngle",
+        value: function turnAngle(angle) {
+            var __ = this.__;
+
+            if ((0, _utils.isUndefined)(angle)) {
+                return __.turnAngle;
+            }
+
+            __.turnAngle = angle;
+            this.dirty(true);
+        }
+    }, {
+        key: "setDefault",
+        value: function setDefault() {
+            return this.options(this.getDefault());
+        }
+    }, {
+        key: "getDefault",
+        value: function getDefault() {
+            return {
+                innerRadius: 0,
+                outerRadius: 150,
+                explodeRadius: 0,
+                padAngle: 0,
+                turnAngle: 0
+            };
+        }
+    }]);
+
+    return Pie;
+})(_object2.default);
+
+exports.default = Pie;
+
+},{"../object":15,"../utils":28}],21:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var presets = {
+    "donut": function donut(option) {
+        var pie = option.pie;
+
+        pie.innerRadius(60);
+        pie.padAngle(0.03);
+    }
+};
+
+exports.default = presets;
+
+},{}],22:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _object = require("../object");
+
+var _object2 = _interopRequireDefault(_object);
+
+var _utils = require("../utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Size = (function (_Obj) {
+    _inherits(Size, _Obj);
+
+    function Size(d, parent) {
+        _classCallCheck(this, Size);
+
+        d = (0, _utils.option)(d, {});
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Size).call(this, d, parent));
+
+        _this.setDefault();
+        _this.sizes(d);
+        return _this;
+    }
+
+    _createClass(Size, [{
+        key: "__init",
+        value: function __init(d, parent) {
+            this.__ = {
+                parent: parent
+            };
+        }
+    }, {
+        key: "sizes",
+        value: function sizes(d) {
+            var __ = this.__;
+
+            if (d === undefined) {
+                return {
+                    width: this.width(),
+                    height: this.height()
+                };
+            }
+
+            this.width(d.width);
+            this.height(d.height);
+        }
+    }, {
+        key: "width",
+        value: function width(_width) {
+            var __ = this.__;
+            if (_width === undefined) {
+                return __.width;
+            }
+
+            __.width = _width;
+            this.dirty(true);
+        }
+    }, {
+        key: "height",
+        value: function height(_height) {
+            var __ = this.__;
+            if (_height === undefined) {
+                return __.height;
+            }
+
+            __.height = _height;
+            this.dirty(true);
+        }
+    }, {
+        key: "setDefault",
+        value: function setDefault() {
+            this.sizes(this.getDefault());
+        }
+    }, {
+        key: "getDefault",
+        value: function getDefault() {
+            return {
+                width: 800,
+                height: 600
+            };
+        }
+    }]);
+
+    return Size;
+})(_object2.default);
+
+exports.default = Size;
+
+},{"../object":15,"../utils":28}],23:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _utils = require("../utils");
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/*
+ * The render object is passed to renderers whenever chart.redraw is called.
+ * Is has no "private" fields because it is basicly just the representation of the rendered chart in code and no private info is needed.
+ */
+
+var RenderObject = (function () {
+    /*
+     * Init main fields that are required.
+     */
+
+    function RenderObject() {
+        _classCallCheck(this, RenderObject);
+
+        this.data = {
+            rectangular: {},
+            circular: {}
+        };
+
+        this.option = {};
+
+        this.clear();
+    }
+
+    _createClass(RenderObject, [{
+        key: "clear",
+        value: function clear() {
+            this.clearData();
+            this.clearOption();
+
+            return this;
+        }
+    }, {
+        key: "clearData",
+        value: function clearData() {
+            this.clearRectangularData();
+            this.clearCircularData();
+
+            return this;
+        }
+    }, {
+        key: "clearOption",
+        value: function clearOption() {
+            this.option = this.getDefaultOption();
+
+            return this;
+        }
+    }, {
+        key: "clearRectangularData",
+        value: function clearRectangularData(except) {
+            var _this = this;
+
+            except = (0, _utils.option)(except, {});
+
+            var types = ["areas", "columns", "lines"];
+
+            types.forEach(function (type) {
+                if ((0, _utils.isUndefined)(except[type])) {
+                    _this.data.rectangular[type] = _this.getDefaultStore();
+                }
+            });
+
+            return this;
+        }
+    }, {
+        key: "clearCircularData",
+        value: function clearCircularData(except) {
+            var _this2 = this;
+
+            except = (0, _utils.option)(except, {});
+
+            var types = ["pies", "disks"];
+
+            types.forEach(function (type) {
+                if ((0, _utils.isUndefined)(except[type])) {
+                    _this2.data.circular[type] = _this2.getDefaultStore();
+                }
+            });
+
+            return this;
+        }
+    }, {
+        key: "getDefaultOption",
+        value: function getDefaultOption() {
+            return {
+                bindTo: "",
+                size: {},
+                axes: {
+                    x: {},
+                    y: {}
+                }
+            };
+        }
+    }, {
+        key: "getDefaultStore",
+        value: function getDefaultStore() {
+            return {
+                dirty: true,
+                values: []
+            };
+        }
+    }]);
+
+    return RenderObject;
+})();
+
+exports.default = RenderObject;
+
+},{"../utils":28}],24:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _renderObject = require("../renderObject/renderObject");
+
+var _renderObject2 = _interopRequireDefault(_renderObject);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Renderer = function Renderer() {
+    _classCallCheck(this, Renderer);
+
+    this.render = new _renderObject2.default();
+};
+
+exports.default = Renderer;
+
+},{"../renderObject/renderObject":23}],25:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+var PADDING = exports.PADDING = {
+    LEFT: 10,
+    RIGHT: 10,
+    TOP: 10,
+    BOTTOM: 10
+};
+
+var AXIS = exports.AXIS = {
+    WIDTH: 30
+};
+
+},{}],26:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _d = require("d3");
+
+var _d2 = _interopRequireDefault(_d);
+
+var _renderer = require("../renderer");
+
+var _renderer2 = _interopRequireDefault(_renderer);
+
+var _constants = require("./constants");
+
+var _utils = require("../../utils");
+
+var _svgUtils = require("./svgUtils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var SvgRenderer = (function (_Renderer) {
+    _inherits(SvgRenderer, _Renderer);
+
+    function SvgRenderer(chart) {
+        _classCallCheck(this, SvgRenderer);
+
+        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(SvgRenderer).call(this));
+
+        _this.option = chart.option;
+        var bindTo = _this.option.bindTo;
+
+        _this.easel = _d2.default.selectAll("#chart").attr("class", "iva-chart");;
+        _this.easel.append("g").attr("transform", "translate(0, 0)");
+
+        _this.initLines();
+        _this.initAreas();
+
+        _this.initPies();
+
+        _this.initAxes();
+        _this.initPoints();
+
+        _this.color = _d2.default.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
+        return _this;
+    }
+
+    _createClass(SvgRenderer, [{
+        key: "redraw",
+        value: function redraw(renderObject) {
+            this.render = renderObject;
+            this.data = this.render.data;
+            this.option = this.render.option;
+
+            this.setSizes();
+            this.setDomainsToScales();
+
+            //this.redrawColumns();
+            this.redrawLines();
+            this.redrawAreas();
+            this.redrawPies();
+
+            this.redrawAxes();
+        }
+    }, {
+        key: "initLines",
+        value: function initLines() {
+            this.easel.append("g").attr("class", "lines");
+        }
+    }, {
+        key: "initAreas",
+        value: function initAreas() {
+            this.easel.append("g").attr("class", "areas");
+        }
+    }, {
+        key: "initPies",
+        value: function initPies() {
+            this.easel.append("g").attr("class", "pies");
+        }
+    }, {
+        key: "initAxes",
+        value: function initAxes() {
+            var easel = this.easel;
+
+            var xAxis = this.xAxis = _d2.default.svg.axis().orient("bottom");
+            var yAxis = this.yAxis = _d2.default.svg.axis().orient("left");
+
+            easel.append("g").attr("class", "axis xAxis");
+
+            easel.append("g").attr("class", "axis yAxis");
+        }
+    }, {
+        key: "initPoints",
+        value: function initPoints() {
+            this.easel.append("g").attr("class", "points");
+        }
+    }, {
+        key: "setSizes",
+        value: function setSizes() {
+            var easel = this.easel,
+                size = this.option.size;
+
+            var innerSize = this.innerSize = {
+                width: size.width - _constants.PADDING.LEFT - _constants.PADDING.RIGHT,
+                height: size.height - _constants.PADDING.TOP - _constants.PADDING.BOTTOM
+            };
+
+            this.easel.attr("width", size.width).attr("height", size.height);
+
+            var xScale = this.xScale = _d2.default.scale.ordinal().rangePoints([0, innerSize.width - _constants.AXIS.WIDTH]);
+
+            var yScale = this.yScale = _d2.default.scale.linear().range([innerSize.height - _constants.AXIS.WIDTH, 0]);
+        }
+    }, {
+        key: "setDomainsToScales",
+        value: function setDomainsToScales() {
+            var _data$ranges = this.data.ranges;
+            var xMin = _data$ranges.xMin;
+            var xMax = _data$ranges.xMax;
+            var yMin = _data$ranges.yMin;
+            var yMax = _data$ranges.yMax;
+            var xStrings = _data$ranges.xStrings;
+
+            var xScale = this.xScale,
+                yScale = this.yScale;
+
+            if (!(0, _utils.isEmpty)(xStrings)) {
+                xScale.domain(xStrings);
+            } else {
+                xScale.domain(_d2.default.range(xMin, xMax + 1));
+            }
+            yScale.domain([yMin, yMax]);
+        }
+    }, {
+        key: "redrawAxes",
+        value: function redrawAxes() {
+            var easel = this.easel,
+                size = this.option.size,
+                axes = this.option.axes,
+                xAxis = this.xAxis,
+                yAxis = this.yAxis;
+
+            xAxis.scale(this.xScale);
+            yAxis.scale(this.yScale);
+
+            easel.select(".xAxis").attr("transform", "translate(" + (_constants.AXIS.WIDTH + _constants.PADDING.LEFT) + ", " + (size.height - _constants.AXIS.WIDTH) + ")").style("opacity", function (d) {
+                return axes.x.visible ? 100 : 0;
+            }).call(xAxis);
+
+            easel.select(".yAxis").attr("transform", "translate(" + _constants.AXIS.WIDTH + ", " + _constants.PADDING.TOP + ")").style("opacity", function (d) {
+                return axes.y.visible ? 100 : 0;
+            }).call(yAxis);
+        }
+    }, {
+        key: "redrawColumns",
+        value: function redrawColumns() {
+            var _this2 = this;
+
+            var easel = this.easel,
+                x0 = this.x0,
+                x1 = this.x1,
+                y = this.y,
+                color = this.color;
+
+            if (!this.data.columns && !this.data.rows) {
+                return;
+            }
+
+            var columns = this.data.columns.values;
+            var rows = this.data.rows.values;
+
+            x0.domain(rows.map(function (row) {
+                return row.x;
+            }));
+            x1.domain(_d2.default.range(_d2.default.max(columns, function (column) {
+                return column.values.length;
+            })));
+            y.domain([0, _d2.default.max(columns, function (column) {
+                return _d2.default.max(column.values, function (value) {
+                    return value.y;
+                });
+            })]);
+
+            var rowsSvg = easel.selectAll(".row").data(rows).enter().append("g").attr("class", "row").attr("transform", function (d) {
+                return "translate(" + x0(d.x) + ",0)";
+            });
+
+            rowsSvg.selectAll("rect").data(function (d) {
+                return d.values;
+            }).enter().append("rect").attr("width", x1.rangeBand()).attr("x", function (d) {
+                return x1(d.x);
+            }).attr("y", function (d) {
+                return y(d.y);
+            }).attr("height", function (d) {
+                return _this2.option.size.height - y(d.y);
+            }).style("fill", function (d) {
+                return color(d.x);
+            });
+        }
+    }, {
+        key: "redrawLines",
+        value: function redrawLines() {
+            var easel = this.easel,
+                color = this.color,
+                xScale = this.xScale,
+                yScale = this.yScale;
+
+            if ((0, _utils.isEmpty)(this.data.rectangular.lines.values)) {
+                this.clear(".lines");
+                return;
+            }
+
+            var lines = this.data.rectangular.lines.values;
+
+            color.domain(lines.map(function (line) {
+                return line.id;
+            }));
+
+            var line = _d2.default.svg.line().x(function (d) {
+                return xScale(d.x);
+            }).y(function (d) {
+                return yScale(d.y);
+            }).interpolate(this.option.line.interpolate);
+
+            var linesSvg = easel.select(".lines");
+
+            var lineSvg = linesSvg.selectAll("path").data(lines);
+
+            lineSvg.enter().append("path").attr("class", "line").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("stroke", function (d) {
+                return color(d.id);
+            }).attr("stroke-width", 2).attr("fill", "none");
+
+            lineSvg.attr("d", function (d) {
+                return line(d.values);
+            });
+
+            lineSvg.exit().remove();
+
+            if (this.option.line.points) {
+                this.redrawPoints(lines);
+            }
+        }
+    }, {
+        key: "redrawAreas",
+        value: function redrawAreas() {
+            var easel = this.easel,
+                color = this.color,
+                xScale = this.xScale,
+                yScale = this.yScale;
+
+            if ((0, _utils.isEmpty)(this.data.rectangular.areas.values)) {
+                this.clear(".areas");
+                return;
+            }
+
+            var areas = this.data.rectangular.areas.values;
+
+            color.domain(areas.map(function (area) {
+                return area.id;
+            }));
+
+            var area = _d2.default.svg.area().x(function (d) {
+                return xScale(d.x);
+            }).y0(function (d) {
+                return yScale(d.y0) + _constants.PADDING.TOP - 10;
+            }).y1(function (d) {
+                return yScale(d.y);
+            }).interpolate(this.option.area.interpolate);
+
+            var areasSvg = easel.select(".areas");
+
+            var areaSvg = areasSvg.selectAll("path").data(areas);
+
+            areaSvg.enter().append("path").attr("class", "area").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")").attr("class", "area").attr("stroke", function (d) {
+                return color(d.id);
+            }).attr("fill", function (d) {
+                return color(d.id);
+            });
+
+            areaSvg.attr("d", function (d) {
+                return area(d.values);
+            });
+
+            areaSvg.exit().remove();
+
+            if (this.option.area.points) {
+                this.redrawPoints(areas);
+            }
+        }
+    }, {
+        key: "redrawPies",
+        value: function redrawPies() {
+            var easel = this.easel,
+                color = this.color,
+                option = this.option;
+
+            if ((0, _utils.isEmpty)(this.data.circular.pies.values)) {
+                return;
+            }
+
+            var pies = this.data.circular.pies.values;
+
+            var pie = pies[0].values;
+            color.domain(pie.map(function (value) {
+                return value.x;
+            }));
+
+            var arcSvg = _d2.default.svg.arc().outerRadius(option.pie.outerRadius).innerRadius(option.pie.innerRadius).startAngle(function (d) {
+                return d.startAngle + option.pie.turnAngle;
+            }).endAngle(function (d) {
+                return d.endAngle + option.pie.turnAngle;
+            }).padAngle(option.pie.padAngle);
+
+            var pieLayout = _d2.default.layout.pie().sort(null).value(function (d) {
+                return d.y;
+            });
+
+            easel.selectAll(".pies").attr("transform", "translate(" + this.option.size.width / 2 + ", " + this.option.size.height / 2 + ")");
+            var p = easel.selectAll(".pies").selectAll(".arc").data(pieLayout(pie));
+
+            p.enter().append("path").attr("class", "arc").style("fill", function (d) {
+                return color(d.data.id);
+            });
+
+            p.attr("d", arcSvg);
+            p.attr("transform", (0, _svgUtils.generateExplode)(option.pie.explodeRadius));
+
+            p.exit().remove();
+        }
+    }, {
+        key: "redrawPoints",
+        value: function redrawPoints(sequences) {
+            var _this3 = this;
+
+            if ((0, _utils.isEmpty)(sequences)) {
+                return;
+            }
+
+            var easel = this.easel,
+                option = this.option,
+                xScale = this.xScale,
+                yScale = this.yScale;
+
+            var points = [];
+
+            sequences.forEach(function (sequence) {
+                sequence.values.forEach(function (value) {
+                    points.push({
+                        x: value.x,
+                        y: value.y,
+                        id: sequence.id
+                    });
+                });
+            });
+
+            var pointsSvg = easel.selectAll(".points").attr("transform", "translate(" + (_constants.PADDING.LEFT + _constants.AXIS.WIDTH) + ", " + _constants.PADDING.TOP + ")");
+
+            var pointSvg = pointsSvg.selectAll(".point").data(points);
+
+            pointSvg.enter().append("circle").attr("class", "point").attr("fill", function (d) {
+                return _this3.color(d.id);
+            }).attr("r", 3);
+
+            pointSvg.attr("cx", function (d) {
+                return xScale(d.x);
+            });
+            pointSvg.attr("cy", function (d) {
+                return yScale(d.y);
+            });
+
+            pointSvg.exit().remove();
+        }
+    }, {
+        key: "clear",
+        value: function clear(select) {
+            this.easel.selectAll(select).selectAll("*").transition().duration(500).style("opacity", 0).remove();
+        }
+    }]);
+
+    return SvgRenderer;
+})(_renderer2.default);
+
+exports.default = SvgRenderer;
+
+},{"../../utils":28,"../renderer":24,"./constants":25,"./svgUtils":27,"d3":1}],27:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.visibility = visibility;
+exports.generateExplode = generateExplode;
+function visibility(b) {
+    if (b) {
+        return "visible";
+    } else {
+        return "hidden";
+    }
+}
+
+function generateExplode(explodeRadius) {
+    return function explode(d, index) {
+        var angle = (d.startAngle + d.endAngle) / 2;
+        var xOff = Math.sin(angle) * explodeRadius;
+        var yOff = -Math.cos(angle) * explodeRadius;
+        return 'translate(' + xOff + ',' + yOff + ')';
+    };
+}
+
+},{}],28:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.option = option;
+exports.copy = copy;
+exports.copyObject = copyObject;
+exports.copyArray = copyArray;
+exports.copyString = copyString;
+exports.isNumeric = isNumeric;
+exports.isObject = isObject;
+exports.isArray = isArray;
+exports.isString = isString;
+exports.isFunction = isFunction;
+exports.isUndefined = isUndefined;
+exports.isDefined = isDefined;
+exports.toString = toString;
+exports.toInt = toInt;
+exports.objToString = objToString;
+exports.throwIfUndefined = throwIfUndefined;
+exports.throwIfNotNumeric = throwIfNotNumeric;
+exports.throwIfNotArray = throwIfNotArray;
+exports.throwIfNotObject = throwIfNotObject;
+exports.throwIfNotString = throwIfNotString;
+exports.throwIfNotFunction = throwIfNotFunction;
+exports.merge = merge;
+exports.isEmpty = isEmpty;
+exports.debug = debug;
+
+var _underscore = require("underscore");
+
+var _underscore2 = _interopRequireDefault(_underscore);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+
+function option(value, _default) {
+    if (value === undefined) {
+        return _default;
+    }
+    return value;
+}
+
+/*
+ * Function for copying
+ */
+
+function copy(el) {
+    if (Array.isArray(el)) {
+        return copyArray(el);
+    } else if ((typeof el === "undefined" ? "undefined" : _typeof(el)) === "object") {
+        return copyObject(el);
+    } else if (typeof el === "string") {
+        return copyString(el);
+    } else {
+        return el;
+    }
+}
+
+function copyObject(obj) {
+    var copyObj = {};
+
+    for (var key in obj) {
+        var el = obj[key];
+
+        copyObj[key] = copy(el);
+    }
+
+    return copyObj;
+}
+
+function copyArray(arr) {
+    var copyArr = [];
+
+    for (var i = 0; i < arr.length; i++) {
+        var el = arr[i];
+
+        copyArr.push(copy(el));
+    }
+
+    return copyArr;
+}
+
+function copyString(string) {
+    return string.slice(0);
+}
+
+/*
+ * Functions for checking if value is some type
+ */
+
+// Taken from jQuery code
+function isNumeric(obj) {
+    return !Array.isArray(obj) && obj - parseFloat(obj) + 1 >= 0;
+}
+
+function isObject(obj) {
+    return (typeof obj === "undefined" ? "undefined" : _typeof(obj)) === "object";
+}
+
+function isArray(obj) {
+    return Array.isArray(obj);
+}
+
+function isString(obj) {
+    return typeof obj === "string";
+}
+
+function isFunction(obj) {
+    return typeof obj === "function";
+}
+
+function isUndefined(obj) {
+    return obj === undefined;
+}
+
+function isDefined(obj) {
+    return obj !== undefined;
+}
+
+/*
+ * Transformers
+ */
+
+function toString(obj) {
+    if ((typeof obj === "undefined" ? "undefined" : _typeof(obj)) === "object") {
+        return objToString(obj);
+    } else {
+        return obj;
+    }
+}
+
+function toInt(obj) {
+    return parseInt(obj);
+}
+
+function objToString(obj) {
+    return JSON.stringify(obj, null, 8);
+}
+
+/*
+ * Throw if x is not y type
+ */
+
+function throwIfUndefined(v, msg) {
+    msg = option(msg, v);
+    if (isUndefined(v)) {
+        throw new TypeError(msg + " shouldn't be undefined");
+    }
+}
+
+function throwIfNotNumeric(v, msg) {
+    msg = option(msg, v);
+    if (!isNumeric(v)) {
+        throw new TypeError(msg + " should be number and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
+    }
+}
+
+function throwIfNotArray(v, msg) {
+    msg = option(msg, v);
+    if (!isArray(v)) {
+        throw new TypeError(msg + " should be array and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
+    }
+}
+
+function throwIfNotObject(v, msg) {
+    msg = option(msg, v);
+    if (!isObject(v)) {
+        throw new TypeError(msg + " should be object and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
+    }
+}
+
+function throwIfNotString(v, msg) {
+    msg = option(msg, v);
+    if (!isString(v)) {
+        throw new TypeError(msg + " shoud be string and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
+    }
+}
+
+function throwIfNotFunction(v, msg) {
+    msg = option(msg, v);
+    if (!isFunction(v)) {
+        throw new TypeError(msg + " should be function and not " + (typeof v === "undefined" ? "undefined" : _typeof(v)));
+    }
+}
+
+/*
+ * Object manipulation 
+ */
+
+/*
+ * Returns new object that has values of second object merged into values of first.
+ * {                       {                {
+ *     a: 10,        <---      a: 15,   =       a: 15,
+ *     b: undefined, <---      b: 5     =       b: 5,
+ *     c: 20         <---               =       c: 20
+ * }                       }                }
+ */
+function merge(o1, o2) {
+    var o = {};
+
+    for (var key in o1) {
+        o[key] = o1[key];
+    }
+
+    for (var key in o2) {
+        o[key] = o2[key];
+    }
+    return o;
+}
+
+function isEmpty(obj) {
+    return isUndefined(obj) || obj.length === 0;
+}
+
+/*
+ * Debug
+ */
+
+function debug(msg) {
+    console.debug(toString(msg));
+}
+
+},{"underscore":2}]},{},[14])(14)
 });
 
 

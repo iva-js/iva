@@ -4,25 +4,29 @@
  * Distributed under terms of the MIT license.
  */
 
-var path = require("path");
+"use strict";
 
-var gulp = require('gulp');
-var sourcemaps = require('gulp-sourcemaps');
-var browserify = require('browserify');
-var watchify = require('watchify');
-var babel = require('babelify');
-var eslint = require("gulp-eslint");
-var sass = require("gulp-sass");
+let path = require("path");
 
-var source = require('vinyl-source-stream');
-var buffer = require('vinyl-buffer');
+let gulp = require('gulp');
+let sourcemaps = require('gulp-sourcemaps');
+let browserify = require('browserify');
+let watchify = require('watchify');
+let babel = require('babelify');
+let eslint = require("gulp-eslint");
+let sass = require("gulp-sass");
 
-var Server = require("karma").Server;
+let source = require('vinyl-source-stream');
+let buffer = require('vinyl-buffer');
 
-var rmdir = require("rmdir");
+let jade = require("gulp-jade");
+
+let Server = require("karma").Server;
+
+let rmdir = require("rmdir");
 
 function compile(watch) {
-    var bundler = watchify(browserify({ debug: true, entries: ["src/index.js"], standalone: "Iva"})
+    let bundler = watchify(browserify({ debug: true, entries: ["src/index.js"], standalone: "Iva"})
                          .transform(babel, { sourceMapRelative: path.resolve(__dirname, 'src'), presets: ["es2015"] }));
 
     function rebundle() {
@@ -88,3 +92,21 @@ gulp.task("sass-default", () => {
 gulp.task("sass-default:watch", () => {
     gulp.watch("./styles/default/scss/*.scss", ["sass-default"]);
 });
+
+gulp.task("examples", ()=>{
+    gulp.src("examples/jade/**/*.jade")
+        .pipe(gulp.dest("examples/html"));
+
+    gulp.src("examples/jade/**/*.js")
+        .pipe(gulp.dest("examples/html"));
+
+    gulp.src("examples/html/**/*.jade")
+        .pipe(jade())
+        .pipe(gulp.dest("examples/html"));
+});
+
+gulp.task("examples:watch", ()=>{
+    gulp.watch("./examples/jade/**/*", ["examples"]);
+});
+
+gulp.task("watch:all", ["examples:watch", "sass-default:watch", "js:watch"],()=>{});
