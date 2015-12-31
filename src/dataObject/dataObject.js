@@ -1,7 +1,5 @@
 import Obj from "../object";
 
-import "babel-polyfill";
-
 import {option, copy, isObject, isNumeric, isArray, isUndefined, toInt, throwIfNotString, throwIfNotArray, throwIfUndefined} from "../utils";
 
 

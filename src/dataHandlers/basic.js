@@ -2,8 +2,6 @@
 import RenderObject from "../renderObject/renderObject";
 import {isUndefined, isString} from "../utils";
 
-import "babel-polyfill";
-
 export default class Handler {
     constructor(){
         this.__ = {
@@ -79,12 +77,27 @@ export default class Handler {
      * Changes input instead of copying for time saving.
      */
     stack(data){
-        for(let i = 1; i < data.values.length; i++){
+
+        let stacked = new Map();
+
+        for(let i = 0; i < data.values.length; i++){
             for(let j = 0; j < data.values[i].values.length; j++){
-                data.values[i].values[j].y0 = data.values[i-1].values[j].y;
-                data.values[i].values[j].y += data.values[i-1].values[j].y
+                let value = data.values[i].values[j];
+
+                if(!stacked.has(value.x)){
+                    stacked.set(value.x, 0);
+                }
+
+                let padding = stacked.get(value.x);
+
+                value.y0 = padding;
+                value.y += padding;
+
+                stacked.set(value.x, value.y);
+
             }
         }
+
         return data;
     }
 

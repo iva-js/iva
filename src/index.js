@@ -6,6 +6,8 @@ import Chart from "./chart";
 import DefaultBuffer from "./buffers/default";
 import InstantBuffer from "./buffers/instant";
 
+//import "babel-polyfill";
+
 let Buffer = {
     Default: DefaultBuffer,
     Instant: InstantBuffer

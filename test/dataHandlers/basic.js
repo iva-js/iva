@@ -121,13 +121,13 @@ describe("Handler", () => {
         });
 
         it("should stack data of different sizes", ()=>{
-            let data = generateValues([
+            let data = generateValues([[
                 1, 2, 3
             ], [
                 4, 5
             ], [
                 6, 7, 8, 9
-            ]);
+            ]]);
 
             data = handler.stack(data);
 
@@ -139,7 +139,7 @@ describe("Handler", () => {
             expect(data.values[1].values[1].y).to.equal(7);
 
             expect(data.values[2].values[0].y).to.equal(11);
-            expect(data.values[2].values[1].y).to.equal(15);
+            expect(data.values[2].values[1].y).to.equal(14);
             expect(data.values[2].values[2].y).to.equal(11);
             expect(data.values[2].values[3].y).to.equal(9);
 
@@ -268,39 +268,39 @@ describe("Handler", () => {
         });
 
         it("should normalize data of different sizes", ()=>{
-            let data = generateValues([
+            let data = generateValues([[
                 1, 2, 3
             ], [
                 4, 5
             ], [
                 6, 7, 8, 9
-            ]);
+            ]]);
 
             data = handler.normalize(data);
 
-            expect(data.values[0].values[0].y).to.equal(1/11, .01);
-            expect(data.values[0].values[1].y).to.equal(2/15, .01);
-            expect(data.values[0].values[2].y).to.equal(3/11, .01);
+            expect(data.values[0].values[0].y).to.be.closeTo(1/11, .01);
+            expect(data.values[0].values[1].y).to.be.closeTo(2/14, .01);
+            expect(data.values[0].values[2].y).to.be.closeTo(3/11, .01);
 
-            expect(data.values[1].values[0].y).to.equal(5/11);
-            expect(data.values[1].values[1].y).to.equal(7/15);
+            expect(data.values[1].values[0].y).to.be.closeTo(5/11, 0.01);
+            expect(data.values[1].values[1].y).to.be.closeTo(7/14, 0.01);
 
-            expect(data.values[2].values[0].y).to.equal(1, 0.01);
-            expect(data.values[2].values[1].y).to.equal(1, 0.01);
-            expect(data.values[2].values[2].y).to.equal(1, 0.01);
-            expect(data.values[2].values[3].y).to.equal(1, 0.01);
+            expect(data.values[2].values[0].y).to.be.closeTo(1, 0.01);
+            expect(data.values[2].values[1].y).to.be.closeTo(1, 0.01);
+            expect(data.values[2].values[2].y).to.be.closeTo(1, 0.01);
+            expect(data.values[2].values[3].y).to.be.closeTo(1, 0.01);
 
-            expect(data.values[0].values[0].y0).to.equal(0);
-            expect(data.values[0].values[1].y0).to.equal(0);
-            expect(data.values[0].values[2].y0).to.equal(0);
+            expect(data.values[0].values[0].y0).to.be.closeTo(0, 0.01);
+            expect(data.values[0].values[1].y0).to.be.closeTo(0, 0.01);
+            expect(data.values[0].values[2].y0).to.be.closeTo(0, 0.01);
 
-            expect(data.values[1].values[0].y0).to.equal(1/11);
-            expect(data.values[1].values[1].y0).to.equal(2/15);
+            expect(data.values[1].values[0].y0).to.be.closeTo(1/11, 0.01);
+            expect(data.values[1].values[1].y0).to.be.closeTo(2/15, 0.01);
 
-            expect(data.values[2].values[0].y0).to.equal(5/11);
-            expect(data.values[2].values[1].y0).to.equal(7/11);
-            expect(data.values[2].values[2].y0).to.equal(3/11);
-            expect(data.values[2].values[3].y0).to.equal(0);
+            expect(data.values[2].values[0].y0).to.be.closeTo(5/11, 0.01);
+            expect(data.values[2].values[1].y0).to.be.closeTo(7/14, 0.01);
+            expect(data.values[2].values[2].y0).to.be.closeTo(3/11, 0.01);
+            expect(data.values[2].values[3].y0).to.be.closeTo(0, 0.01);
         });
 
     });
