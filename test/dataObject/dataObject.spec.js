@@ -8,14 +8,8 @@ import FakeParent from "../fake/parent";
 describe("Data object", ()=>{
     let data, anotherData;
 
-    let counter = {
-        dirty: 0
-    };
-
     describe("/columns", ()=>{
         beforeEach(()=>{
-            counter.dirty = 0;
-
             data = new DataObject({
                 columns: [{
                     id: "data1",
@@ -28,7 +22,7 @@ describe("Data object", ()=>{
                         30, 40, 50
                     ]
                 }]
-            }, new FakeParent(counter));
+            }, new FakeParent());
         });
 
         function checkColumn(column, values){
@@ -145,8 +139,6 @@ describe("Data object", ()=>{
 
     describe("/rows", ()=>{
         beforeEach(()=>{
-            counter.dirty = 0;
-
             data = new DataObject({
                 columns: [{
                     id: "data1",
@@ -159,7 +151,7 @@ describe("Data object", ()=>{
                         30, 40, 50
                     ]
                 }]
-            }, new FakeParent(counter));
+            }, new FakeParent());
         });
 
         function checkRow(row, values){
