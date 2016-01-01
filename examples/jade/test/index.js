@@ -20,7 +20,7 @@ var dataObject = new Iva.DataObject({
 }, buffer);
 
 var optionObject = new Iva.OptionObject({
-    handler: "area",
+    handler: "line",
     axes:{
         both:{
             visible: true

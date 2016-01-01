@@ -13172,12 +13172,18 @@ var SvgRenderer = (function (_Renderer) {
 
             var legendPicture = legend.selectAll(".legendPicture").data(sequences);
 
-            legendPicture.enter().append("rect").attr("class", "legendPicture").attr("width", 10).attr("height", 10);
+            if (this.option.legend.pointType === "line") {
+                legendPicture.enter().append("line").attr("class", "legendPicture").attr("x1", 0).attr("y1", 5).attr("x2", 10).attr("y2", 5).attr("stroke", function (d) {
+                    return color(d.id);
+                }).style("stroke-width", 2);
+            } else {
+                legendPicture.enter().append("rect").attr("class", "legendPicture").attr("width", 10).attr("height", 10).attr("fill", function (d) {
+                    return color(d.id);
+                });
+            }
 
             legendPicture.attr("transform", function (d) {
                 return "translate(0, " + (legendScale(d.id) - 10) + ")";
-            }).attr("fill", function (d) {
-                return color(d.id);
             });
 
             legendItem.exit().remove();
@@ -13210,7 +13216,7 @@ var SvgRenderer = (function (_Renderer) {
                 });
             });
 
-            var pointSvg = scene.selectAll(".points").pointsSvg.selectAll(".point").data(points);
+            var pointSvg = scene.selectAll(".points").selectAll(".point").data(points);
 
             pointSvg.enter().append("circle").attr("class", "point").attr("fill", function (d) {
                 return _this3.color(d.id);
