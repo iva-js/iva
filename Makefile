@@ -5,7 +5,7 @@
 
 all: long deps build-final build-dev
 
-all-dev: long build-final build-dev
+build-all: long build-final build-dev
 
 test-all: long test-unit test-integr
 

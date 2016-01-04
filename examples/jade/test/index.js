@@ -9,13 +9,13 @@ var buffer = new iva.Buffer.Instant()
 var dataObject = new iva.DataObject({
     columns: [{
         id: "data1",
-        values: [2, 2, 10, 5, 6]
+        values: [20, 20, 100, 50, 60, 50, 50, 50, 50, 60, 70,]
     }, {
         id: "data2",
-        values: [3, 4, 3, 5, 7]
+        values: [30, 40, 30, 50, 70, 10, 10, 20, 30, 40, 50]
     }, {
         id: "data3", 
-        values: [5, 6, 5, 1, 9]
+        values: [50, 60, 50, 10, 90, 80, 70, 10, 20, 30, 40]
     }] 
 }, buffer);
 

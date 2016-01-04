@@ -168,20 +168,7 @@ export default class SvgRenderer extends Renderer {
             return;
         }
 
-        let xs = new Map();
-
         let bars = this.data.rectangular.bars.values;
-
-        for(let sequence of bars){
-            for(let value of sequence.values){
-                let x = value.x;
-                if(xs.has(x)){
-                    xs.set(x, xs.get(x)+1);
-                } else {
-                    xs.set(x, 1);
-                }
-            }
-        }
 
         let xScale1 = d3.scale.ordinal();
         let {xMin, xMax, yMin, yMax, xStrings} = this.data.ranges;
@@ -193,7 +180,7 @@ export default class SvgRenderer extends Renderer {
             xScale.domain(d3.range(xMin, xMax+1)).rangeRoundBands([0, this.scene.attr("width")], 0.1);
         }
 
-        yScale.domain([yMin, yMax]);
+        yScale.domain([yMin-1, yMax]);
 
         xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], 0.1);
 
