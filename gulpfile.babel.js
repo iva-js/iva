@@ -9,15 +9,8 @@
 let path = require("path");
 
 let gulp = require('gulp');
-let sourcemaps = require('gulp-sourcemaps');
-let browserify = require('browserify');
-let watchify = require('watchify');
-let babel = require('babelify');
 let eslint = require("gulp-eslint");
 let sass = require("gulp-sass");
-
-let source = require('vinyl-source-stream');
-let buffer = require('vinyl-buffer');
 
 let jade = require("gulp-jade");
 
@@ -25,45 +18,7 @@ let Server = require("karma").Server;
 
 let rmdir = require("rmdir");
 
-function compile(watch) {
-    let bundler = watchify(browserify({ debug: true, entries: ["src/index.js"], standalone: "Iva"})
-                         .transform(babel, { 
-                             sourceMapRelative: path.resolve(__dirname, 'src'), 
-                             presets: ["es2015"],
-                             ignore: /d3/ig
-                         }));
-
-    function rebundle() {
-        lint();
-
-        rmdir("./build", (err, dirs, files) => {
-            console.log('-> bundling at ' + new Date());
-
-            bundler.bundle()
-                .on('error', (err) => { console.error(err); this.emit('end'); })
-                .pipe(source('build.js'))
-                .pipe(buffer())
-                .pipe(sourcemaps.init({ loadMaps: true }))
-                .pipe(sourcemaps.write('./'))
-                .pipe(gulp.dest('./build'));
-
-        });
-   }
-
-    if (watch) {
-        bundler.on('update', function() {
-            rebundle();
-        });
-    }
-
-    rebundle();
-}
-
-function watch() {
-    return compile(true);
-};
-
-function lint(){
+gulp.task("lint", ()=>{
     return gulp.src(["src/**/*.js"])
         .pipe(eslint({ 
             env: {
@@ -75,10 +30,7 @@ function lint(){
         }))
         .pipe(eslint.format())
         .pipe(eslint.failAfterError());
-}
-
-gulp.task('js', () => { return compile(); });
-gulp.task('js:watch', () =>  { return watch(); });
+});
 
 gulp.task('test-integration', (done) => {
     new Server({

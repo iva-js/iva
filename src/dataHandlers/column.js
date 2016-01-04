@@ -7,9 +7,29 @@ export default class ColumnHandler extends RectangularHandler {
     }
 
     computeRenderObject(data, option){
+        super.computeRenderObject(data, option);
+
         let d = this.d();
 
-        this.processColumns(data.columns);
+        d.clearRectangularData({
+            columns: false
+        });
+
+        d.data.rectangular.columns = this.processColumns(data.columns());
+
+        if(option.mode() === "stacked"){
+            d.data.rectangular.columns = this.stack(d.data.rectangular.columns);
+        } else if(option.mode() === "normalized"){
+            d.data.rectangular.columns = this.normalize(d.data.rectangular.columns);
+        }
+
+        d.data.ranges = this.computeRanges(d.data.rectangular.columns);
+
+        d.data.rectangular.columns = this.setY0(d.data.rectangular.columns, d.data.ranges.yMin);
+
+        d.option.area = option.area.options();
+
+
 
         return d;
     }
