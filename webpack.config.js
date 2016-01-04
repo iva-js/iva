@@ -15,9 +15,9 @@ var plugins = [];
 
 if(env === "build"){
     plugins.push(new uglify({ minimize: true }));
-    outFile = lname + ".js";
-} else {
     outFile = lname + ".min.js";
+} else {
+    outFile = lname + ".js";
 }
 
 var config = {
@@ -35,15 +35,18 @@ var config = {
             {
                 test: /\.js$/,
                 loader: "babel",
-                exclude: /(node_modules|bower_components)/
             }
         ]
+    },
+    externals: {
+        "d3": "d3",
     },
     resolve: {
         root: path.resolve("./src"),
         extensions: ["", ".js"]
     },
-    plugins: plugins
+    plugins: plugins,
+    debug: true
 };
 
 module.exports = config;
