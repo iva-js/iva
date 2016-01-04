@@ -7,7 +7,7 @@ describe("Render object", ()=>{
     
     let render;
 
-    let rectTypes = ["columns", "areas", "lines"];
+    let rectTypes = ["bars", "areas", "lines"];
     let circTypes = ["pies"];
 
     function checkRectDataCleared(){
@@ -58,7 +58,7 @@ describe("Render object", ()=>{
             });           
 
             render.clearRectangularData({
-                columns: false,
+                bars: false,
                 lines: false
             });
 
@@ -67,7 +67,7 @@ describe("Render object", ()=>{
             });
 
             expect(render.data.rectangular.areas).to.deep.equal(render.getDefaultStore());
-            expect(render.data.rectangular.columns).to.deep.equal({ values: [1, 2, 3] });
+            expect(render.data.rectangular.bars).to.deep.equal({ values: [1, 2, 3] });
             expect(render.data.rectangular.lines).to.deep.equal({ values: [1, 2, 3] });
 
             expect(render.data.circular.pies).to.deep.equal({ values: [1, 2, 3] });

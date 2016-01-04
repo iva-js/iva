@@ -32,6 +32,10 @@ gulp.task("lint", ()=>{
         .pipe(eslint.failAfterError());
 });
 
+gulp.task("lint:watch", ()=>{
+   gulp.watch("./src/**/*.js", ["lint"]);
+});
+
 gulp.task('test-integration', (done) => {
     new Server({
         configFile: __dirname + '/karma.conf.js',
@@ -63,4 +67,4 @@ gulp.task("examples:watch", ()=>{
     gulp.watch("./examples/jade/**/*", ["examples"]);
 });
 
-gulp.task("watch:all", ["examples:watch", "sass-default:watch", "js:watch"],()=>{});
+gulp.task("watch:all", ["examples:watch", "sass-default:watch", "lint:watch"],()=>{});

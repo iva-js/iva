@@ -1,6 +1,6 @@
 import {option, isDefined} from "./utils";
 
-import ColumnHandler from "./dataHandlers/column";
+import BarHandler from "./dataHandlers/bar";
 import LineHandler from "./dataHandlers/line";
 import AreaHandler from "./dataHandlers/area";
 import PieHandler from "./dataHandlers/pie";
@@ -57,8 +57,8 @@ export default class Chart {
     }
 
     setHandlerByName(handler){
-        if(handler === "column"){
-            this.handler = new ColumnHandler(this);
+        if(handler === "bar"){
+            this.handler = new BarHandler(this);
         } else if(handler === "line"){
             this.handler = new LineHandler(this);
         } else if(handler === "area"){

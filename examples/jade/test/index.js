@@ -4,23 +4,23 @@
  * Distributed under terms of the MIT license.
  */
 
-var buffer = new Iva.Buffer.Instant()
+var buffer = new iva.Buffer.Instant()
 
-var dataObject = new Iva.DataObject({
+var dataObject = new iva.DataObject({
     columns: [{
-        id: "Здрасти",
-        values: [1, 2, 3, 4]
+        id: "data1",
+        values: [2, 2, 10, 5, 6]
     }, {
-        id: "Я данные",
-        values: [4, 2, 2, 4]
+        id: "data2",
+        values: [3, 4, 3, 5, 7]
     }, {
-        id: "И я! :)", 
-        values: [5, 1, 4, 3]
+        id: "data3", 
+        values: [5, 6, 5, 1, 9]
     }] 
 }, buffer);
 
-var optionObject = new Iva.OptionObject({
-    handler: "line",
+var optionObject = new iva.OptionObject({
+    handler: "bar",
     axes:{
         both:{
             visible: true
@@ -34,5 +34,5 @@ var optionObject = new Iva.OptionObject({
     }
 }, buffer);
 
-var chart = new Iva.Chart(dataObject, optionObject, buffer);
+var chart = new iva.Chart(dataObject, optionObject, buffer);
 chart.redraw();

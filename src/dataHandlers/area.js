@@ -25,8 +25,8 @@ export default class AreaHandler extends RectangularHandler {
             d.data.rectangular.areas = this.normalize(d.data.rectangular.areas);
         }
 
+        d.data.ids = this.ids(d.data.rectangular.areas);
         d.data.ranges = this.computeRanges(d.data.rectangular.areas);
-
         d.data.rectangular.areas = this.setY0(d.data.rectangular.areas, d.data.ranges.yMin);
 
         d.option.area = option.area.options();
@@ -69,18 +69,5 @@ export default class AreaHandler extends RectangularHandler {
         } 
 
         return v;
-    }
-
-    setY0(areas, yMin){
-        for (let area of areas.values) {
-            for (let value of area.values) {
-                if(isUndefined(value.y0)){
-                    value.y0 = yMin;
-                }
-            }
-
-        }
-
-        return areas;
     }
 }

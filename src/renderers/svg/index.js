@@ -17,6 +17,7 @@ export default class SvgRenderer extends Renderer {
 
         this.initLines();
         this.initAreas();
+        this.initBars();
 
         this.initPies();
 
@@ -35,12 +36,13 @@ export default class SvgRenderer extends Renderer {
         this.setSizes();
         this.setDomainsToScales();
 
-        //this.redrawColumns();
+        this.redrawBars();
         this.redrawLines();
         this.redrawAreas();
         this.redrawPies();
 
         this.redrawAxes();
+        this.redrawLegend();
 
         this.endRender();
     }
@@ -66,6 +68,10 @@ export default class SvgRenderer extends Renderer {
 
     initAreas(){
         this.scene.append("g").attr("class", "areas");
+    }
+
+    initBars(){
+        this.scene.append("g").attr("class", "bars");
     }
 
     initPies(){
@@ -124,7 +130,7 @@ export default class SvgRenderer extends Renderer {
 
     setDomainsToScales(){
         let {xMin, xMax, yMin, yMax, xStrings} = this.data.ranges;
-        let xScale = this.xScale, yScale = this.yScale;
+        let xScale = this.xScale, yScale = this.yScale, color = this.color;
 
         if(!isEmpty(xStrings)){
             xScale.domain(xStrings);
@@ -133,6 +139,7 @@ export default class SvgRenderer extends Renderer {
         }
         yScale.domain([yMin, yMax]);
 
+        color.domain(this.data.ids);
     }
 
     redrawAxes(){
@@ -153,35 +160,60 @@ export default class SvgRenderer extends Renderer {
 
     }
 
-    redrawColumns(){
-        let easel = this.easel, x0 = this.x0, x1 = this.x1, y = this.y, color = this.color;
+    redrawBars(){
+        let scene = this.scene, color = this.color,  yScale = this.yScale, xScale = this.xScale;
 
-        if(!this.data.columns && !this.data.rows){
+        if(isEmpty(this.data.rectangular.bars.values)){
+            this.clear(".bars");
             return;
         }
 
-        let columns = this.data.columns.values;
-        let rows = this.data.rows.values;
+        let xs = new Map();
 
-        x0.domain(rows.map(row => row.x));
-        x1.domain(d3.range(d3.max(columns, column => column.values.length)));
-        y.domain([0, d3.max(columns, column => d3.max(column.values, value => value.y))]);
+        let bars = this.data.rectangular.bars.values;
 
-        let rowsSvg = easel.selectAll(".row")
-            .data(rows)
-          .enter().append("g")
-            .attr("class", "row")
-            .attr("transform", d => `translate(${x0(d.x)},0)`);  
+        for(let sequence of bars){
+            for(let value of sequence.values){
+                let x = value.x;
+                if(xs.has(x)){
+                    xs.set(x, xs.get(x)+1);
+                } else {
+                    xs.set(x, 1);
+                }
+            }
+        }
 
-        rowsSvg.selectAll("rect")
-            .data(d => d.values)
-          .enter().append("rect")
-            .attr("width", x1.rangeBand())
-            .attr("x", d => x1(d.x))
-            .attr("y", d => y(d.y))
-            .attr("height", d => this.option.size.height - y(d.y))
-            .style("fill", d => color(d.x));
+        let xScale1 = d3.scale.ordinal();
+        let {xMin, xMax, yMin, yMax, xStrings} = this.data.ranges;
+        let height = this.scene.attr("height");
 
+        if(!isEmpty(xStrings)){
+            xScale.domain(xStrings);
+        } else {
+            xScale.domain(d3.range(xMin, xMax+1)).rangeRoundBands([0, this.scene.attr("width")], 0.1);
+        }
+
+        yScale.domain([yMin, yMax]);
+
+        xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], 0.1);
+
+        let barsSvg = scene.select(".bars");
+        let barSvg = barsSvg.selectAll(".bar").data(bars);
+
+        barSvg.enter().append("g").attr("class", "bar");
+        barSvg.attr("transform", d => `translate(${xScale(d.x)}, 0)`);
+
+        let rectSvg = barSvg.selectAll("rect").data(d => d.values)
+        rectSvg.enter().append("rect");
+        
+        rectSvg.attr("x", d => xScale1(d.id))
+            .attr("y", d => yScale(d.y))
+            .attr("height", d => { return height - yScale(d.y - d.y0) })
+            .attr("width", xScale1.rangeBand())
+            .style("fill", d => color(d.id));
+
+        rectSvg.exit().remove();
+        barSvg.exit().remove();    
     }
 
     redrawLines(){
@@ -193,8 +225,6 @@ export default class SvgRenderer extends Renderer {
         }
 
         let lines = this.data.rectangular.lines.values;
-
-        color.domain(lines.map(line => line.id));
 
         let line = d3.svg.line()
             .x(d => xScale(d.x))
@@ -219,7 +249,6 @@ export default class SvgRenderer extends Renderer {
             this.redrawPoints(lines);
         }
 
-        this.redrawLegend(lines);
     }
 
     redrawAreas(){
@@ -231,8 +260,6 @@ export default class SvgRenderer extends Renderer {
         }
 
         let areas = this.data.rectangular.areas.values;
-
-        color.domain(areas.map(area => area.id));
 
         let area = d3.svg.area()
             .x(d => xScale(d.x))
@@ -258,7 +285,6 @@ export default class SvgRenderer extends Renderer {
             this.redrawPoints(areas);
         }
 
-        this.redrawLegend(areas);
     }
 
     redrawPies(){
@@ -271,7 +297,6 @@ export default class SvgRenderer extends Renderer {
         let pies = this.data.circular.pies.values;
 
         let pie = pies[0].values;
-        color.domain(pie.map(value => value.x));
 
         let arcSvg = d3.svg.arc()
             .outerRadius(option.pie.outerRadius)
@@ -298,8 +323,10 @@ export default class SvgRenderer extends Renderer {
 
     }
 
-    redrawLegend(sequences){
-        if(isEmpty(sequences)){
+    redrawLegend(){
+        let ids = this.data.ids;
+
+        if(isEmpty(ids)){
             this.clear(".legend");
             return;
         }
@@ -310,17 +337,17 @@ export default class SvgRenderer extends Renderer {
 
         let legend = this.legend, legendScale = this.legendScale, color = this.color;
 
-        legendScale.domain(sequences.map(sequence => sequence.id));
+        legendScale.domain(ids);
 
-        let legendItem = legend.selectAll(".legendItem").data(sequences);
+        let legendItem = legend.selectAll(".legendItem").data(ids);
 
         legendItem.enter().append("text")
             .attr("class", "legendItem");
 
-        legendItem.attr("transform", d => `translate(20, ${legendScale(d.id)})`);
-        legendItem.text(d => d.id);
+        legendItem.attr("transform", d => `translate(20, ${legendScale(d)})`);
+        legendItem.text(d => d);
         
-        let legendPicture = legend.selectAll(".legendPicture").data(sequences);  
+        let legendPicture = legend.selectAll(".legendPicture").data(ids);  
 
         if(this.option.legend.pointType === "line"){
             legendPicture.enter().append("line")
@@ -329,17 +356,17 @@ export default class SvgRenderer extends Renderer {
                 .attr("y1", 5)
                 .attr("x2", 10)
                 .attr("y2", 5)
-                .attr("stroke", d => color(d.id))
+                .attr("stroke", d => color(d))
                 .style("stroke-width", 2);
         } else {
             legendPicture.enter().append("rect")
                 .attr("class", "legendPicture")
                 .attr("width", 10)
                 .attr("height", 10)
-                .attr("fill", d => color(d.id));
+                .attr("fill", d => color(d));
         }
             
-        legendPicture.attr("transform", d => `translate(0, ${legendScale(d.id) - 10})`);
+        legendPicture.attr("transform", d => `translate(0, ${legendScale(d) - 10})`);
 
         legendItem.exit().remove();
         legendPicture.exit().remove();

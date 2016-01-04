@@ -1901,9 +1901,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _utils = __webpack_require__(3);
 	
-	var _column = __webpack_require__(13);
+	var _bar = __webpack_require__(13);
 	
-	var _column2 = _interopRequireDefault(_column);
+	var _bar2 = _interopRequireDefault(_bar);
 	
 	var _line = __webpack_require__(17);
 	
@@ -1994,8 +1994,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }, {
 	        key: "setHandlerByName",
 	        value: function setHandlerByName(handler) {
-	            if (handler === "column") {
-	                this.handler = new _column2.default(this);
+	            if (handler === "bar") {
+	                this.handler = new _bar2.default(this);
 	            } else if (handler === "line") {
 	                this.handler = new _line2.default(this);
 	            } else if (handler === "area") {
@@ -2081,6 +2081,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 	
+	var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
+	
 	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 	
 	var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
@@ -2103,109 +2105,141 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
-	var ColumnHandler = (function (_RectangularHandler) {
-	    _inherits(ColumnHandler, _RectangularHandler);
+	var BarHandler = (function (_RectangularHandler) {
+	    _inherits(BarHandler, _RectangularHandler);
 	
-	    function ColumnHandler() {
-	        _classCallCheck(this, ColumnHandler);
+	    function BarHandler() {
+	        _classCallCheck(this, BarHandler);
 	
-	        return _possibleConstructorReturn(this, Object.getPrototypeOf(ColumnHandler).call(this));
+	        return _possibleConstructorReturn(this, Object.getPrototypeOf(BarHandler).call(this));
 	    }
 	
-	    _createClass(ColumnHandler, [{
+	    _createClass(BarHandler, [{
+	        key: "init",
+	        value: function init() {}
+	    }, {
 	        key: "computeRenderObject",
 	        value: function computeRenderObject(data, option) {
-	            _get(Object.getPrototypeOf(ColumnHandler.prototype), "computeRenderObject", this).call(this, data, option);
+	            _get(Object.getPrototypeOf(BarHandler.prototype), "computeRenderObject", this).call(this, data, option);
 	
 	            var d = this.d();
 	
 	            d.clearRectangularData({
-	                columns: false
+	                bars: false
 	            });
 	
-	            d.data.rectangular.columns = this.processColumns(data.columns());
+	            d.data.rectangular.bars = this.processBars(data.columns());
 	
 	            if (option.mode() === "stacked") {
-	                d.data.rectangular.columns = this.stack(d.data.rectangular.columns);
+	                d.data.rectangular.bars = this.stack(d.data.rectangular.bars);
 	            } else if (option.mode() === "normalized") {
-	                d.data.rectangular.columns = this.normalize(d.data.rectangular.columns);
+	                d.data.rectangular.bars = this.normalize(d.data.rectangular.bars);
 	            }
 	
-	            d.data.ranges = this.computeRanges(d.data.rectangular.columns);
+	            d.data.ids = this.ids(d.data.rectangular.bars);
+	            d.data.ranges = this.computeRanges(d.data.rectangular.bars);
+	            d.data.rectangular.bars = this.setY0(d.data.rectangular.bars, 0);
 	
-	            d.data.rectangular.columns = this.setY0(d.data.rectangular.columns, d.data.ranges.yMin);
-	
-	            d.option.area = option.area.options();
+	            d.data.rectangular.bars = this.turnToRows(d.data.rectangular.bars);
 	
 	            return d;
 	        }
 	    }, {
-	        key: "init",
-	        value: function init() {
-	            var d = this.d();
-	            d.data.columns = {
+	        key: "processBars",
+	        value: function processBars(bars) {
+	            var ret = {
 	                dirty: true,
 	                values: []
 	            };
-	        }
-	    }, {
-	        key: "processColumns",
-	        value: function processColumns(columns) {
-	            var _this2 = this;
 	
-	            var d = this.d();
+	            var _iteratorNormalCompletion = true;
+	            var _didIteratorError = false;
+	            var _iteratorError = undefined;
 	
-	            if (!columns.dirty) {
-	                return;
+	            try {
+	                for (var _iterator = bars[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	                    var _step$value = _slicedToArray(_step.value, 2);
+	
+	                    var id = _step$value[0];
+	                    var bar = _step$value[1];
+	
+	                    ret.values.push(this.processBar(bar, id));
+	                }
+	            } catch (err) {
+	                _didIteratorError = true;
+	                _iteratorError = err;
+	            } finally {
+	                try {
+	                    if (!_iteratorNormalCompletion && _iterator.return) {
+	                        _iterator.return();
+	                    }
+	                } finally {
+	                    if (_didIteratorError) {
+	                        throw _iteratorError;
+	                    }
+	                }
 	            }
 	
-	            d.data.columns.values = [];
-	
-	            var cols = columns.values();
-	
-	            cols.forEach(function (column) {
-	                d.data.columns.values.push(_this2.processColumn(column));
-	            });
-	
-	            d.data.columns.dirty = true;
-	
-	            this.columnsToRows(columns);
+	            return ret;
 	        }
 	    }, {
-	        key: "processColumn",
-	        value: function processColumn(column) {
-	            var processed = {
-	                id: column.id(),
-	                values: []
+	        key: "processBar",
+	        value: function processBar(bar, id) {
+	            var ret = {
+	                dirty: true,
+	                values: [],
+	                id: id
 	            };
 	
-	            var i = undefined;
-	            var values = column.values();
-	            for (i = 0; i < values.length; i++) {
-	                var value = values[i];
-	                processed.values.push(this.processValue(value, { x: i }));
+	            var _iteratorNormalCompletion2 = true;
+	            var _didIteratorError2 = false;
+	            var _iteratorError2 = undefined;
+	
+	            try {
+	                for (var _iterator2 = bar[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	                    var _step2$value = _slicedToArray(_step2.value, 2);
+	
+	                    var x = _step2$value[0];
+	                    var value = _step2$value[1];
+	
+	                    ret.values.push(this.processValue(value, x, id));
+	                }
+	            } catch (err) {
+	                _didIteratorError2 = true;
+	                _iteratorError2 = err;
+	            } finally {
+	                try {
+	                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	                        _iterator2.return();
+	                    }
+	                } finally {
+	                    if (_didIteratorError2) {
+	                        throw _iteratorError2;
+	                    }
+	                }
 	            }
 	
-	            return processed;
+	            return ret;
 	        }
 	    }, {
 	        key: "processValue",
-	        value: function processValue(v, d) {
-	            d = (0, _utils.option)(d, {});
+	        value: function processValue(value, x, id) {
+	            var v = _get(Object.getPrototypeOf(BarHandler.prototype), "processValue", this).call(this, value, x);
 	
-	            return {
-	                x: (0, _utils.option)(v.x, d.x),
-	                y: v.y,
-	                dirty: v.dirty,
-	                label: v.label
-	            };
+	            if ((0, _utils.isDefined)(value.y0)) {
+	                v.y0 = value.y0;
+	            }
+	            if ((0, _utils.isDefined)(id)) {
+	                v.id = id;
+	            }
+	            return v;
 	        }
 	    }]);
 	
-	    return ColumnHandler;
+	    return BarHandler;
 	})(_rectangular2.default);
 	
-	exports.default = ColumnHandler;
+	exports.default = BarHandler;
 	module.exports = exports['default'];
 
 /***/ },
@@ -2296,6 +2330,60 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	
 	            return v;
+	        }
+	    }, {
+	        key: "setY0",
+	        value: function setY0(sequences, yMin) {
+	            var _iteratorNormalCompletion = true;
+	            var _didIteratorError = false;
+	            var _iteratorError = undefined;
+	
+	            try {
+	                for (var _iterator = sequences.values[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	                    var sequence = _step.value;
+	                    var _iteratorNormalCompletion2 = true;
+	                    var _didIteratorError2 = false;
+	                    var _iteratorError2 = undefined;
+	
+	                    try {
+	                        for (var _iterator2 = sequence.values[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	                            var value = _step2.value;
+	
+	                            if ((0, _utils.isUndefined)(value.y0)) {
+	                                value.y0 = yMin;
+	                            }
+	                        }
+	                    } catch (err) {
+	                        _didIteratorError2 = true;
+	                        _iteratorError2 = err;
+	                    } finally {
+	                        try {
+	                            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	                                _iterator2.return();
+	                            }
+	                        } finally {
+	                            if (_didIteratorError2) {
+	                                throw _iteratorError2;
+	                            }
+	                        }
+	                    }
+	                }
+	            } catch (err) {
+	                _didIteratorError = true;
+	                _iteratorError = err;
+	            } finally {
+	                try {
+	                    if (!_iteratorNormalCompletion && _iterator.return) {
+	                        _iterator.return();
+	                    }
+	                } finally {
+	                    if (_didIteratorError) {
+	                        throw _iteratorError;
+	                    }
+	                }
+	            }
+	
+	            return sequences;
 	        }
 	    }]);
 	
@@ -2663,6 +2751,137 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	            return false;
 	        }
+	    }, {
+	        key: "ids",
+	        value: function ids(sequences) {
+	            var ret = [];
+	
+	            var _iteratorNormalCompletion9 = true;
+	            var _didIteratorError9 = false;
+	            var _iteratorError9 = undefined;
+	
+	            try {
+	                for (var _iterator9 = sequences.values[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+	                    var sequence = _step9.value;
+	
+	                    ret.push(sequence.id);
+	                }
+	            } catch (err) {
+	                _didIteratorError9 = true;
+	                _iteratorError9 = err;
+	            } finally {
+	                try {
+	                    if (!_iteratorNormalCompletion9 && _iterator9.return) {
+	                        _iterator9.return();
+	                    }
+	                } finally {
+	                    if (_didIteratorError9) {
+	                        throw _iteratorError9;
+	                    }
+	                }
+	            }
+	
+	            return ret;
+	        }
+	    }, {
+	        key: "turnToRows",
+	        value: function turnToRows(sequences) {
+	            var ret = {
+	                values: []
+	            };
+	
+	            function findByX(x) {
+	                var _iteratorNormalCompletion10 = true;
+	                var _didIteratorError10 = false;
+	                var _iteratorError10 = undefined;
+	
+	                try {
+	                    for (var _iterator10 = ret.values[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+	                        var v = _step10.value;
+	
+	                        if (v.x === x) {
+	                            return v;
+	                        }
+	                    }
+	                } catch (err) {
+	                    _didIteratorError10 = true;
+	                    _iteratorError10 = err;
+	                } finally {
+	                    try {
+	                        if (!_iteratorNormalCompletion10 && _iterator10.return) {
+	                            _iterator10.return();
+	                        }
+	                    } finally {
+	                        if (_didIteratorError10) {
+	                            throw _iteratorError10;
+	                        }
+	                    }
+	                }
+	            }
+	
+	            var _iteratorNormalCompletion11 = true;
+	            var _didIteratorError11 = false;
+	            var _iteratorError11 = undefined;
+	
+	            try {
+	                for (var _iterator11 = sequences.values[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+	                    var sequence = _step11.value;
+	                    var _iteratorNormalCompletion12 = true;
+	                    var _didIteratorError12 = false;
+	                    var _iteratorError12 = undefined;
+	
+	                    try {
+	                        for (var _iterator12 = sequence.values[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+	                            var value = _step12.value;
+	
+	                            var obj = findByX(value.x);
+	                            if ((0, _utils.isUndefined)(obj)) {
+	                                ret.values.push({
+	                                    x: value.x,
+	                                    values: []
+	                                });
+	
+	                                obj = ret.values[ret.values.length - 1];
+	                            }
+	
+	                            obj.values.push({
+	                                id: sequence.id,
+	                                y: value.y,
+	                                y0: value.y0
+	                            });
+	                        }
+	                    } catch (err) {
+	                        _didIteratorError12 = true;
+	                        _iteratorError12 = err;
+	                    } finally {
+	                        try {
+	                            if (!_iteratorNormalCompletion12 && _iterator12.return) {
+	                                _iterator12.return();
+	                            }
+	                        } finally {
+	                            if (_didIteratorError12) {
+	                                throw _iteratorError12;
+	                            }
+	                        }
+	                    }
+	                }
+	            } catch (err) {
+	                _didIteratorError11 = true;
+	                _iteratorError11 = err;
+	            } finally {
+	                try {
+	                    if (!_iteratorNormalCompletion11 && _iterator11.return) {
+	                        _iterator11.return();
+	                    }
+	                } finally {
+	                    if (_didIteratorError11) {
+	                        throw _iteratorError11;
+	                    }
+	                }
+	            }
+	
+	            return ret;
+	        }
 	    }]);
 	
 	    return Handler;
@@ -2740,7 +2959,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	            except = (0, _utils.option)(except, {});
 	
-	            var types = ["areas", "columns", "lines"];
+	            var types = ["areas", "bars", "lines"];
 	
 	            types.forEach(function (type) {
 	                if ((0, _utils.isUndefined)(except[type])) {
@@ -2858,8 +3077,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                d.data.rectangular.lines = this.normalize(d.data.rectangular.lines);
 	            }
 	
+	            d.data.ids = this.ids(d.data.rectangular.lines);
 	            d.data.ranges = this.computeRanges(d.data.rectangular.lines);
-	
 	            d.option.line = option.line.options();
 	
 	            return d;
@@ -3012,8 +3231,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                d.data.rectangular.areas = this.normalize(d.data.rectangular.areas);
 	            }
 	
+	            d.data.ids = this.ids(d.data.rectangular.areas);
 	            d.data.ranges = this.computeRanges(d.data.rectangular.areas);
-	
 	            d.data.rectangular.areas = this.setY0(d.data.rectangular.areas, d.data.ranges.yMin);
 	
 	            d.option.area = option.area.options();
@@ -3108,60 +3327,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	            return v;
 	        }
-	    }, {
-	        key: "setY0",
-	        value: function setY0(areas, yMin) {
-	            var _iteratorNormalCompletion3 = true;
-	            var _didIteratorError3 = false;
-	            var _iteratorError3 = undefined;
-	
-	            try {
-	                for (var _iterator3 = areas.values[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	                    var area = _step3.value;
-	                    var _iteratorNormalCompletion4 = true;
-	                    var _didIteratorError4 = false;
-	                    var _iteratorError4 = undefined;
-	
-	                    try {
-	                        for (var _iterator4 = area.values[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	                            var value = _step4.value;
-	
-	                            if ((0, _utils.isUndefined)(value.y0)) {
-	                                value.y0 = yMin;
-	                            }
-	                        }
-	                    } catch (err) {
-	                        _didIteratorError4 = true;
-	                        _iteratorError4 = err;
-	                    } finally {
-	                        try {
-	                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
-	                                _iterator4.return();
-	                            }
-	                        } finally {
-	                            if (_didIteratorError4) {
-	                                throw _iteratorError4;
-	                            }
-	                        }
-	                    }
-	                }
-	            } catch (err) {
-	                _didIteratorError3 = true;
-	                _iteratorError3 = err;
-	            } finally {
-	                try {
-	                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
-	                        _iterator3.return();
-	                    }
-	                } finally {
-	                    if (_didIteratorError3) {
-	                        throw _iteratorError3;
-	                    }
-	                }
-	            }
-	
-	            return areas;
-	        }
 	    }]);
 	
 	    return AreaHandler;
@@ -3217,6 +3382,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            _get(Object.getPrototypeOf(PieHandler.prototype), "computeRenderObject", this).call(this, data, option);
 	
 	            d.data.circular.pies = this.processPies(data.columns());
+	            d.data.ids = this.ids(d.data.circular.pies);
 	
 	            d.option.pie = option.pie.options();
 	
@@ -3575,6 +3741,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	        _this.initLines();
 	        _this.initAreas();
+	        _this.initBars();
 	
 	        _this.initPies();
 	
@@ -3596,12 +3763,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	            this.setSizes();
 	            this.setDomainsToScales();
 	
-	            //this.redrawColumns();
+	            this.redrawBars();
 	            this.redrawLines();
 	            this.redrawAreas();
 	            this.redrawPies();
 	
 	            this.redrawAxes();
+	            this.redrawLegend();
 	
 	            this.endRender();
 	        }
@@ -3635,6 +3803,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	        key: "initAreas",
 	        value: function initAreas() {
 	            this.scene.append("g").attr("class", "areas");
+	        }
+	    }, {
+	        key: "initBars",
+	        value: function initBars() {
+	            this.scene.append("g").attr("class", "bars");
 	        }
 	    }, {
 	        key: "initPies",
@@ -3702,7 +3875,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var xStrings = _data$ranges.xStrings;
 	
 	            var xScale = this.xScale,
-	                yScale = this.yScale;
+	                yScale = this.yScale,
+	                color = this.color;
 	
 	            if (!(0, _utils.isEmpty)(xStrings)) {
 	                xScale.domain(xStrings);
@@ -3710,6 +3884,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                xScale.domain(_d2.default.range(xMin, xMax + 1));
 	            }
 	            yScale.domain([yMin, yMax]);
+	
+	            color.domain(this.data.ids);
 	        }
 	    }, {
 	        key: "redrawAxes",
@@ -3732,50 +3908,119 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }).call(yAxis);
 	        }
 	    }, {
-	        key: "redrawColumns",
-	        value: function redrawColumns() {
-	            var _this2 = this;
+	        key: "redrawBars",
+	        value: function redrawBars() {
+	            var scene = this.scene,
+	                color = this.color,
+	                yScale = this.yScale,
+	                xScale = this.xScale;
 	
-	            var easel = this.easel,
-	                x0 = this.x0,
-	                x1 = this.x1,
-	                y = this.y,
-	                color = this.color;
-	
-	            if (!this.data.columns && !this.data.rows) {
+	            if ((0, _utils.isEmpty)(this.data.rectangular.bars.values)) {
+	                this.clear(".bars");
 	                return;
 	            }
 	
-	            var columns = this.data.columns.values;
-	            var rows = this.data.rows.values;
+	            var xs = new Map();
 	
-	            x0.domain(rows.map(function (row) {
-	                return row.x;
-	            }));
-	            x1.domain(_d2.default.range(_d2.default.max(columns, function (column) {
-	                return column.values.length;
-	            })));
-	            y.domain([0, _d2.default.max(columns, function (column) {
-	                return _d2.default.max(column.values, function (value) {
-	                    return value.y;
-	                });
-	            })]);
+	            var bars = this.data.rectangular.bars.values;
 	
-	            var rowsSvg = easel.selectAll(".row").data(rows).enter().append("g").attr("class", "row").attr("transform", function (d) {
-	                return "translate(" + x0(d.x) + ",0)";
+	            var _iteratorNormalCompletion = true;
+	            var _didIteratorError = false;
+	            var _iteratorError = undefined;
+	
+	            try {
+	                for (var _iterator = bars[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	                    var sequence = _step.value;
+	                    var _iteratorNormalCompletion2 = true;
+	                    var _didIteratorError2 = false;
+	                    var _iteratorError2 = undefined;
+	
+	                    try {
+	                        for (var _iterator2 = sequence.values[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	                            var value = _step2.value;
+	
+	                            var x = value.x;
+	                            if (xs.has(x)) {
+	                                xs.set(x, xs.get(x) + 1);
+	                            } else {
+	                                xs.set(x, 1);
+	                            }
+	                        }
+	                    } catch (err) {
+	                        _didIteratorError2 = true;
+	                        _iteratorError2 = err;
+	                    } finally {
+	                        try {
+	                            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	                                _iterator2.return();
+	                            }
+	                        } finally {
+	                            if (_didIteratorError2) {
+	                                throw _iteratorError2;
+	                            }
+	                        }
+	                    }
+	                }
+	            } catch (err) {
+	                _didIteratorError = true;
+	                _iteratorError = err;
+	            } finally {
+	                try {
+	                    if (!_iteratorNormalCompletion && _iterator.return) {
+	                        _iterator.return();
+	                    }
+	                } finally {
+	                    if (_didIteratorError) {
+	                        throw _iteratorError;
+	                    }
+	                }
+	            }
+	
+	            var xScale1 = _d2.default.scale.ordinal();
+	            var _data$ranges2 = this.data.ranges;
+	            var xMin = _data$ranges2.xMin;
+	            var xMax = _data$ranges2.xMax;
+	            var yMin = _data$ranges2.yMin;
+	            var yMax = _data$ranges2.yMax;
+	            var xStrings = _data$ranges2.xStrings;
+	
+	            var height = this.scene.attr("height");
+	
+	            if (!(0, _utils.isEmpty)(xStrings)) {
+	                xScale.domain(xStrings);
+	            } else {
+	                xScale.domain(_d2.default.range(xMin, xMax + 1)).rangeRoundBands([0, this.scene.attr("width")], 0.1);
+	            }
+	
+	            yScale.domain([yMin, yMax]);
+	
+	            xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], 0.1);
+	
+	            var barsSvg = scene.select(".bars");
+	            var barSvg = barsSvg.selectAll(".bar").data(bars);
+	
+	            barSvg.enter().append("g").attr("class", "bar");
+	            barSvg.attr("transform", function (d) {
+	                return "translate(" + xScale(d.x) + ", 0)";
 	            });
 	
-	            rowsSvg.selectAll("rect").data(function (d) {
+	            var rectSvg = barSvg.selectAll("rect").data(function (d) {
 	                return d.values;
-	            }).enter().append("rect").attr("width", x1.rangeBand()).attr("x", function (d) {
-	                return x1(d.x);
-	            }).attr("y", function (d) {
-	                return y(d.y);
-	            }).attr("height", function (d) {
-	                return _this2.option.size.height - y(d.y);
-	            }).style("fill", function (d) {
-	                return color(d.x);
 	            });
+	            rectSvg.enter().append("rect");
+	
+	            rectSvg.attr("x", function (d) {
+	                return xScale1(d.id);
+	            }).attr("y", function (d) {
+	                return yScale(d.y);
+	            }).attr("height", function (d) {
+	                return height - yScale(d.y - d.y0);
+	            }).attr("width", xScale1.rangeBand()).style("fill", function (d) {
+	                return color(d.id);
+	            });
+	
+	            rectSvg.exit().remove();
+	            barSvg.exit().remove();
 	        }
 	    }, {
 	        key: "redrawLines",
@@ -3791,10 +4036,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	
 	            var lines = this.data.rectangular.lines.values;
-	
-	            color.domain(lines.map(function (line) {
-	                return line.id;
-	            }));
 	
 	            var line = _d2.default.svg.line().x(function (d) {
 	                return xScale(d.x);
@@ -3819,8 +4060,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            if (this.option.line.points) {
 	                this.redrawPoints(lines);
 	            }
-	
-	            this.redrawLegend(lines);
 	        }
 	    }, {
 	        key: "redrawAreas",
@@ -3836,10 +4075,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	
 	            var areas = this.data.rectangular.areas.values;
-	
-	            color.domain(areas.map(function (area) {
-	                return area.id;
-	            }));
 	
 	            var area = _d2.default.svg.area().x(function (d) {
 	                return xScale(d.x);
@@ -3868,8 +4103,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            if (this.option.area.points) {
 	                this.redrawPoints(areas);
 	            }
-	
-	            this.redrawLegend(areas);
 	        }
 	    }, {
 	        key: "redrawPies",
@@ -3885,9 +4118,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var pies = this.data.circular.pies.values;
 	
 	            var pie = pies[0].values;
-	            color.domain(pie.map(function (value) {
-	                return value.x;
-	            }));
 	
 	            var arcSvg = _d2.default.svg.arc().outerRadius(option.pie.outerRadius).innerRadius(option.pie.innerRadius).startAngle(function (d) {
 	                return d.startAngle + option.pie.turnAngle;
@@ -3913,8 +4143,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	    }, {
 	        key: "redrawLegend",
-	        value: function redrawLegend(sequences) {
-	            if ((0, _utils.isEmpty)(sequences)) {
+	        value: function redrawLegend() {
+	            var ids = this.data.ids;
+	
+	            if ((0, _utils.isEmpty)(ids)) {
 	                this.clear(".legend");
 	                return;
 	            }
@@ -3927,35 +4159,33 @@ return /******/ (function(modules) { // webpackBootstrap
 	                legendScale = this.legendScale,
 	                color = this.color;
 	
-	            legendScale.domain(sequences.map(function (sequence) {
-	                return sequence.id;
-	            }));
+	            legendScale.domain(ids);
 	
-	            var legendItem = legend.selectAll(".legendItem").data(sequences);
+	            var legendItem = legend.selectAll(".legendItem").data(ids);
 	
 	            legendItem.enter().append("text").attr("class", "legendItem");
 	
 	            legendItem.attr("transform", function (d) {
-	                return "translate(20, " + legendScale(d.id) + ")";
+	                return "translate(20, " + legendScale(d) + ")";
 	            });
 	            legendItem.text(function (d) {
-	                return d.id;
+	                return d;
 	            });
 	
-	            var legendPicture = legend.selectAll(".legendPicture").data(sequences);
+	            var legendPicture = legend.selectAll(".legendPicture").data(ids);
 	
 	            if (this.option.legend.pointType === "line") {
 	                legendPicture.enter().append("line").attr("class", "legendPicture").attr("x1", 0).attr("y1", 5).attr("x2", 10).attr("y2", 5).attr("stroke", function (d) {
-	                    return color(d.id);
+	                    return color(d);
 	                }).style("stroke-width", 2);
 	            } else {
 	                legendPicture.enter().append("rect").attr("class", "legendPicture").attr("width", 10).attr("height", 10).attr("fill", function (d) {
-	                    return color(d.id);
+	                    return color(d);
 	                });
 	            }
 	
 	            legendPicture.attr("transform", function (d) {
-	                return "translate(0, " + (legendScale(d.id) - 10) + ")";
+	                return "translate(0, " + (legendScale(d) - 10) + ")";
 	            });
 	
 	            legendItem.exit().remove();
@@ -3964,7 +4194,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }, {
 	        key: "redrawPoints",
 	        value: function redrawPoints(sequences) {
-	            var _this3 = this;
+	            var _this2 = this;
 	
 	            if ((0, _utils.isEmpty)(sequences)) {
 	                this.clear(".points");
@@ -3991,7 +4221,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var pointSvg = scene.selectAll(".points").selectAll(".point").data(points);
 	
 	            pointSvg.enter().append("circle").attr("class", "point").attr("fill", function (d) {
-	                return _this3.color(d.id);
+	                return _this2.color(d.id);
 	            }).attr("r", 3);
 	
 	            pointSvg.attr("cx", function (d) {

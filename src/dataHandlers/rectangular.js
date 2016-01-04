@@ -1,7 +1,7 @@
 
 import Handler from "./basic";
 
-import {isDefined} from "../utils";
+import {isDefined, isUndefined} from "../utils";
 
 /*
  * Rectangular chart is the father of column, line, area and other charts, that are painted on rectangular canvas.
@@ -52,6 +52,19 @@ export default class RectangularHandler extends Handler {
         }
 
         return v;
+    }
+
+    setY0(sequences, yMin){
+        for (let sequence of sequences.values) {
+            for (let value of sequence.values) {
+                if(isUndefined(value.y0)){
+                    value.y0 = yMin;
+                }
+            }
+
+        }
+
+        return sequences;
     }
 
 }

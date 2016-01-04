@@ -27,8 +27,8 @@ export default class LineHandler extends RectangularHandler {
             d.data.rectangular.lines = this.normalize(d.data.rectangular.lines);
         }
 
+        d.data.ids = this.ids(d.data.rectangular.lines);
         d.data.ranges = this.computeRanges(d.data.rectangular.lines);
-
         d.option.line = option.line.options();
 
         return d;

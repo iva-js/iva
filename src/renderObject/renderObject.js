@@ -43,7 +43,7 @@ export default class RenderObject {
     clearRectangularData(except){
         except = option(except, {});
 
-        let types = ["areas", "columns", "lines"];
+        let types = ["areas", "bars", "lines"];
 
         types.forEach(type => {
             if(isUndefined(except[type])){

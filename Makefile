@@ -3,14 +3,16 @@
 # missingdays, 2015-12-11 09:40
 #
 
-all: long build-final build-dev
+all: long deps build-final build-dev
+
+all-dev: long build-final build-dev
 
 test-all: long test-unit test-integr
 
-build-final:
+build-final: 
 	WEBPACK_ENV=build webpack --progress --colors 
 
-build-dev:
+build-dev: lint
 	WEBPACK_ENV=dev webpack --progress --colors
 
 test-unit:
@@ -30,6 +32,13 @@ example:
 
 watch-all:
 	gulp watch:all
+
+deps:
+	npm install
+	bower install
+
+lint:
+	gulp lint
 
 long:
 	@echo "Go drink some coffee -- this will take some time"

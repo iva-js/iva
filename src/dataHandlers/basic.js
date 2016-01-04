@@ -163,4 +163,50 @@ export default class Handler {
         return false;
     }
 
+    ids(sequences){
+        let ret = [];
+
+        for(let sequence of sequences.values){
+            ret.push(sequence.id);
+        }
+
+        return ret;
+    }
+
+    turnToRows(sequences){
+        let ret = {
+            values: []
+        };
+
+        function findByX(x){
+            for(let v of ret.values){
+                if(v.x === x){
+                    return v;
+                }
+            }
+        }
+
+        for(let sequence of sequences.values){
+            for(let value of sequence.values){
+                let obj = findByX(value.x);
+                if(isUndefined(obj)){
+                    ret.values.push({
+                        x: value.x,
+                        values: []
+                    });
+
+                    obj = ret.values[ret.values.length-1];
+                }
+
+                obj.values.push({
+                    id: sequence.id,
+                    y: value.y,
+                    y0: value.y0
+                });
+            }
+        }
+
+        return ret;
+    }
+
 }

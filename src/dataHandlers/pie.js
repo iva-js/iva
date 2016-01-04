@@ -11,6 +11,7 @@ export default class PieHandler extends CircularHandler {
         super.computeRenderObject(data, option);
 
         d.data.circular.pies = this.processPies(data.columns());
+        d.data.ids = this.ids(d.data.circular.pies);
 
         d.option.pie = option.pie.options();
 
