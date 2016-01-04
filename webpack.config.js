@@ -9,7 +9,7 @@ var path = require("path");
 var uglify = webpack.optimize.UglifyJsPlugin;
 var env = process.env.WEBPACK_ENV;
 
-var lname = "Iva";
+var lname = "iva";
 var outFile;
 var plugins = [];
 

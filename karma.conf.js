@@ -17,7 +17,7 @@ module.exports = function(config) {
     files: [
       'node_modules/d3/d3.js',
       'node_modules/babel-polyfill/browser.js',
-      'build/Iva.js',
+      'build/iva.js',
       'test-integration/*.helper.js',
       'test-integration/*.spec.js'
     ],

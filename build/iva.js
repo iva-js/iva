@@ -2,11 +2,11 @@
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory(require("d3"));
 	else if(typeof define === 'function' && define.amd)
-		define("Iva", ["d3"], factory);
+		define("iva", ["d3"], factory);
 	else if(typeof exports === 'object')
-		exports["Iva"] = factory(require("d3"));
+		exports["iva"] = factory(require("d3"));
 	else
-		root["Iva"] = factory(root["d3"]);
+		root["iva"] = factory(root["d3"]);
 })(this, function(__WEBPACK_EXTERNAL_MODULE_24__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
@@ -4141,4 +4141,4 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ ])
 });
 ;
-//# sourceMappingURL=Iva.js.map
+//# sourceMappingURL=iva.js.map
