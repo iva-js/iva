@@ -7,6 +7,7 @@ import Legend from "./legend";
 
 import Area from "./area";
 import Line from "./line";
+import Bar from "./bar";
 import Pie from "./pie";
 
 import {option, throwIfNotArray, isFunction, isUndefined} from "../utils";
@@ -28,6 +29,7 @@ export default class OptionObject extends Obj {
 
         this.area = new Area(d.area, this);
         this.line = new Line(d.line, this);
+        this.bar = new Bar(d.bar, this);
         this.pie = new Pie(d.pie, this);
 
         this.setDefault();

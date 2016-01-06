@@ -32,6 +32,8 @@ export default class BarHandler extends RectangularHandler {
 
         d.data.rectangular.bars = this.turnToRows(d.data.rectangular.bars);
 
+        d.option.bar = option.bar.options();
+
         return d;
     }
 

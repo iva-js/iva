@@ -163,7 +163,7 @@ export default class SvgRenderer extends Renderer {
     }
 
     redrawBars(){
-        let scene = this.scene, color = this.color,  yScale = this.yScale, xScale = this.xScale;
+        let scene = this.scene, color = this.color,  yScale = this.yScale, xScale = this.xScale, option = this.option;
 
         if(isEmpty(this.data.rectangular.bars.values)){
             this.clear(".bars");
@@ -179,15 +179,15 @@ export default class SvgRenderer extends Renderer {
         if(!isEmpty(xStrings)){
             xScale.domain(xStrings);
         } else {
-            xScale.domain(d3.range(xMin, xMax+1)).rangeRoundBands([0, this.scene.attr("width")], 0.1);
+            xScale.domain(d3.range(xMin, xMax+1)).rangeRoundBands([0, this.scene.attr("width")], option.bar.outerGap);
         }
 
         yScale.domain([0, yMax]);
 
-        xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], 0.1);
+        xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], option.bar.innerGap);
 
-        let barWidth = this.option.mode === MODE.NORMAL ? xScale1.rangeBand() : xScale.rangeBand();
-        let barX = this.option.mode === MODE.NORMAL ? d => xScale1(d.id) : 0;
+        let barWidth = option.mode === MODE.NORMAL ? xScale1.rangeBand() : xScale.rangeBand();
+        let barX = option.mode === MODE.NORMAL ? d => xScale1(d.id) : 0;
 
         let barsSvg = scene.select(".bars");
         let barSvg = barsSvg.selectAll(".bar").data(bars);

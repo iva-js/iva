@@ -7,7 +7,7 @@
 		exports["Iva"] = factory(require("d3"));
 	else
 		root["Iva"] = factory(root["d3"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_24__) {
+})(this, function(__WEBPACK_EXTERNAL_MODULE_25__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -71,19 +71,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _optionObject2 = _interopRequireDefault(_optionObject);
 	
-	var _chart = __webpack_require__(12);
+	var _chart = __webpack_require__(13);
 	
 	var _chart2 = _interopRequireDefault(_chart);
 	
-	var _default = __webpack_require__(21);
+	var _default = __webpack_require__(22);
 	
 	var _default2 = _interopRequireDefault(_default);
 	
-	var _instant = __webpack_require__(22);
+	var _instant = __webpack_require__(23);
 	
 	var _instant2 = _interopRequireDefault(_instant);
 	
-	var _constants = __webpack_require__(28);
+	var _constants = __webpack_require__(29);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -991,13 +991,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _line2 = _interopRequireDefault(_line);
 	
-	var _pie = __webpack_require__(10);
+	var _bar = __webpack_require__(10);
+	
+	var _bar2 = _interopRequireDefault(_bar);
+	
+	var _pie = __webpack_require__(11);
 	
 	var _pie2 = _interopRequireDefault(_pie);
 	
 	var _utils = __webpack_require__(3);
 	
-	var _presets = __webpack_require__(11);
+	var _presets = __webpack_require__(12);
 	
 	var _presets2 = _interopRequireDefault(_presets);
 	
@@ -1029,6 +1033,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	        _this.area = new _area2.default(d.area, _this);
 	        _this.line = new _line2.default(d.line, _this);
+	        _this.bar = new _bar2.default(d.bar, _this);
 	        _this.pie = new _pie2.default(d.pie, _this);
 	
 	        _this.setDefault();
@@ -1751,6 +1756,102 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
+	var Bar = (function (_Obj) {
+	    _inherits(Bar, _Obj);
+	
+	    function Bar(d, parent) {
+	        _classCallCheck(this, Bar);
+	
+	        var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Bar).call(this, d, parent));
+	
+	        _this.setDefault();
+	        _this.options(d);
+	        return _this;
+	    }
+	
+	    _createClass(Bar, [{
+	        key: "options",
+	        value: function options(d) {
+	            if ((0, _utils.isUndefined)(d)) {
+	                return {
+	                    innerGap: this.innerGap(),
+	                    outerGap: this.outerGap()
+	                };
+	            }
+	
+	            this.innerGap(d.innerGap);
+	            this.outerGap(d.outerGap);
+	        }
+	    }, {
+	        key: "innerGap",
+	        value: function innerGap(_innerGap) {
+	            var __ = this.__;
+	
+	            if ((0, _utils.isUndefined)(_innerGap)) {
+	                return __.innerGap;
+	            }
+	
+	            __.innerGap = _innerGap;
+	
+	            this.dirty(true);
+	            return this;
+	        }
+	    }, {
+	        key: "outerGap",
+	        value: function outerGap(_outerGap) {
+	            var __ = this.__;
+	
+	            if ((0, _utils.isUndefined)(_outerGap)) {
+	                return __.outerGap;
+	            }
+	
+	            __.outerGap = _outerGap;
+	
+	            this.dirty(true);
+	            return this;
+	        }
+	    }, {
+	        key: "getDefault",
+	        value: function getDefault() {
+	            return {
+	                innerGap: 0,
+	                outerGap: 0
+	            };
+	        }
+	    }]);
+	
+	    return Bar;
+	})(_object2.default);
+	
+	exports.default = Bar;
+	module.exports = exports['default'];
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	
+	var _object = __webpack_require__(2);
+	
+	var _object2 = _interopRequireDefault(_object);
+	
+	var _utils = __webpack_require__(3);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
 	var Pie = (function (_Obj) {
 	    _inherits(Pie, _Obj);
 	
@@ -1867,7 +1968,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 11 */
+/* 12 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -1889,7 +1990,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 12 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -1902,31 +2003,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _utils = __webpack_require__(3);
 	
-	var _bar = __webpack_require__(13);
+	var _bar = __webpack_require__(14);
 	
 	var _bar2 = _interopRequireDefault(_bar);
 	
-	var _line = __webpack_require__(17);
+	var _line = __webpack_require__(18);
 	
 	var _line2 = _interopRequireDefault(_line);
 	
-	var _area = __webpack_require__(18);
+	var _area = __webpack_require__(19);
 	
 	var _area2 = _interopRequireDefault(_area);
 	
-	var _pie = __webpack_require__(19);
+	var _pie = __webpack_require__(20);
 	
 	var _pie2 = _interopRequireDefault(_pie);
 	
-	var _default = __webpack_require__(21);
+	var _default = __webpack_require__(22);
 	
 	var _default2 = _interopRequireDefault(_default);
 	
-	var _instant = __webpack_require__(22);
+	var _instant = __webpack_require__(23);
 	
 	var _instant2 = _interopRequireDefault(_instant);
 	
-	var _index = __webpack_require__(23);
+	var _index = __webpack_require__(24);
 	
 	var _index2 = _interopRequireDefault(_index);
 	
@@ -2077,7 +2178,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 13 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -2092,7 +2193,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _rectangular = __webpack_require__(14);
+	var _rectangular = __webpack_require__(15);
 	
 	var _rectangular2 = _interopRequireDefault(_rectangular);
 	
@@ -2142,6 +2243,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	            d.data.rectangular.bars = this.setY0(d.data.rectangular.bars, 0);
 	
 	            d.data.rectangular.bars = this.turnToRows(d.data.rectangular.bars);
+	
+	            d.option.bar = option.bar.options();
 	
 	            return d;
 	        }
@@ -2244,7 +2347,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 14 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -2257,7 +2360,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _basic = __webpack_require__(15);
+	var _basic = __webpack_require__(16);
 	
 	var _basic2 = _interopRequireDefault(_basic);
 	
@@ -2395,7 +2498,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 15 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -2406,7 +2509,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _renderObject = __webpack_require__(16);
+	var _renderObject = __webpack_require__(17);
 	
 	var _renderObject2 = _interopRequireDefault(_renderObject);
 	
@@ -2891,7 +2994,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 16 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3015,7 +3118,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 17 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3030,7 +3133,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _rectangular = __webpack_require__(14);
+	var _rectangular = __webpack_require__(15);
 	
 	var _rectangular2 = _interopRequireDefault(_rectangular);
 	
@@ -3169,7 +3272,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 18 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3186,7 +3289,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _utils = __webpack_require__(3);
 	
-	var _rectangular = __webpack_require__(14);
+	var _rectangular = __webpack_require__(15);
 	
 	var _rectangular2 = _interopRequireDefault(_rectangular);
 	
@@ -3336,7 +3439,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3351,7 +3454,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _circular = __webpack_require__(20);
+	var _circular = __webpack_require__(21);
 	
 	var _circular2 = _interopRequireDefault(_circular);
 	
@@ -3488,7 +3591,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3499,7 +3602,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _basic = __webpack_require__(15);
+	var _basic = __webpack_require__(16);
 	
 	var _basic2 = _interopRequireDefault(_basic);
 	
@@ -3532,7 +3635,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3643,7 +3746,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3654,7 +3757,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _default = __webpack_require__(21);
+	var _default = __webpack_require__(22);
 	
 	var _default2 = _interopRequireDefault(_default);
 	
@@ -3693,7 +3796,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -3704,21 +3807,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _d = __webpack_require__(24);
+	var _d = __webpack_require__(25);
 	
 	var _d2 = _interopRequireDefault(_d);
 	
-	var _renderer = __webpack_require__(25);
+	var _renderer = __webpack_require__(26);
 	
 	var _renderer2 = _interopRequireDefault(_renderer);
 	
-	var _constants = __webpack_require__(26);
+	var _constants = __webpack_require__(27);
 	
 	var _utils = __webpack_require__(3);
 	
-	var _svgUtils = __webpack_require__(27);
+	var _svgUtils = __webpack_require__(28);
 	
-	var _constants2 = __webpack_require__(28);
+	var _constants2 = __webpack_require__(29);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -3915,7 +4018,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var scene = this.scene,
 	                color = this.color,
 	                yScale = this.yScale,
-	                xScale = this.xScale;
+	                xScale = this.xScale,
+	                option = this.option;
 	
 	            if ((0, _utils.isEmpty)(this.data.rectangular.bars.values)) {
 	                this.clear(".bars");
@@ -3937,15 +4041,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	            if (!(0, _utils.isEmpty)(xStrings)) {
 	                xScale.domain(xStrings);
 	            } else {
-	                xScale.domain(_d2.default.range(xMin, xMax + 1)).rangeRoundBands([0, this.scene.attr("width")], 0.1);
+	                xScale.domain(_d2.default.range(xMin, xMax + 1)).rangeRoundBands([0, this.scene.attr("width")], option.bar.outerGap);
 	            }
 	
 	            yScale.domain([0, yMax]);
 	
-	            xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], 0.1);
+	            xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], option.bar.innerGap);
 	
-	            var barWidth = this.option.mode === _constants2.MODE.NORMAL ? xScale1.rangeBand() : xScale.rangeBand();
-	            var barX = this.option.mode === _constants2.MODE.NORMAL ? function (d) {
+	            var barWidth = option.mode === _constants2.MODE.NORMAL ? xScale1.rangeBand() : xScale.rangeBand();
+	            var barX = option.mode === _constants2.MODE.NORMAL ? function (d) {
 	                return xScale1(d.id);
 	            } : 0;
 	
@@ -4215,13 +4319,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports) {
 
-	module.exports = __WEBPACK_EXTERNAL_MODULE_24__;
+	module.exports = __WEBPACK_EXTERNAL_MODULE_25__;
 
 /***/ },
-/* 25 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -4230,7 +4334,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: true
 	});
 	
-	var _renderObject = __webpack_require__(16);
+	var _renderObject = __webpack_require__(17);
 	
 	var _renderObject2 = _interopRequireDefault(_renderObject);
 	
@@ -4248,7 +4352,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports['default'];
 
 /***/ },
-/* 26 */
+/* 27 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -4268,7 +4372,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 27 */
+/* 28 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -4296,7 +4400,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 28 */
+/* 29 */
 /***/ function(module, exports) {
 
 	"use strict";
