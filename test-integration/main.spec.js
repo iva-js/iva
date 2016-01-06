@@ -3,7 +3,7 @@ describe("Basic use case", function(){
     var chart;
 
     beforeEach(function(){
-        chart = iva.generateBasicChart();
+        chart = Iva.generateBasicChart();
     });
 
     it("should draw chart", function(){

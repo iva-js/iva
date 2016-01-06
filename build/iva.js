@@ -2,11 +2,11 @@
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory(require("d3"));
 	else if(typeof define === 'function' && define.amd)
-		define("iva", ["d3"], factory);
+		define("Iva", ["d3"], factory);
 	else if(typeof exports === 'object')
-		exports["iva"] = factory(require("d3"));
+		exports["Iva"] = factory(require("d3"));
 	else
-		root["iva"] = factory(root["d3"]);
+		root["Iva"] = factory(root["d3"]);
 })(this, function(__WEBPACK_EXTERNAL_MODULE_24__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
@@ -59,7 +59,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	exports.INTERPOLATE = exports.Buffer = exports.Chart = exports.OptionObject = exports.DataObject = undefined;
+	exports.MODE = exports.INTERPOLATE = exports.Buffer = exports.Chart = exports.OptionObject = exports.DataObject = undefined;
 	exports.generateBasicChart = generateBasicChart;
 	exports.generateInstantChart = generateInstantChart;
 	
@@ -115,6 +115,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.Chart = _chart2.default;
 	exports.Buffer = Buffer;
 	exports.INTERPOLATE = _constants.INTERPOLATE;
+	exports.MODE = _constants.MODE;
 
 /***/ },
 /* 1 */
@@ -2440,10 +2441,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var d = this.d();
 	
 	            d.option.size = this.processSize(option.size);
-	
 	            d.option.easel = option.easel();
-	
 	            d.option.legend = option.legend.options();
+	            d.option.mode = option.mode();
 	        }
 	    }, {
 	        key: "processSize",
@@ -3718,6 +3718,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _svgUtils = __webpack_require__(27);
 	
+	var _constants2 = __webpack_require__(28);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -3930,7 +3932,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            var yMax = _data$ranges2.yMax;
 	            var xStrings = _data$ranges2.xStrings;
 	
-	            var height = this.scene.attr("height");
+	            var sceneHeight = this.scene.attr("height");
 	
 	            if (!(0, _utils.isEmpty)(xStrings)) {
 	                xScale.domain(xStrings);
@@ -3938,9 +3940,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	                xScale.domain(_d2.default.range(xMin, xMax + 1)).rangeRoundBands([0, this.scene.attr("width")], 0.1);
 	            }
 	
-	            yScale.domain([yMin - 1, yMax]);
+	            yScale.domain([0, yMax]);
 	
 	            xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], 0.1);
+	
+	            var barWidth = this.option.mode === _constants2.MODE.NORMAL ? xScale1.rangeBand() : xScale.rangeBand();
+	            var barX = this.option.mode === _constants2.MODE.NORMAL ? function (d) {
+	                return xScale1(d.id);
+	            } : 0;
 	
 	            var barsSvg = scene.select(".bars");
 	            var barSvg = barsSvg.selectAll(".bar").data(bars);
@@ -3955,13 +3962,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	            });
 	            rectSvg.enter().append("rect");
 	
-	            rectSvg.attr("x", function (d) {
-	                return xScale1(d.id);
-	            }).attr("y", function (d) {
+	            rectSvg.attr("x", barX).attr("y", function (d) {
 	                return yScale(d.y);
 	            }).attr("height", function (d) {
-	                return height - yScale(d.y - d.y0);
-	            }).attr("width", xScale1.rangeBand()).style("fill", function (d) {
+	                return sceneHeight - yScale(d.y - d.y0);
+	            }).attr("width", barWidth).style("fill", function (d) {
 	                return color(d.id);
 	            });
 	
@@ -4311,7 +4316,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	};
 	
+	var MODE = {
+	    get NORMAL() {
+	        return "normal";
+	    },
+	    get STACKED() {
+	        return "stacked";
+	    },
+	    get NORMALIZED() {
+	        return "normalized";
+	    }
+	};
+	
 	exports.INTERPOLATE = INTERPOLATE;
+	exports.MODE = MODE;
 
 /***/ }
 /******/ ])

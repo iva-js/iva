@@ -26,7 +26,7 @@ var config = {
     output: {
         path: __dirname + "/build",
         filename: outFile,
-        library: lname,
+        library: "Iva",
         libraryTarget: "umd",
         umdNamedDefine: true
     },

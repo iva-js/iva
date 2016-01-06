@@ -7,7 +7,7 @@ import Chart from "./chart";
 import DefaultBuffer from "./buffers/default";
 import InstantBuffer from "./buffers/instant";
 
-import {INTERPOLATE} from "./constants";
+import {INTERPOLATE, MODE} from "./constants";
 
 let Buffer = {
     Default: DefaultBuffer,
@@ -40,3 +40,4 @@ export { Chart as Chart };
 export { Buffer as Buffer };
 
 export { INTERPOLATE as INTERPOLATE };
+export { MODE as MODE }

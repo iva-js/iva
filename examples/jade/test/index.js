@@ -4,9 +4,9 @@
  * Distributed under terms of the MIT license.
  */
 
-var buffer = new iva.Buffer.Instant()
+var buffer = new Iva.Buffer.Instant()
 
-var dataObject = new iva.DataObject({
+var dataObject = new Iva.DataObject({
     columns: [{
         id: "data1",
         values: [20, 20, 100, 50, 60, 50, 50, 50, 50, 60, 70,]
@@ -19,7 +19,7 @@ var dataObject = new iva.DataObject({
     }] 
 }, buffer);
 
-var optionObject = new iva.OptionObject({
+var optionObject = new Iva.OptionObject({
     handler: "bar",
     axes:{
         both:{
@@ -31,8 +31,9 @@ var optionObject = new iva.OptionObject({
     },
     legend: {
         visible: true
-    }
+    },
+    mode: Iva.MODE.STACKED
 }, buffer);
 
-var chart = new iva.Chart(dataObject, optionObject, buffer);
+var chart = new Iva.Chart(dataObject, optionObject, buffer);
 chart.redraw();

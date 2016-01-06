@@ -6,6 +6,8 @@ import {PADDING, AXIS} from "./constants";
 import {isUndefined, isEmpty, debug} from "../../utils";
 import {generateExplode, visibility} from "./svgUtils";
 
+import {MODE} from "../../constants";
+
 export default class SvgRenderer extends Renderer {
 
     constructor(chart){
@@ -172,7 +174,7 @@ export default class SvgRenderer extends Renderer {
 
         let xScale1 = d3.scale.ordinal();
         let {xMin, xMax, yMin, yMax, xStrings} = this.data.ranges;
-        let height = this.scene.attr("height");
+        let sceneHeight = this.scene.attr("height");
 
         if(!isEmpty(xStrings)){
             xScale.domain(xStrings);
@@ -180,9 +182,12 @@ export default class SvgRenderer extends Renderer {
             xScale.domain(d3.range(xMin, xMax+1)).rangeRoundBands([0, this.scene.attr("width")], 0.1);
         }
 
-        yScale.domain([yMin-1, yMax]);
+        yScale.domain([0, yMax]);
 
         xScale1.domain(this.data.ids).rangeRoundBands([0, xScale.rangeBand()], 0.1);
+
+        let barWidth = this.option.mode === MODE.NORMAL ? xScale1.rangeBand() : xScale.rangeBand();
+        let barX = this.option.mode === MODE.NORMAL ? d => xScale1(d.id) : 0;
 
         let barsSvg = scene.select(".bars");
         let barSvg = barsSvg.selectAll(".bar").data(bars);
@@ -193,10 +198,10 @@ export default class SvgRenderer extends Renderer {
         let rectSvg = barSvg.selectAll("rect").data(d => d.values)
         rectSvg.enter().append("rect");
         
-        rectSvg.attr("x", d => xScale1(d.id))
+        rectSvg.attr("x", barX)
             .attr("y", d => yScale(d.y))
-            .attr("height", d => { return height - yScale(d.y - d.y0) })
-            .attr("width", xScale1.rangeBand())
+            .attr("height", d => { return sceneHeight - yScale(d.y - d.y0) })
+            .attr("width", barWidth)
             .style("fill", d => color(d.id));
 
         rectSvg.exit().remove();
