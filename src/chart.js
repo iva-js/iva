@@ -1,4 +1,4 @@
-import {option, isDefined} from "./utils";
+import {option, isDefined, isUndefined} from "./utils";
 
 import BarHandler from "./dataHandlers/bar";
 import LineHandler from "./dataHandlers/line";
@@ -14,7 +14,13 @@ import OptionObject from "./optionObject/optionObject";
 import DataObject from "./dataObject/dataObject";
 
 export default class Chart {
-    constructor(dataObject, optionObject, buffer){
+    constructor(d){
+
+        let dataObject = d.dataObject;
+        let optionObject = d.optionObject;
+        let buffer = d.buffer;
+
+        this.bindTo(d.bindTo);
 
         this.setBuffer(buffer);
 
@@ -29,6 +35,7 @@ export default class Chart {
 
     redraw(){
         let renderObject = this.handler.computeRenderObject(this.data, this.option);
+        this.renderer.bindTo(this.bindTo());
         this.renderer.redraw(renderObject);
     }
 
@@ -74,7 +81,7 @@ export default class Chart {
         renderer = option(renderer, "default");
 
         if(typeof renderer === "function"){
-            this.renderer = new renderer(this); 
+            this.renderer = new renderer(this.bindTo()); 
         } else if(typeof renderer === "object") {
             this.renderer = renderer;
         } else {
@@ -84,7 +91,7 @@ export default class Chart {
 
     setRendererByName(renderer){
         if(renderer === "default"){
-            this.renderer = new SvgRenderer(this);
+            this.renderer = new SvgRenderer(this.bindTo());
         } else {
             throw new Error("Uknown type of renderer: " + renderer);
         }
@@ -119,6 +126,14 @@ export default class Chart {
         }else {
             throw new Error("Uknown type of buffer: " + buffer);
         }
+    }
+
+    bindTo(bindTo){
+        if(isUndefined(bindTo)){
+            return this.__bindTo;
+        }
+
+        this.__bindTo = bindTo;
     }
 
     endInit(){

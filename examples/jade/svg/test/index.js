@@ -35,5 +35,11 @@ var optionObject = new Iva.OptionObject({
     mode: Iva.MODE.STACKED
 }, buffer);
 
-var chart = new Iva.Chart(dataObject, optionObject, buffer);
+var chart = new Iva.Chart({
+    dataObject: dataObject,
+    optionObject: optionObject,
+    buffer: buffer,
+    bindTo: "#chart"
+});
+
 chart.redraw();

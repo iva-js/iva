@@ -23,7 +23,6 @@ export default class Handler {
         let d = this.d();
 
         d.option.size = this.processSize(option.size);
-        d.option.easel = option.easel();
         d.option.legend = option.legend.options();
         d.option.mode = option.mode();
     }

@@ -10,9 +10,8 @@ import {MODE} from "../../constants";
 
 export default class SvgRenderer extends Renderer {
 
-    constructor(chart){
-        super();
-        this.option = chart.option;
+    constructor(bindTo){
+        super(bindTo);
 
         this.initEasel();
         this.initScene();
@@ -53,7 +52,7 @@ export default class SvgRenderer extends Renderer {
      * Easel is where all the things are drawn
      */
     initEasel(){
-        this.easel = d3.selectAll(this.option.easel()).attr("class", "iva-chart");
+        this.easel = d3.selectAll(this.bindTo()).attr("class", "iva-chart");
         this.clear();
     }
 

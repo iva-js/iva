@@ -14,20 +14,30 @@ let Buffer = {
     Instant: InstantBuffer
 };
 
-export function generateBasicChart(){
+export function generateBasicChart(bindTo){
     var buffer = new Buffer.Default()
     var data = new DataObject({}, buffer);
     var option = new OptionObject({}, buffer);
-    var chart = new Chart(data, option, buffer);
+    var chart = new Chart({
+        dataObject: data,
+        optionObject: option,
+        buffer: buffer,
+        bindTo: bindTo
+    });
 
     return chart;
 }
 
-export function generateInstantChart(){
+export function generateInstantChart(bindTo){
     var buffer = new Buffer.Instant()
     var data = new DataObject({}, buffer);
     var option = new OptionObject({}, buffer);
-    var chart = new Chart(data, option, buffer);
+    var chart = new Chart({
+        dataObject: data,
+        optionObject: option,
+        buffer: buffer,
+        bindTo: bindTo
+    });
 
     return chart;
 }

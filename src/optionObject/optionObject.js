@@ -54,26 +54,10 @@ export default class OptionObject extends Obj {
         if(isUndefined(d)){
             return {
                 mode: this.mode(),
-                easel: this.easel()
             };
         }
 
         this.mode(d.mode);
-        this.easel(d.easel);
-
-        return this;
-    }
-
-    easel(easel){
-        let __ = this.__;
-
-        if(isUndefined(easel)){
-            return __.easel;
-        }
-
-        __.easel = easel;
-
-        this.dirty(true);
 
         return this;
     }
