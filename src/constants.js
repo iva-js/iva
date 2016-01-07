@@ -1,13 +1,13 @@
 let INTERPOLATE = {
-    get LINEAR() { return "linear" },
-    get CARDINAL() { return "cardinal" },
-    get MONOTONE() { return "monotone" }
+    LINEAR: "linear",
+    CARDINAL: "cardinal",
+    MONOTONE: "monotone"
 };
 
 let MODE = {
-    get NORMAL() { return "normal" },
-    get STACKED() { return "stacked" },
-    get NORMALIZED() { return "normalized" }
+    NORMAL: "normal",
+    STACKED: "stacked",
+    NORMALIZED: "normalized"
 };
 
 export {INTERPOLATE as INTERPOLATE};
