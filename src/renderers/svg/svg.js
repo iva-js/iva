@@ -22,6 +22,7 @@ export default class SvgRenderer extends Renderer {
 
         this.initPies();
 
+        this.initScales();
         this.initAxes();
         this.initPoints();
         this.initLegend();
@@ -29,13 +30,13 @@ export default class SvgRenderer extends Renderer {
         this.color = d3.scale.ordinal().range(["#98abc5", "#a05d56", "#7b6888", "#6b486b", "#8a89a6", "#d0743c", "#ff8c00"]);
     }
 
-    redraw(renderObject){
-        this.render = renderObject;
-        this.data = this.render.data;
-        this.option = this.render.option;
+    redraw(d){
+        this.data = d.data;
+        this.option = d.option;
 
         this.setSizes();
         this.setDomainsToScales();
+        this.setRangesToScales();
 
         this.redrawBars();
         this.redrawLines();
@@ -52,7 +53,7 @@ export default class SvgRenderer extends Renderer {
      * Easel is where all the things are drawn
      */
     initEasel(){
-        this.easel = d3.selectAll(this.bindTo()).attr("class", "iva-chart");
+        this.easel = d3.selectAll("#" + this.bindTo()).attr("class", "iva-chart");
         this.clear();
     }
 
@@ -100,6 +101,11 @@ export default class SvgRenderer extends Renderer {
         this.scene.append("g").attr("class", "points");
     }
 
+    initScales(){
+        this.xScale = d3.scale.ordinal();
+        this.yScale = d3.scale.linear();
+    }
+
     setSizes(){
         let easel = this.easel, option = this.option, size = option.size;
 
@@ -123,10 +129,6 @@ export default class SvgRenderer extends Renderer {
 
         this.legendScale = d3.scale.ordinal().rangePoints([0, legend.height]);    
 
-        let xScale = this.xScale = d3.scale.ordinal().rangePoints([0, this.scene.attr("width")]);
-
-        let yScale = this.yScale = d3.scale.linear().range([this.scene.attr("height"), 0]);
-
     }
 
     setDomainsToScales(){
@@ -141,6 +143,12 @@ export default class SvgRenderer extends Renderer {
         yScale.domain([yMin, yMax]);
 
         color.domain(this.data.ids);
+    }
+
+    setRangesToScales(){
+        this.xScale.rangePoints([0, this.scene.attr("width")]);
+
+        this.yScale.range([this.scene.attr("height"), 0]);
     }
 
     redrawAxes(){

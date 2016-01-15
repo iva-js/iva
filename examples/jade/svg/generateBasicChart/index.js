@@ -4,7 +4,7 @@
  * Distributed under terms of the MIT license.
  */
 
-var chart = Iva.generateBasicChart();
+var chart = Iva.generateBasicChart("chart");
 
 chart.data.column("data", [1, 5, -10]);
 

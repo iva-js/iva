@@ -5,7 +5,7 @@ describe("Axes", function(){
     beforeEach(function(){
         initDOM();
 
-        chart = Iva.generateInstantChart("#chart");
+        chart = Iva.generateInstantChart("chart");
         main = d3.select("#chart");
     });
 

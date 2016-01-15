@@ -8,7 +8,8 @@ import PieHandler from "./dataHandlers/pie";
 import DefaultBuffer from "./buffers/default";
 import InstantBuffer from "./buffers/instant";
 
-import SvgRenderer from "./renderers/svg/index";
+import SvgRenderer from "./renderers/svg/svg";
+import WebglRenderer from "./renderers/webgl/webgl";
 
 import OptionObject from "./optionObject/optionObject";
 import DataObject from "./dataObject/dataObject";
@@ -92,6 +93,8 @@ export default class Chart {
     setRendererByName(renderer){
         if(renderer === "default"){
             this.renderer = new SvgRenderer(this.bindTo());
+        } else if(renderer === "webgl"){
+            this.renderer = new WebglRenderer(this.bindTo());
         } else {
             throw new Error("Uknown type of renderer: " + renderer);
         }

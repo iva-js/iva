@@ -39,7 +39,7 @@ var chart = new Iva.Chart({
     dataObject: dataObject,
     optionObject: optionObject,
     buffer: buffer,
-    bindTo: "#chart"
+    bindTo: "chart"
 });
 
 chart.redraw();

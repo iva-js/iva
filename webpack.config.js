@@ -40,6 +40,7 @@ var config = {
     },
     externals: {
         "d3": "d3",
+        "three.js": "THREE"
     },
     resolve: {
         root: path.resolve("./src"),

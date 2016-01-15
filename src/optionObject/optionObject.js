@@ -22,6 +22,7 @@ export default class OptionObject extends Obj {
         this.size = new Size(d.size, this);
 
         this.handler = d.handler;
+        this.renderer = d.renderer;
 
         this.axes = new Axes(d.axes, this);
 
