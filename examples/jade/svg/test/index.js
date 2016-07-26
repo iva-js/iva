@@ -20,7 +20,7 @@ var dataObject = new Iva.DataObject({
 }, buffer);
 
 var optionObject = new Iva.OptionObject({
-    handler: "bar",
+    handler: "line",
     axes:{
         both:{
             visible: true
@@ -32,7 +32,7 @@ var optionObject = new Iva.OptionObject({
     legend: {
         visible: true
     },
-    mode: Iva.MODE.STACKED
+    mode: Iva.MODE.NORMALIZED
 }, buffer);
 
 var chart = new Iva.Chart({

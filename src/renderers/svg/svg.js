@@ -245,7 +245,9 @@ export default class SvgRenderer extends Renderer {
         lineSvg.exit().remove();    
 
         if(this.option.line.points){
-            this.redrawPoints(lines);
+            this.redrawPoints(lines, '.lines');
+        } else {
+            this.clearPoints('.lines');
         }
 
     }
@@ -281,7 +283,9 @@ export default class SvgRenderer extends Renderer {
         areaSvg.exit().remove();
 
         if(this.option.area.points){
-            this.redrawPoints(areas);
+            this.redrawPoints(areas, '.areas');
+        } else {
+            this.clearPoints('.areas');
         }
 
     }
@@ -371,9 +375,9 @@ export default class SvgRenderer extends Renderer {
         legendPicture.exit().remove();
     }
 
-    redrawPoints(sequences){
+    redrawPoints(sequences, className='.points'){
         if(isEmpty(sequences)){
-            this.clear(".points");
+            this.clearPoints(className);
             return;
         }
 
@@ -392,10 +396,10 @@ export default class SvgRenderer extends Renderer {
         });
 
 
-        let pointSvg = scene.selectAll(".points").selectAll(".point").data(points);
+        let pointSvg = scene.selectAll(".points").selectAll(".point" + className).data(points);
 
         pointSvg.enter().append("circle")
-            .attr("class", "point")
+            .attr("class", "point " + className.slice(1))
             .attr("fill", d => this.color(d.id))
             .attr("r", 3);
 
@@ -403,6 +407,10 @@ export default class SvgRenderer extends Renderer {
         pointSvg.attr("cy", d => yScale(d.y))
 
         pointSvg.exit().remove();
+    }
+
+    clearPoints(className='.points'){
+        this.easel.selectAll('.points ' + className).transition().duration(500).style('opacity', 0).remove();
     }
 
     clear(select){
